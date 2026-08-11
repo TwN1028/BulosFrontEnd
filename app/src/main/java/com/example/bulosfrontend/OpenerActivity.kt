@@ -22,9 +22,10 @@ class OpenerActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             BulosFrontEndTheme {
-                OpenerScreen { destination ->
+                OpenerScreen { destination, dialogue ->
                     val intent = Intent(this, MainActivity::class.java).apply {
                         putExtra("target_destination", destination)
+                        putExtra("dialogue1", dialogue)
                     }
                     startActivity(intent)
                 }
@@ -34,7 +35,7 @@ class OpenerActivity : ComponentActivity() {
 }
 
 @Composable
-fun OpenerScreen(onNavigate: (String) -> Unit) {
+fun OpenerScreen(onNavigate: (String, String) -> Unit) {
     Scaffold(
         topBar = { BulosTopAppBar() },
     ) { innerPadding ->
@@ -47,41 +48,41 @@ fun OpenerScreen(onNavigate: (String) -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Button(
-                onClick = { onNavigate("HOME") },
+                onClick = { onNavigate("HOME", "english") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(80.dp),
             ) {
                 Text(
-                    text = stringResource(R.string.lang_english),
+                    text = stringResource(R.string.choose_lang_english),
                     style = MaterialTheme.typography.titleLarge,
                     textAlign = TextAlign.Center,
                 )
             }
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             Button(
-                onClick = { onNavigate("FAVORITES") },
+                onClick = { onNavigate("HOME", "filipino") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(80.dp),
             ) {
                 Text(
-                    text = stringResource(R.string.lang_tagalog),
+                    text = stringResource(R.string.choose_lang_filipino),
                     style = MaterialTheme.typography.titleLarge,
                     textAlign = TextAlign.Center,
                 )
             }
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             Button(
-                onClick = { onNavigate("PROFILE") },
+                onClick = { onNavigate("HOME", "bulos") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(80.dp),
             ) {
                 Text(
-                    text = stringResource(R.string.lang_bulos),
+                    text = stringResource(R.string.choose_lang_bulos),
                     style = MaterialTheme.typography.titleLarge,
                     textAlign = TextAlign.Center,
                 )
@@ -94,6 +95,6 @@ fun OpenerScreen(onNavigate: (String) -> Unit) {
 @Composable
 fun OpenerScreenPreview() {
     BulosFrontEndTheme {
-        OpenerScreen {}
+        OpenerScreen { _, _ -> }
     }
 }

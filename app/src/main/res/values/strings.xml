@@ -47,12 +47,31 @@
     <string name="default_name">Android</string>
     <string name="app_header_title">Bulos Translator</string>
     <string name="app_logo_content_description">App Logo</string>
-    <string name="nav_home">Home</string>
-    <string name="nav_favorites">Favorites</string>
-    <string name="nav_profile">Profile</string>
+    <string name="choose_lang_english">I would like to use English</string>
+    <string name="choose_lang_filipino">Nais kong gamitin ang wikang filipino</string>
+    <string name="choose_lang_bulos">I wish to use the dialect of Bulos</string>
     <string name="welcome_message">Welcome to Bulos Translator</string>
-    <string name="lang_english">I would like to use English</string>
-    <string name="lang_tagalog">Nais kong gamitin ang wikang Tagalog</string>
-    <string name="lang_bulos">I wish to use the dialect of Bulos</string>
     <string name="fab_content_description">Email button</string>
+
+    <!-- english dialogue -->
+    <string name="main_button_1_eng">Translate by Text</string>
+    <string name="main_button_2_eng">Translate by Voice</string>
+    <string name="main_button_3_eng">History</string>
+    <string name="main_button_4_eng">Placeholder</string>
+    <string name="footer_eng">Made by research thesis kineme, 2026</string>
+
+    <!-- filipino dialogue -->
+    <string name="main_button_1_fil">Pagsalin ng Salita</string>
+    <string name="main_button_2_fil">Pagsalin ng Boses</string>
+    <string name="main_button_3_fil">Nakaraang Salin</string>
+    <string name="main_button_4_fil">Placeholder</string>
+    <string name="footer_fil">Gawa ng research thesis kineme, 2026</string>
+
+    <!-- bulos dialogue -->
+    <string name="main_button_1_bul">Button 1</string>
+    <string name="main_button_2_bul">Button 2</string>
+    <string name="main_button_3_bul">Placeholder</string>
+    <string name="main_button_4_bul">Placeholder</string>
+    <string name="footer_bul">Gawa ng research thesis kineme, 2026</string>
+
 </resources>

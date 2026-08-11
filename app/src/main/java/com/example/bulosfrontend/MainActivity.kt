@@ -5,30 +5,33 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
+import com.example.bulosfrontend.ui.theme.Aileron
 import com.example.bulosfrontend.ui.theme.BulosFrontEndTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        
-        val target = intent.getStringExtra("target_destination")?.let {
-            try { AppDestinations.valueOf(it) } catch (_: Exception) { AppDestinations.HOME }
-        } ?: AppDestinations.HOME
+
+        val dialogueKey = intent.getStringExtra("dialogue1") ?: "none"
+        val dialogueContent = DialogueProvider.getDialogue(dialogueKey)
 
         setContent {
             BulosFrontEndTheme {
-                BulosFrontEndApp(initialDestination = target)
+                BulosFrontEndApp(dialogueContent = dialogueContent)
             }
         }
     }
@@ -36,35 +39,84 @@ class MainActivity : ComponentActivity() {
 
 @Preview(name = "Phone", device = Devices.PIXEL_7, showSystemUi = true, showBackground = true)
 @Composable
-fun BulosFrontEndApp(initialDestination: AppDestinations = AppDestinations.HOME) {
-    var currentDestination by rememberSaveable { mutableStateOf(initialDestination) }
+fun BulosFrontEndApp(
+    dialogueContent: DialogueContent = DialogueProvider.getDialogue("preview"),
+) {
+    Scaffold(
+        topBar = { BulosTopAppBar() },
+        modifier = Modifier.fillMaxSize(),
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            MainButtonsGrid(
+                content = dialogueContent,
+                modifier = Modifier.weight(1f),
+            )
 
-    NavigationSuiteScaffold(
-        navigationSuiteItems = {
-            AppDestinations.entries.forEach {
-                item(
-                    icon = {
-                        Icon(
-                            painterResource(it.icon),
-                            contentDescription = stringResource(it.labelRes),
-                        )
-                    },
-                    label = { Text(stringResource(it.labelRes)) },
-                    selected = it == currentDestination,
-                    onClick = { currentDestination = it },
-                )
-            }
-        },
-    ) {
-        Scaffold(
-            topBar = { BulosTopAppBar() },
-            modifier = Modifier.fillMaxSize(),
-        ) { innerPadding ->
-            Greeting(
-                name = stringResource(R.string.default_name),
-                modifier = Modifier.padding(innerPadding),
+            Text(
+                text = stringResource(dialogueContent.footerRes),
+                modifier = Modifier
+                    .padding(bottom = 16.dp)
+                    .alpha(0.7f),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Light,
+                    fontFamily = Aileron,
+                ),
+                textAlign = TextAlign.Center,
             )
         }
+    }
+}
+
+@Composable
+fun MainButtonsGrid(
+    content: DialogueContent,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.padding(8.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+        ) {
+            SquareButton(stringResource(content.button1Res))
+            SquareButton(stringResource(content.button2Res))
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+        ) {
+            SquareButton(stringResource(content.button3Res))
+            SquareButton(stringResource(content.button4Res))
+        }
+    }
+}
+
+@Composable
+fun SquareButton(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Button(
+        onClick = { /* TODO */ },
+        modifier = modifier
+            .size(160.dp)
+            .aspectRatio(1f),
+        shape = RoundedCornerShape(24.dp),
+    ) {
+        Text(
+            text = text,
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.titleMedium,
+        )
     }
 }
 
@@ -85,27 +137,10 @@ fun BulosTopAppBar() {
     )
 }
 
-enum class AppDestinations(
-    val labelRes: Int,
-    val icon: Int,
-) {
-    HOME(R.string.nav_home, R.drawable.ic_home),
-    FAVORITES(R.string.nav_favorites, R.drawable.ic_favorite),
-    PROFILE(R.string.nav_profile, R.drawable.ic_account_box),
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = stringResource(R.string.greeting_format, name),
-        modifier = modifier,
-    )
-}
-
 @Preview(showBackground = true)
 @Composable
-fun GreetingPreview() {
+fun MainButtonsGridPreview() {
     BulosFrontEndTheme {
-        Greeting(stringResource(R.string.default_name))
+        MainButtonsGrid(content = DialogueProvider.getDialogue("preview"))
     }
 }

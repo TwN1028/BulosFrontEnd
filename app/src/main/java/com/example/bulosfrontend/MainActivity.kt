@@ -1,5 +1,6 @@
 package com.example.bulosfrontend
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -18,20 +19,25 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
-import com.example.bulosfrontend.ui.theme.Aileron
-import com.example.bulosfrontend.ui.theme.BulosFrontEndTheme
+import com.example.bulosfrontend.ui.theme.*
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        val dialogueKey = intent.getStringExtra("dialogue1") ?: "none"
-        val dialogueContent = DialogueProvider.getDialogue(dialogueKey)
+        val key = intent.getStringExtra("dialogue1") ?: "none"
+        val content = DialogueProvider.getDialogue(key)
 
         setContent {
             BulosFrontEndTheme {
-                BulosFrontEndApp(dialogueContent = dialogueContent)
+                BulosFrontEndApp(content = content) {
+                    startActivity(
+                        Intent(this, TranslateTextActivity::class.java).apply {
+                            putExtra("dialogue1", key)
+                        },
+                    )
+                }
             }
         }
     }
@@ -40,28 +46,26 @@ class MainActivity : ComponentActivity() {
 @Preview(name = "Phone", device = Devices.PIXEL_7, showSystemUi = true, showBackground = true)
 @Composable
 fun BulosFrontEndApp(
-    dialogueContent: DialogueContent = DialogueProvider.getDialogue("preview"),
+    content: DialogueContent = DialogueProvider.getDialogue("preview"),
+    onNavigateToTranslate: () -> Unit = {}
 ) {
     Scaffold(
         topBar = { BulosTopAppBar() },
         modifier = Modifier.fillMaxSize(),
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize(),
+            modifier = Modifier.padding(innerPadding).fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             MainButtonsGrid(
-                content = dialogueContent,
+                content = content,
+                onNavigateToTranslate = onNavigateToTranslate,
                 modifier = Modifier.weight(1f),
             )
 
             Text(
-                text = stringResource(dialogueContent.footerRes),
-                modifier = Modifier
-                    .padding(bottom = 16.dp)
-                    .alpha(0.7f),
+                text = stringResource(content.footerRes),
+                modifier = Modifier.padding(bottom = 16.dp).alpha(0.7f),
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontWeight = FontWeight.Light,
                     fontFamily = Aileron,
@@ -75,27 +79,25 @@ fun BulosFrontEndApp(
 @Composable
 fun MainButtonsGrid(
     content: DialogueContent,
+    onNavigateToTranslate: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val buttons = listOf(content.button1Res, content.button2Res, content.button3Res, content.button4Res)
     Column(
         modifier = modifier.padding(8.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-        ) {
-            SquareButton(stringResource(content.button1Res))
-            SquareButton(stringResource(content.button2Res))
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-        ) {
-            SquareButton(stringResource(content.button3Res))
-            SquareButton(stringResource(content.button4Res))
+        buttons.chunked(2).forEachIndexed { index, row ->
+            Row(Modifier.fillMaxWidth(), Arrangement.SpaceEvenly) {
+                row.forEachIndexed { rowIndex, res ->
+                    SquareButton(
+                        text = stringResource(res),
+                        onClick = { if ((index == 0) && (rowIndex == 0)) onNavigateToTranslate() }
+                    )
+                }
+            }
+            if (index == 0) Spacer(Modifier.height(8.dp))
         }
     }
 }
@@ -104,12 +106,11 @@ fun MainButtonsGrid(
 fun SquareButton(
     text: String,
     modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
 ) {
     Button(
-        onClick = { /* TODO */ },
-        modifier = modifier
-            .size(160.dp)
-            .aspectRatio(1f),
+        onClick = onClick,
+        modifier = modifier.size(160.dp).aspectRatio(1f),
         shape = RoundedCornerShape(24.dp),
     ) {
         Text(
@@ -129,9 +130,7 @@ fun BulosTopAppBar() {
             Icon(
                 painter = painterResource(id = R.drawable.ic_launcher_foreground),
                 contentDescription = stringResource(R.string.app_logo_content_description),
-                modifier = Modifier
-                    .size(48.dp)
-                    .padding(8.dp),
+                modifier = Modifier.size(48.dp).padding(8.dp),
             )
         },
     )
@@ -141,6 +140,6 @@ fun BulosTopAppBar() {
 @Composable
 fun MainButtonsGridPreview() {
     BulosFrontEndTheme {
-        MainButtonsGrid(content = DialogueProvider.getDialogue("preview"))
+        MainButtonsGrid(content = DialogueProvider.getDialogue("preview"), onNavigateToTranslate = {})
     }
 }

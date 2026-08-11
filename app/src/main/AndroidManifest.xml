@@ -31,6 +31,12 @@
             android:theme="@style/Theme.BulosFrontEnd"
             android:windowSoftInputMode="adjustResize" />
 
+        <activity
+            android:name=".TranslateTextActivity"
+            android:exported="false"
+            android:theme="@style/Theme.BulosFrontEnd"
+            android:windowSoftInputMode="adjustResize" />
+
     </application>
 
 </manifest>

@@ -47,31 +47,48 @@
     <string name="default_name">Android</string>
     <string name="app_header_title">Bulos Translator</string>
     <string name="app_logo_content_description">App Logo</string>
-    <string name="choose_lang_english">I would like to use English</string>
-    <string name="choose_lang_filipino">Nais kong gamitin ang wikang filipino</string>
-    <string name="choose_lang_bulos">I wish to use the dialect of Bulos</string>
     <string name="welcome_message">Welcome to Bulos Translator</string>
     <string name="fab_content_description">Email button</string>
 
     <!-- english dialogue -->
+    <string name="choose_lang_english">I would like to use English</string>
     <string name="main_button_1_eng">Translate by Text</string>
     <string name="main_button_2_eng">Translate by Voice</string>
     <string name="main_button_3_eng">History</string>
     <string name="main_button_4_eng">Placeholder</string>
     <string name="footer_eng">Made by research thesis kineme, 2026</string>
+    <string name="side_button_1_eng">English</string>
+    <string name="side_button_2_eng">Filipino</string>
+    <string name="translate_action_eng">Translate Text</string>
+    <string name="placeholder_eng">Enter text to translate&#8230;</string>
 
     <!-- filipino dialogue -->
+    <string name="choose_lang_filipino">Nais kong gamitin ang wikang Filipino</string>
     <string name="main_button_1_fil">Pagsalin ng Salita</string>
     <string name="main_button_2_fil">Pagsalin ng Boses</string>
     <string name="main_button_3_fil">Nakaraang Salin</string>
     <string name="main_button_4_fil">Placeholder</string>
     <string name="footer_fil">Gawa ng research thesis kineme, 2026</string>
+    <string name="side_button_1_fil">English</string>
+    <string name="side_button_2_fil">Filipino</string>
+    <string name="translate_action_fil">Isalin ang Teksto</string>
+    <string name="placeholder_fil">Ipasok ang tekstong isasalin&#8230;</string>
 
     <!-- bulos dialogue -->
+    <string name="choose_lang_bulos">I wish to use the dialect of Bulos</string>
     <string name="main_button_1_bul">Button 1</string>
     <string name="main_button_2_bul">Button 2</string>
     <string name="main_button_3_bul">Placeholder</string>
     <string name="main_button_4_bul">Placeholder</string>
     <string name="footer_bul">Gawa ng research thesis kineme, 2026</string>
+    <string name="side_button_1_bul">English</string>
+    <string name="side_button_2_bul">Bulos</string>
+    <string name="translate_action_bul">Translate Text</string>
+    <string name="placeholder_bul">Enter text to translate&#8230;</string>
+
+    <!-- Language Labels -->
+    <string name="lang_label_english">English</string>
+    <string name="lang_label_filipino">Filipino</string>
+    <string name="lang_label_bulos">Bulos</string>
 
 </resources>

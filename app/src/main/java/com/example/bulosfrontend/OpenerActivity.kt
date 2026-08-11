@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -36,9 +37,7 @@ class OpenerActivity : ComponentActivity() {
 
 @Composable
 fun OpenerScreen(onNavigate: (String, String) -> Unit) {
-    Scaffold(
-        topBar = { BulosTopAppBar() },
-    ) { innerPadding ->
+    Scaffold { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -52,6 +51,7 @@ fun OpenerScreen(onNavigate: (String, String) -> Unit) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(80.dp),
+                shape = RoundedCornerShape(12.dp),
             ) {
                 Text(
                     text = stringResource(R.string.choose_lang_english),
@@ -66,6 +66,7 @@ fun OpenerScreen(onNavigate: (String, String) -> Unit) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(80.dp),
+                shape = RoundedCornerShape(12.dp),
             ) {
                 Text(
                     text = stringResource(R.string.choose_lang_filipino),
@@ -80,6 +81,7 @@ fun OpenerScreen(onNavigate: (String, String) -> Unit) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(80.dp),
+                shape = RoundedCornerShape(12.dp),
             ) {
                 Text(
                     text = stringResource(R.string.choose_lang_bulos),

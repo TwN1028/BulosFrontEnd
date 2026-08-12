@@ -12,6 +12,10 @@ object TranslationState {
     var sourceLanguage by mutableStateOf("English")
     var targetLanguage by mutableStateOf("Bulos")
     var textToTranslate by mutableStateOf("")
+    var recordedAudioPath by mutableStateOf<String?>(null)
+
+    // all code to translate the needed text goes here
+    var translatedText by mutableStateOf("")
     
-    // You can add more fields here later (e.g., resultText)
+
 }

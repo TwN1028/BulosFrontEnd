@@ -13,7 +13,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.bulosfrontend.ui.theme.BulosFrontEndTheme
 
@@ -23,80 +22,23 @@ class OpenerActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             BulosFrontEndTheme {
-                OpenerScreen { destination, dialogue ->
-                    val intent = Intent(this, MainActivity::class.java).apply {
-                        putExtra("target_destination", destination)
-                        putExtra("dialogue1", dialogue)
-                    }
-                    startActivity(intent)
+                OpenerScreen { key -> startActivity(Intent(this, MainActivity::class.java).putExtra("dialogue1", key)) }
+            }
+        }
+    }
+}
+
+@Composable
+fun OpenerScreen(onNavigate: (String) -> Unit) {
+    val options = listOf("english" to R.string.choose_lang_eng, "filipino" to R.string.choose_lang_fil, "bulos" to R.string.choose_lang_bul)
+    Scaffold(topBar = { SharedTopAppBar(stringResource(R.string.header_main_eng)) }) { p ->
+        Column(Modifier.fillMaxSize().padding(p).padding(horizontal = 32.dp), Arrangement.Center, Alignment.CenterHorizontally) {
+            options.forEach { (key, res) ->
+                Button({ onNavigate(key) }, Modifier.fillMaxWidth().height(80.dp), shape = RoundedCornerShape(12.dp)) {
+                    Text(stringResource(res), style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
                 }
+                if (key != options.last().first) Spacer(Modifier.height(24.dp))
             }
         }
-    }
-}
-
-@Composable
-fun OpenerScreen(onNavigate: (String, String) -> Unit) {
-    Scaffold { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 32.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Button(
-                onClick = { onNavigate("HOME", "english") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp),
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Text(
-                    text = stringResource(R.string.choose_lang_english),
-                    style = MaterialTheme.typography.titleLarge,
-                    textAlign = TextAlign.Center,
-                )
-            }
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Button(
-                onClick = { onNavigate("HOME", "filipino") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp),
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Text(
-                    text = stringResource(R.string.choose_lang_filipino),
-                    style = MaterialTheme.typography.titleLarge,
-                    textAlign = TextAlign.Center,
-                )
-            }
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Button(
-                onClick = { onNavigate("HOME", "bulos") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp),
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Text(
-                    text = stringResource(R.string.choose_lang_bulos),
-                    style = MaterialTheme.typography.titleLarge,
-                    textAlign = TextAlign.Center,
-                )
-            }
-        }
-    }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun OpenerScreenPreview() {
-    BulosFrontEndTheme {
-        OpenerScreen { _, _ -> }
     }
 }

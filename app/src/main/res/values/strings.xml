@@ -45,25 +45,36 @@
 
     <string name="greeting_format">The Bulos Translator %1$s!</string>
     <string name="default_name">Android</string>
-    <string name="app_header_title">Bulos Translator</string>
     <string name="app_logo_content_description">App Logo</string>
     <string name="welcome_message">Welcome to Bulos Translator</string>
     <string name="fab_content_description">Email button</string>
 
     <!-- english dialogue -->
-    <string name="choose_lang_english">I would like to use English</string>
+    <string name="choose_lang_eng">I would like to use English</string>
+    <string name="header_main_eng">Bulos Translator</string>
+    <string name="header_translate_eng">Translate by Text</string>
+    <string name="header_voice_eng">Translate by Voice</string>
+    <string name="header_results_eng">Here\'s your translated text!</string>
     <string name="main_button_1_eng">Translate by Text</string>
     <string name="main_button_2_eng">Translate by Voice</string>
-    <string name="main_button_3_eng">History</string>
+    <string name="main_button_3_eng">Translation History</string>
     <string name="main_button_4_eng">Placeholder</string>
     <string name="footer_eng">Made by research thesis kineme, 2026</string>
     <string name="side_button_1_eng">English</string>
     <string name="side_button_2_eng">Filipino</string>
     <string name="translate_action_eng">Translate Text</string>
     <string name="placeholder_eng">Enter text to translate&#8230;</string>
+    <string name="record_start_label_eng">Press to start recording</string>
+    <string name="cancel_btn_eng">Cancel</string>
+    <string name="copied_msg_eng">Text copied to clipboard!</string>
+    <string name="go_back_eng">Go Back</string>
 
     <!-- filipino dialogue -->
-    <string name="choose_lang_filipino">Nais kong gamitin ang wikang Filipino</string>
+    <string name="choose_lang_fil">Nais kong gamitin ang wikang Filipino</string>
+    <string name="header_main_fil">Bulos Translator</string>
+    <string name="header_translate_fil">Pagsalin ng Salita</string>
+    <string name="header_voice_fil">Pagsalin ng Boses</string>
+    <string name="header_results_fil">Ito ang tekstong isinalin!</string>
     <string name="main_button_1_fil">Pagsalin ng Salita</string>
     <string name="main_button_2_fil">Pagsalin ng Boses</string>
     <string name="main_button_3_fil">Nakaraang Salin</string>
@@ -73,22 +84,36 @@
     <string name="side_button_2_fil">Filipino</string>
     <string name="translate_action_fil">Isalin ang Teksto</string>
     <string name="placeholder_fil">Ipasok ang tekstong isasalin&#8230;</string>
+    <string name="record_start_label_fil">Pindutin para simulan ang pag-record</string>
+    <string name="cancel_btn_fil">Kanselahin</string>
+    <string name="copied_msg_fil">Napiya ang teksto!</string>
+    <string name="go_back_fil">Bumalik</string>
 
     <!-- bulos dialogue -->
-    <string name="choose_lang_bulos">I wish to use the dialect of Bulos</string>
-    <string name="main_button_1_bul">Button 1</string>
-    <string name="main_button_2_bul">Button 2</string>
-    <string name="main_button_3_bul">Placeholder</string>
+    <string name="choose_lang_bul">Nais kong gamitin ang wikang Filipino</string>
+    <string name="header_main_bul">Bulos Translator</string>
+    <string name="header_translate_bul">Pagsalin ng Salita</string>
+    <string name="header_voice_bul">Pagsalin ng Boses</string>
+    <string name="header_results_bul">Ito ang tekstong isinalin!</string>
+    <string name="main_button_1_bul">Pagsalin ng Salita</string>
+    <string name="main_button_2_bul">Pagsalin ng Boses</string>
+    <string name="main_button_3_bul">Nakaraang Salin</string>
     <string name="main_button_4_bul">Placeholder</string>
     <string name="footer_bul">Gawa ng research thesis kineme, 2026</string>
     <string name="side_button_1_bul">English</string>
-    <string name="side_button_2_bul">Bulos</string>
-    <string name="translate_action_bul">Translate Text</string>
-    <string name="placeholder_bul">Enter text to translate&#8230;</string>
+    <string name="side_button_2_bul">Filipino</string>
+    <string name="translate_action_bul">Isalin ang Teksto</string>
+    <string name="placeholder_bul">Ipasok ang tekstong isasalin&#8230;</string>
+    <string name="record_start_label_bul">Pindutin para simulan ang pag-record</string>
+    <string name="cancel_btn_bul">Kanselahin</string>
+    <string name="copied_msg_bul">Napiya ang teksto!</string>
+    <string name="go_back_bul">Bumalik</string>
 
-    <!-- Language Labels -->
-    <string name="lang_label_english">English</string>
-    <string name="lang_label_filipino">Filipino</string>
-    <string name="lang_label_bulos">Bulos</string>
+    <!-- language labels -->
+    <string name="lang_label_eng">English</string>
+    <string name="lang_label_fil">Filipino</string>
+    <string name="lang_label_bul">Bulos</string>
+    <string name="back_to_home">Back to Home</string>
+    <string name="lang_header_format">%1$s to %2$s</string>
 
 </resources>

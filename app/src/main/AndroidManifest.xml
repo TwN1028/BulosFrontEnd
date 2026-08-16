@@ -17,7 +17,7 @@
         tools:ignore="DiscouragedApi">
 
         <activity
-            android:name=".OpenerActivity"
+            android:name=".MainActivity"
             android:exported="true"
             android:theme="@style/Theme.BulosFrontEnd"
             android:windowSoftInputMode="adjustResize">
@@ -26,30 +26,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <activity
-            android:name=".MainActivity"
-            android:exported="true"
-            android:theme="@style/Theme.BulosFrontEnd"
-            android:windowSoftInputMode="adjustResize" />
-
-        <activity
-            android:name=".TranslateTextActivity"
-            android:exported="false"
-            android:theme="@style/Theme.BulosFrontEnd"
-            android:windowSoftInputMode="adjustResize" />
-
-        <activity
-            android:name=".TranslateVoiceActivity"
-            android:exported="false"
-            android:theme="@style/Theme.BulosFrontEnd"
-            android:windowSoftInputMode="adjustResize" />
-
-        <activity
-            android:name=".ResultActivity"
-            android:exported="false"
-            android:theme="@style/Theme.BulosFrontEnd"
-            android:windowSoftInputMode="adjustResize" />
 
     </application>
 

@@ -1,6 +1,8 @@
-# Tasks: Decouple Translation State
+# Tasks: Translation History Feature
 
-- `[x]` Create `TranslationState.kt`
-- `[x]` Update `MainViewModel.kt` to use global state
-- `[x]` Update UI in `Screens.kt` to use global state
+- `[x]` Create `History.kt` for data model and storage
+- `[x]` Update `Dialogue.kt` with history-related resources
+- `[x]` Modify `MainViewModel.kt` to save translations to history
+- `[x]` Implement `HistoryScreen` in `Screens.kt`
+- `[x]` Add history route to `MainActivity.kt`
 - `[x]` Verification & Testing

@@ -4,6 +4,8 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -76,7 +78,7 @@ fun HomeScreen(viewModel: MainViewModel, onNavigate: (String) -> Unit) {
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceEvenly) {
                         row.forEach { (res, type) ->
                             SquareButton(stringResource(res)) {
-                                if (type == "text" || type == "voice") onNavigate(type)
+                                if (type == "text" || type == "voice" || type == "history") onNavigate(type)
                             }
                         }
                     }
@@ -124,6 +126,7 @@ fun TranslateTextScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBac
                         viewModel.translateText(text)
                         onTranslate()
                     },
+                    enabled = text.isNotBlank(),
                     modifier = Modifier.fillMaxWidth().height(64.dp),
                     shape = RoundedCornerShape(12.dp)
                 ) {
@@ -256,6 +259,57 @@ fun ResultScreen(viewModel: MainViewModel, onBackToHome: () -> Unit) {
             }
             TopToastNotification(showNotif, stringResource(content.copiedRes), p)
             Box(Modifier.fillMaxSize(), Alignment.BottomCenter) { StandardFooter(content.footerRes) }
+        }
+    }
+}
+
+@Composable
+fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
+    val content = viewModel.content
+    val historyItems = HistoryProvider.history
+
+    Scaffold(topBar = { SharedTopAppBar(stringResource(content.historyHeaderRes)) }) { p ->
+        Column(Modifier.padding(p).fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+            if (historyItems.isEmpty()) {
+                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Text("No history yet", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.outline)
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(historyItems) { item ->
+                        HistoryCard(item)
+                    }
+                }
+            }
+            TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth().padding(16.dp).height(48.dp)) {
+                Text(stringResource(content.goBackRes), style = MaterialTheme.typography.titleMedium)
+            }
+            StandardFooter(content.footerRes)
+        }
+    }
+}
+
+@Composable
+fun HistoryCard(item: HistoryItem) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(item.sourceLang, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, null, Modifier.size(12.dp).padding(horizontal = 4.dp), tint = MaterialTheme.colorScheme.outline)
+                Text(item.targetLang, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(item.inputText, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(4.dp))
+            Text(item.translatedText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

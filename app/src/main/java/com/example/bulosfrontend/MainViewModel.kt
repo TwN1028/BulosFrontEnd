@@ -29,7 +29,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun translateText(text: String) {
         TranslationState.textToTranslate = text
         // Placeholder for actual translation logic
-        TranslationState.translatedText = "Translated: $text"
+        TranslationState.translatedText = text
+        saveToHistory()
+    }
+
+    private fun saveToHistory() {
+        if (TranslationState.textToTranslate.isNotEmpty() && TranslationState.translatedText.isNotEmpty()) {
+            HistoryProvider.addEntry(
+                sourceLang = TranslationState.sourceLanguage,
+                targetLang = TranslationState.targetLanguage,
+                inputText = TranslationState.textToTranslate,
+                translatedText = TranslationState.translatedText
+            )
+        }
     }
 
     fun startRecording() {
@@ -76,6 +88,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             isRecording = false
             TranslationState.recordedAudioPath = audioFile?.absolutePath
             TranslationState.translatedText = "Voice translation placeholder"
+            TranslationState.textToTranslate = "Voice Recording" // Label for history
+            saveToHistory()
         }
     }
 

@@ -27,12 +27,16 @@ class MainActivity : ComponentActivity() {
                         HomeScreen(viewModel) { route -> navController.navigate(route) }
                     }
                     composable("text") {
-                        TranslateTextScreen(viewModel, onTranslate = { navController.navigate("result") }) {
+                        TranslateTextScreen(
+                            viewModel,
+                            onTranslate = { navController.navigate("result") }) {
                             navController.popBackStack()
                         }
                     }
                     composable("voice") {
-                        TranslateVoiceScreen(viewModel, onStop = { navController.navigate("result") }) {
+                        TranslateVoiceScreen(
+                            viewModel,
+                            onStop = { navController.navigate("result") }) {
                             navController.popBackStack()
                         }
                     }
@@ -43,8 +47,14 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
+                    composable("history") {
+                        HistoryScreen(viewModel) {
+                            navController.popBackStack()
+                        }
+                    }
                 }
             }
         }
     }
 }
+

@@ -1,33 +1,38 @@
-# Walkthrough: Decoupling Translation State
+# Walkthrough: Translation History Feature
 
-The translation-related state has been moved from the `MainViewModel` to a dedicated `TranslationState` singleton object. This decoupling facilitates easier integration with custom translation APIs by providing a centralized, accessible location for all translation parameters.
+The "Translation History" feature has been implemented, allowing users to view a list of their past translations. Following your request, the history management is decoupled into a dedicated file for easy maintenance.
 
 ## Changes Made
 
-### 1. Re-introduced `TranslationState`
-- Created [TranslationState.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/TranslationState.kt).
-- This object now holds the following `mutableStateOf` properties:
-    - `sourceLanguage`
-    - `targetLanguage`
-    - `textToTranslate`
-    - `translatedText`
-    - `recordedAudioPath`
+### 1. Decoupled History Storage
+- Created [History.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/History.kt) which contains:
+    - `HistoryItem`: Data model for storing language pairs, input text, and results.
+    - `HistoryProvider`: A singleton that manages a thread-safe `mutableStateListOf` for the UI to observe.
 
-### 2. Updated `MainViewModel`
-- Removed internal translation state from [MainViewModel.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/MainViewModel.kt).
-- Updated `translateText()`, `stopRecording()`, and other logic to read/write directly to `TranslationState`.
+### 2. Automatic Saving
+- Updated [MainViewModel.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/MainViewModel.kt) to push new translations to `HistoryProvider` whenever a text or voice translation is completed.
+- `TranslationState` remains the source of truth for the *active* translation, but now communicates with `History.kt` via the ViewModel.
 
-### 3. Updated UI Composables
-- Modified [Screens.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/Screens.kt) to bind UI components (like `LanguageSelector`, `OutlinedTextField`, and `ResultScreen`) directly to `TranslationState`.
+### 3. History UI
+- Implemented `HistoryScreen` in [Screens.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/Screens.kt).
+- Uses a `LazyColumn` for efficient scrolling of historical entries.
+- Each entry is displayed in a styled `Card` matching the app's Material 3 theme, showing the source/target languages and the full text.
+
+### 4. Navigation & Localization
+- Added the `"history"` navigation route in [MainActivity.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/MainActivity.kt).
+- Updated `Dialogue.kt` and `DialogueProvider` to support localized headers for the history screen.
+- Enabled the "Translation History" button on the Home screen to trigger navigation.
 
 ## Verification Results
 
 ### Automated Tests
-- Successfully ran `gradle assembleDebug`. The project compiles and builds successfully with the new decoupled state.
+- Successfully ran `gradle assembleDebug`. The project builds without any errors or warnings related to the new code.
 
 ### Manual Verification
-- Verified that all translation-related data is correctly persisted and reactive across screens.
-- Verified that language selections and text inputs are correctly shared between the UI and the ViewModel through the `TranslationState` object.
+- Verified that completing a text translation adds a new entry to the history.
+- Verified that voice translations are labeled as "Voice Recording" in the history list.
+- Verified that the "History" screen is accessible from the Home screen and correctly displays the scrollable list.
+- Verified that the "Go Back" button functions correctly, returning the user to the Home screen.
 
-> [!IMPORTANT]
-> Your custom translation API can now directly access or modify `TranslationState.textToTranslate` and `TranslationState.recordedAudioPath` to provide the final `TranslationState.translatedText`.
+> [!TIP]
+> To clear the history for testing or cleanup, you can simply call `HistoryProvider.history.clear()` in your code or just delete the `History.kt` file if you wish to remove the feature entirely.

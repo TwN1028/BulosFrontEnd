@@ -3,8 +3,8 @@ package com.example.bulosfrontend.ui.theme
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.*
-import androidx.compose.ui.unit.sp
 import com.example.bulosfrontend.R
+import com.example.bulosfrontend.Design
 
 val Aileron = FontFamily(
     Font(R.font.aileron_regular, FontWeight.Normal), Font(R.font.aileron_italic, FontWeight.Normal, FontStyle.Italic),
@@ -18,21 +18,22 @@ val Aileron = FontFamily(
 )
 
 val Typography = Typography(
-    bodyLarge = TextStyle(fontFamily = Aileron, fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 24.sp, letterSpacing = 0.5.sp),
-    titleLarge = TextStyle(fontFamily = Aileron, fontWeight = FontWeight.Normal, fontSize = 22.sp, lineHeight = 28.sp, letterSpacing = 0.sp),
-    labelSmall = TextStyle(
-        fontFamily = Aileron,
-        fontWeight = FontWeight.Medium,
-        fontSize = 11.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.5.sp,
-    ),
+    bodyLarge = TextStyle(fontFamily = Aileron, fontWeight = FontWeight.Normal, fontSize = Design.FontBodyLarge),
+    titleLarge = TextStyle(fontFamily = Aileron, fontWeight = FontWeight.Normal, fontSize = Design.FontTitleLarge),
+    labelSmall = TextStyle(fontFamily = Aileron, fontWeight = FontWeight.Medium, fontSize = Design.FontLabelSmall),
 ).run {
     copy(
-        displayLarge = displayLarge.copy(fontFamily = Aileron), displayMedium = displayMedium.copy(fontFamily = Aileron), displaySmall = displaySmall.copy(fontFamily = Aileron),
-        headlineLarge = headlineLarge.copy(fontFamily = Aileron), headlineMedium = headlineMedium.copy(fontFamily = Aileron), headlineSmall = headlineSmall.copy(fontFamily = Aileron),
-        titleMedium = titleMedium.copy(fontFamily = Aileron), titleSmall = titleSmall.copy(fontFamily = Aileron),
-        bodyMedium = bodyMedium.copy(fontFamily = Aileron), bodySmall = bodySmall.copy(fontFamily = Aileron),
-        labelLarge = labelLarge.copy(fontFamily = Aileron), labelMedium = labelMedium.copy(fontFamily = Aileron)
+        displayLarge = displayLarge.copy(fontFamily = Aileron, fontSize = Design.FontDisplayLarge),
+        displayMedium = displayMedium.copy(fontFamily = Aileron, fontSize = Design.FontDisplayMedium),
+        displaySmall = displaySmall.copy(fontFamily = Aileron, fontSize = Design.FontDisplaySmall),
+        headlineLarge = headlineLarge.copy(fontFamily = Aileron, fontSize = Design.FontHeadlineLarge),
+        headlineMedium = headlineMedium.copy(fontFamily = Aileron, fontSize = Design.FontHeadlineMedium),
+        headlineSmall = headlineSmall.copy(fontFamily = Aileron, fontSize = Design.FontHeadlineSmall),
+        titleMedium = titleMedium.copy(fontFamily = Aileron, fontSize = Design.FontTitleMedium),
+        titleSmall = titleSmall.copy(fontFamily = Aileron, fontSize = Design.FontTitleSmall),
+        bodyMedium = bodyMedium.copy(fontFamily = Aileron, fontSize = Design.FontBodyMedium),
+        bodySmall = bodySmall.copy(fontFamily = Aileron, fontSize = Design.FontBodySmall),
+        labelLarge = labelLarge.copy(fontFamily = Aileron, fontSize = Design.FontLabelLarge),
+        labelMedium = labelMedium.copy(fontFamily = Aileron, fontSize = Design.FontLabelMedium)
     )
 }

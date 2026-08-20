@@ -1,44 +1,44 @@
-# Implementation Plan: Translation History Feature (Decoupled)
+# Implementation Plan: Absolute Design Centralization
 
-This plan outlines the addition of a "Translation History" screen. To ensure easy cleanup and organization, the history storage and logic will be placed in a dedicated file.
+This plan outlines the final consolidation of all styling, sizing, and typography logic into the `Design.kt` file. This ensures that no UI-related constants remain scattered across the functional codebase.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> A new file `History.kt` will be created to manage the history list. `TranslationState` will remain the source of truth for the *active* translation, and entries will be pushed to the history file upon completion.
+> All typography SP values will be moved from `Type.kt` to `Design.kt`. `Type.kt` will then reference these constants.
+
+> [!NOTE]
+> Specific values like alpha transparency (`0.5f`) and specialized weights will also be centralized to ensure a perfectly uniform design language.
 
 ## Proposed Changes
 
-### Core State & Data Models
+### [MODIFY] [Design.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/Design.kt)
+- **Add Typography SP constants**:
+    - `FontDisplayLarge = 64.sp`, `FontDisplayMedium = 52.sp`, `FontDisplaySmall = 42.sp`
+    - `FontHeadlineLarge = 40.sp`, `FontHeadlineMedium = 34.sp`, `FontHeadlineSmall = 30.sp`
+    - `FontTitleLarge = 28.sp`, `FontTitleMedium = 22.sp`, `FontTitleSmall = 18.sp`
+    - `FontBodyLarge = 20.sp`, `FontBodyMedium = 18.sp`, `FontBodySmall = 16.sp`
+    - `FontLabelLarge = 18.sp`, `FontLabelMedium = 16.sp`, `FontLabelSmall = 14.sp`
+- **Add Opacity & Weights**:
+    - `AlphaSecondary = 0.5f`, `AlphaFooter = 0.7f`
+- **Add Specialized Sizes**:
+    - `IconSizeHistory = 12.dp`
 
-#### [NEW] [History.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/History.kt)
-- Define `HistoryItem` data class: `sourceLang`, `targetLang`, `inputText`, `translatedText`, `timestamp`.
-- Define `HistoryProvider` singleton object with a `mutableStateListOf<HistoryItem>`.
-- Add an `addEntry` function to push data from `TranslationState` to the history list.
+### [MODIFY] [ui/theme/Type.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/ui/theme/Type.kt)
+- Update the `Typography` object to use constants from `Design.kt` (e.g., `fontSize = Design.FontBodyLarge`).
 
-#### [MODIFY] [MainViewModel.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/MainViewModel.kt)
-- Update `translateText` and `stopRecording` to call `HistoryProvider.addEntry()` once the translation placeholder (or actual result) is set.
+### [MODIFY] [UIComponents.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/UIComponents.kt)
+- Replace hardcoded `0.7f` alpha in `StandardFooter` with `Design.AlphaFooter`.
 
-### UI & Navigation
-
-#### [MODIFY] [Dialogue.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/Dialogue.kt)
-- Add `historyHeaderRes` to `DialogueContent` to handle the title in different languages.
-
-#### [MODIFY] [Screens.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/Screens.kt)
-- [NEW] Create `HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit)` Composable.
-- Use a `LazyColumn` to render items from `HistoryProvider.history`.
-- Style items to match the app's Material 3 design (Cards with language labels).
-
-#### [MODIFY] [MainActivity.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/MainActivity.kt)
-- Add the `"history"` route to the `NavHost`.
+### [MODIFY] [Screens.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/Screens.kt)
+- Replace hardcoded `0.5f` alpha in `Card` colors with `Design.AlphaSecondary`.
+- Replace hardcoded `12.dp` in `HistoryCard` icon size with `Design.IconSizeHistory`.
+- Ensure all alignments and arrangements use `Design` helpers where possible.
 
 ## Verification Plan
 
 ### Automated Tests
-- Run `gradle build` to verify compilation.
+- Run `gradle assembleDebug` to ensure all cross-file references are resolved correctly.
 
 ### Manual Verification
-- Perform text and voice translations.
-- Navigate to the new "History" screen.
-- Verify the list accurately reflects the translations performed.
-- Test scrolling and navigation back to the home screen.
+- Verify that the app's visual appearance remains unchanged, but all design changes can now be controlled exclusively via `Design.kt`.

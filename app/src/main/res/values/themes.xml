@@ -8,4 +8,10 @@
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
         <item name="android:fontFamily">@font/aileron</item>
     </style>
+
+    <style name="Theme.BulosFrontEnd.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_forest_green</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_placeholder</item>
+        <item name="postSplashScreenTheme">@style/Theme.BulosFrontEnd</item>
+    </style>
 </resources>

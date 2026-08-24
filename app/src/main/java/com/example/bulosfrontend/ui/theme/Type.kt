@@ -18,21 +18,25 @@ val Aileron = FontFamily(
 )
 
 val Typography = Typography(
-    bodyLarge = TextStyle(fontFamily = Aileron, fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 24.sp, letterSpacing = 0.5.sp),
-    titleLarge = TextStyle(fontFamily = Aileron, fontWeight = FontWeight.Normal, fontSize = 22.sp, lineHeight = 28.sp, letterSpacing = 0.sp),
+    displayLarge = TextStyle(fontFamily = Aileron, fontWeight = FontWeight.Bold, fontSize = 40.sp, lineHeight = 46.sp, letterSpacing = (-0.3).sp),
+    displayMedium = TextStyle(fontFamily = Aileron, fontWeight = FontWeight.Bold, fontSize = 33.sp, lineHeight = 39.sp, letterSpacing = (-0.2).sp),
+    displaySmall = TextStyle(fontFamily = Aileron, fontWeight = FontWeight.Bold, fontSize = 28.sp, lineHeight = 34.sp, letterSpacing = (-0.1).sp),
+    headlineLarge = TextStyle(fontFamily = Aileron, fontWeight = FontWeight.Bold, fontSize = 25.sp, lineHeight = 31.sp, letterSpacing = (-0.1).sp),
+    headlineMedium = TextStyle(fontFamily = Aileron, fontWeight = FontWeight.Bold, fontSize = 21.sp, lineHeight = 27.sp, letterSpacing = 0.sp),
+    headlineSmall = TextStyle(fontFamily = Aileron, fontWeight = FontWeight.Bold, fontSize = 19.sp, lineHeight = 25.sp, letterSpacing = 0.sp),
+    titleLarge = TextStyle(fontFamily = Aileron, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, lineHeight = 22.sp, letterSpacing = 0.sp),
+    titleMedium = TextStyle(fontFamily = Aileron, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, lineHeight = 19.sp, letterSpacing = 0.sp),
+    titleSmall = TextStyle(fontFamily = Aileron, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.sp),
+    bodyLarge = TextStyle(fontFamily = Aileron, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.sp),
+    bodyMedium = TextStyle(fontFamily = Aileron, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 17.sp, letterSpacing = 0.sp),
+    bodySmall = TextStyle(fontFamily = Aileron, fontWeight = FontWeight.Normal, fontSize = 10.sp, lineHeight = 15.sp, letterSpacing = 0.sp),
+    labelLarge = TextStyle(fontFamily = Aileron, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.sp),
+    labelMedium = TextStyle(fontFamily = Aileron, fontWeight = FontWeight.SemiBold, fontSize = 10.sp, lineHeight = 14.sp, letterSpacing = 0.sp),
     labelSmall = TextStyle(
         fontFamily = Aileron,
         fontWeight = FontWeight.Medium,
-        fontSize = 11.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.5.sp,
+        fontSize = 9.sp,
+        lineHeight = 12.sp,
+        letterSpacing = 0.sp,
     ),
-).run {
-    copy(
-        displayLarge = displayLarge.copy(fontFamily = Aileron), displayMedium = displayMedium.copy(fontFamily = Aileron), displaySmall = displaySmall.copy(fontFamily = Aileron),
-        headlineLarge = headlineLarge.copy(fontFamily = Aileron), headlineMedium = headlineMedium.copy(fontFamily = Aileron), headlineSmall = headlineSmall.copy(fontFamily = Aileron),
-        titleMedium = titleMedium.copy(fontFamily = Aileron), titleSmall = titleSmall.copy(fontFamily = Aileron),
-        bodyMedium = bodyMedium.copy(fontFamily = Aileron), bodySmall = bodySmall.copy(fontFamily = Aileron),
-        labelLarge = labelLarge.copy(fontFamily = Aileron), labelMedium = labelMedium.copy(fontFamily = Aileron)
-    )
-}
+)

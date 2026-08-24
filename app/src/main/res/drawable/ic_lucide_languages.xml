@@ -1,0 +1,46 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!--
+        Translation / Swap icon — two curved arrows indicating language exchange.
+        Top arrow: left-to-right arc with arrowhead pointing right.
+        Bottom arrow: right-to-left arc with arrowhead pointing left.
+        Renders clearly at 24dp and communicates "translate" immediately.
+    -->
+
+    <!-- Top arrow body: arc sweeping left-to-right across upper half -->
+    <path
+        android:pathData="M3,8 C3,5.5 5.5,4 8,4 L18,4"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="@android:color/transparent"/>
+    <!-- Top arrow head pointing right -->
+    <path
+        android:pathData="M15,1 L18,4 L15,7"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="@android:color/transparent"/>
+
+    <!-- Bottom arrow body: arc sweeping right-to-left across lower half -->
+    <path
+        android:pathData="M21,16 C21,18.5 18.5,20 16,20 L6,20"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="@android:color/transparent"/>
+    <!-- Bottom arrow head pointing left -->
+    <path
+        android:pathData="M9,17 L6,20 L9,23"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="@android:color/transparent"/>
+</vector>

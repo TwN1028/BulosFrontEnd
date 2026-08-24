@@ -1,0 +1,27 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
+    <!-- Replace this vector with the final application mark when available. -->
+    <path
+        android:fillColor="#365F40"
+        android:pathData="M26,8H70C80,8 88,16 88,26V70C88,80 80,88 70,88H26C16,88 8,80 8,70V26C8,16 16,8 26,8Z" />
+    <path
+        android:fillAlpha="0.28"
+        android:fillColor="@color/splash_sage"
+        android:pathData="M48,8H70C80,8 88,16 88,26V70C88,80 80,88 70,88H48Z" />
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M35,27C30.6,27 27,30.6 27,35V47C27,51.4 30.6,55 35,55C39.4,55 43,51.4 43,47V35C43,30.6 39.4,27 35,27ZM31,35C31,32.8 32.8,31 35,31C37.2,31 39,32.8 39,35V47C39,49.2 37.2,51 35,51C32.8,51 31,49.2 31,47Z" />
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M23,45H27V48C27,53.5 30.6,58.2 35,58.2C39.4,58.2 43,53.5 43,48V45H47V48C47,55 42.7,60.8 37,62V68H33V62C27.3,60.8 23,55 23,48Z" />
+    <path
+        android:fillColor="@color/splash_gold"
+        android:fillType="evenOdd"
+        android:pathData="M66,34A14,14 0,1 0,66 62A14,14 0,1 0,66 34M66,38A10,10 0,1 1,66 58A10,10 0,1 1,66 38" />
+    <path
+        android:fillColor="@color/splash_gold"
+        android:pathData="M64,36H68V60H64ZM54,46H78V50H54Z" />
+</vector>

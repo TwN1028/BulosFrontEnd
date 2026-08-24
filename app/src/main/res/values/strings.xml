@@ -116,4 +116,69 @@
     <string name="back_to_home">Back to Home</string>
     <string name="lang_header_format">%1$s to %2$s</string>
 
+    <!-- Redesigned home screen -->
+    <string name="feature_speech_title">Speech Translation</string>
+    <string name="feature_speech_subtitle">Speak &amp; translate</string>
+    <string name="feature_text_title">Text Translation</string>
+    <string name="feature_text_subtitle">Type &amp; translate</string>
+    <string name="feature_dictionary_title">Dictionary</string>
+    <string name="feature_dictionary_subtitle">Browse words</string>
+    <string name="feature_history_title">Saved History</string>
+    <string name="feature_history_subtitle">Past translations</string>
+    <string name="recent_translations">Recent Translations</string>
+    <string name="see_all">See all</string>
+    <string name="no_recent_translations">Your recent translations will appear here.</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_translate">Translate</string>
+    <string name="nav_speech">Speech</string>
+    <string name="nav_dictionary">Dictionary</string>
+    <string name="nav_more">More</string>
+    <string name="placeholder_dictionary">Dictionary is coming soon.</string>
+    <string name="placeholder_more">More features are coming soon.</string>
+    <string name="placeholder_screen_description">This feature is not available yet.</string>
+    <string name="direction_format">%1$s → %2$s</string>
+    <string name="language_option_english">I would like to use the English language.</string>
+    <string name="language_option_filipino">Nais kong gamitin ang wikang Filipino.</string>
+    <string name="language_option_bulos">Nais kong gamitin ang wikang Bulos.</string>
+    <string name="language_name_english">English</string>
+    <string name="language_name_filipino">Filipino</string>
+    <string name="language_name_bulos">Bulos</string>
+    <string name="splash_logo_content_description">Microphone and language app logo</string>
+
+    <!-- Redesigned home screen: Filipino -->
+    <string name="feature_speech_title_fil">Pagsasalin gamit ang Boses</string>
+    <string name="feature_speech_subtitle_fil">Magsalita at magsalin</string>
+    <string name="feature_text_title_fil">Pagsasalin ng Teksto</string>
+    <string name="feature_text_subtitle_fil">Mag-type at magsalin</string>
+    <string name="feature_dictionary_title_fil">Diksyunaryo</string>
+    <string name="feature_dictionary_subtitle_fil">Maghanap ng mga salita</string>
+    <string name="feature_history_title_fil">Nakaraang Salin</string>
+    <string name="feature_history_subtitle_fil">Mga dating pagsasalin</string>
+    <string name="recent_translations_fil">Mga Kamakailang Salin</string>
+    <string name="see_all_fil">Tingnan lahat</string>
+    <string name="no_recent_translations_fil">Dito makikita ang iyong mga kamakailang salin.</string>
+    <string name="nav_home_fil">Home</string>
+    <string name="nav_translate_fil">Magsalin</string>
+    <string name="nav_speech_fil">Boses</string>
+    <string name="nav_dictionary_fil">Diksyunaryo</string>
+    <string name="nav_more_fil">Iba pa</string>
+
+    <!-- Redesigned home screen: Bulos (matching the checkpoint's current Bulos dialogue) -->
+    <string name="feature_speech_title_bul">Pagsasalin gamit ang Boses</string>
+    <string name="feature_speech_subtitle_bul">Magsalita at magsalin</string>
+    <string name="feature_text_title_bul">Pagsasalin ng Teksto</string>
+    <string name="feature_text_subtitle_bul">Mag-type at magsalin</string>
+    <string name="feature_dictionary_title_bul">Diksyunaryo</string>
+    <string name="feature_dictionary_subtitle_bul">Maghanap ng mga salita</string>
+    <string name="feature_history_title_bul">Nakaraang Salin</string>
+    <string name="feature_history_subtitle_bul">Mga dating pagsasalin</string>
+    <string name="recent_translations_bul">Mga Kamakailang Salin</string>
+    <string name="see_all_bul">Tingnan lahat</string>
+    <string name="no_recent_translations_bul">Dito makikita ang iyong mga kamakailang salin.</string>
+    <string name="nav_home_bul">Home</string>
+    <string name="nav_translate_bul">Magsalin</string>
+    <string name="nav_speech_bul">Boses</string>
+    <string name="nav_dictionary_bul">Diksyunaryo</string>
+    <string name="nav_more_bul">Iba pa</string>
+
 </resources>

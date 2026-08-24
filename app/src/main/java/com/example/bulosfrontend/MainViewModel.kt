@@ -12,9 +12,14 @@ import java.io.File
 import kotlin.time.Duration.Companion.seconds
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
-    // UI Language State
-    var dialogueKey by mutableStateOf("english")
-    val content get() = DialogueProvider.getDialogue(dialogueKey)
+    private val languagePreferences = LanguagePreferenceRepository(application)
+
+    var selectedUiLanguage by mutableStateOf<UiLanguage?>(null)
+        private set
+    var isLanguagePreferenceLoaded by mutableStateOf(false)
+        private set
+    val uiLanguage: UiLanguage get() = selectedUiLanguage ?: UiLanguage.ENGLISH
+    val content: DialogueContent get() = DialogueProvider.getDialogue(uiLanguage)
 
     // Recording State
     var isRecording by mutableStateOf(false)
@@ -22,8 +27,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var recorder: MediaRecorder? = null
     private var audioFile: File? = null
 
-    fun updateLanguage(key: String) {
-        dialogueKey = key
+    init {
+        viewModelScope.launch {
+            languagePreferences.selectedLanguage.collect { language ->
+                selectedUiLanguage = language
+                isLanguagePreferenceLoaded = true
+            }
+        }
+    }
+
+    fun selectUiLanguage(language: UiLanguage) {
+        selectedUiLanguage = language
+        viewModelScope.launch { languagePreferences.saveLanguage(language) }
     }
 
     fun translateText(text: String) {
@@ -31,6 +46,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Placeholder for actual translation logic
         TranslationState.translatedText = text
         saveToHistory()
+    }
+
+    fun translateVoiceText(text: String) {
+        TranslationState.textToTranslate = text
+        // Placeholder for the existing translation integration. No speech text is fabricated.
+        TranslationState.translatedText = text
+        saveToHistory()
+    }
+
+    fun clearVoiceDraft() {
+        TranslationState.textToTranslate = ""
+        TranslationState.translatedText = ""
+        TranslationState.recordedAudioPath = null
     }
 
     private fun saveToHistory() {
@@ -64,6 +92,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun currentRecordingAmplitude(): Int {
+        if (!isRecording) return 0
+        return try {
+            recorder?.maxAmplitude ?: 0
+        } catch (_: IllegalStateException) {
+            0
+        } catch (_: RuntimeException) {
+            0
+        }
+    }
+
     private fun startTimer() {
         viewModelScope.launch {
             recordingTime = 0L
@@ -87,9 +126,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             recorder = null
             isRecording = false
             TranslationState.recordedAudioPath = audioFile?.absolutePath
-            TranslationState.translatedText = "Voice translation placeholder"
-            TranslationState.textToTranslate = "Voice Recording" // Label for history
-            saveToHistory()
         }
     }
 

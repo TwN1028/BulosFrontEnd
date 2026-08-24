@@ -18,13 +18,17 @@ import com.example.bulosfrontend.ui.theme.Aileron
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SharedTopAppBar(title: String) = TopAppBar(
+fun SharedTopAppBar(
+    title: String,
+    @androidx.annotation.StringRes logoDescriptionRes: Int = R.string.app_logo_content_description,
+    @androidx.annotation.DrawableRes iconRes: Int? = null,
+) = TopAppBar(
     title = { Text(title) },
     navigationIcon = {
         Icon(
-            painterResource(R.drawable.ic_launcher_foreground),
-            stringResource(R.string.app_logo_content_description),
-            Modifier.size(48.dp).padding(8.dp),
+            painter = painterResource(iconRes ?: R.drawable.ic_launcher_foreground),
+            contentDescription = stringResource(logoDescriptionRes),
+            modifier = if (iconRes != null) Modifier.size(48.dp).padding(12.dp) else Modifier.size(48.dp).padding(8.dp),
         )
     },
 )

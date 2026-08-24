@@ -19,7 +19,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.BulosFrontEnd"
+            android:theme="@style/Theme.BulosFrontEnd.Starting"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

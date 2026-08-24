@@ -68,6 +68,9 @@
     <string name="cancel_btn_eng">Cancel</string>
     <string name="copied_msg_eng">Text copied to clipboard!</string>
     <string name="go_back_eng">Go Back</string>
+    <string name="confirm_voice_eng">Confirm Text and Translate</string>
+    <string name="stop_btn_eng">Finish Recording</string>
+    <string name="review_label_eng">Review Transcription</string>
 
     <!-- filipino dialogue -->
     <string name="choose_lang_fil">Nais kong gamitin ang wikang Filipino</string>
@@ -88,9 +91,12 @@
     <string name="cancel_btn_fil">Kanselahin</string>
     <string name="copied_msg_fil">Napiya ang teksto!</string>
     <string name="go_back_fil">Bumalik</string>
+    <string name="confirm_voice_fil">Kumpirmahin ang Teksto at Isalin</string>
+    <string name="stop_btn_fil">Tapusin ang Pag-record</string>
+    <string name="review_label_fil">Suriin ang Teksto</string>
 
     <!-- bulos dialogue -->
-    <string name="choose_lang_bul">Nais kong gamitin ang wikang Filipino</string>
+    <string name="choose_lang_bul">Nais kong gamitin ang wikang Bulos</string>
     <string name="header_main_bul">Bulos Translator</string>
     <string name="header_translate_bul">Pagsalin ng Salita</string>
     <string name="header_voice_bul">Pagsalin ng Boses</string>
@@ -108,6 +114,9 @@
     <string name="cancel_btn_bul">Kanselahin</string>
     <string name="copied_msg_bul">Napiya ang teksto!</string>
     <string name="go_back_bul">Bumalik</string>
+    <string name="confirm_voice_bul">Kumpirmahin ang Teksto at Isalin</string>
+    <string name="stop_btn_bul">Tapusin ang Pag-record</string>
+    <string name="review_label_bul">Suriin ang Teksto</string>
 
     <!-- language labels -->
     <string name="lang_label_eng">English</string>

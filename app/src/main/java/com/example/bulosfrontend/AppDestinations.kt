@@ -1,7 +1,6 @@
 package com.example.bulosfrontend
 
 object AppDestinations {
-    const val SPLASH = "splash"
     const val LANGUAGE_SELECTION = "language_selection"
     const val HOME = "home"
     const val TEXT = "text"

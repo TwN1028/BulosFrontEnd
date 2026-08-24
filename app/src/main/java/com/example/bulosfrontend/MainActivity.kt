@@ -8,6 +8,11 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -17,6 +22,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.example.bulosfrontend.ui.theme.BulosFrontEndTheme
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
@@ -27,7 +33,13 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             BulosFrontEndTheme {
-                if (!viewModel.isLanguagePreferenceLoaded) {
+                var minimumSplashDurationElapsed by remember { mutableStateOf(false) }
+                LaunchedEffect(Unit) {
+                    delay(1_800L)
+                    minimumSplashDurationElapsed = true
+                }
+
+                if (!viewModel.isLanguagePreferenceLoaded || !minimumSplashDurationElapsed) {
                     BrandedSplashScreen()
                     return@BulosFrontEndTheme
                 }

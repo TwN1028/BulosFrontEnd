@@ -107,6 +107,7 @@ import kotlin.math.pow
 
 @Composable
 fun TranslateVoiceScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBack: () -> Unit) {
+    val contentHorizontalPadding = 20.dp
     val content = viewModel.content
     val labels = content.speechResult
     val context = LocalContext.current
@@ -127,108 +128,167 @@ fun TranslateVoiceScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBa
 
     Surface(Modifier.fillMaxSize(), color = Cream) {
         Column(Modifier.fillMaxSize()) {
-            FeaturePatternHeader(
+            SpeechRecognitionHeader(
                 title = stringResource(content.voiceHeaderRes),
                 subtitle = stringResource(labels.speechSubtitleRes),
                 onBack = onBack,
-                patterned = true,
-                iconRes = R.drawable.ic_lucide_mic,
             )
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-                    .imePadding()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                TranslationLanguageBar(stringResource(labels.swapLanguagesDescriptionRes))
-                Spacer(Modifier.height(22.dp))
-                VoiceMicrophone(
-                    isRecording = viewModel.isRecording,
-                    hasRecording = hasRecording,
-                    timerSeconds = viewModel.recordingTime,
-                    status = stringResource(
-                        when {
-                            viewModel.isRecording -> labels.listeningStatusRes
-                            hasRecording -> labels.reviewStatusRes
-                            else -> labels.idleStatusRes
+            BoxWithConstraints(Modifier.weight(1f)) {
+                val useScrollingLayout = maxHeight < 720.dp
+                val scrollState = rememberScrollState()
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(if (useScrollingLayout) Modifier.verticalScroll(scrollState) else Modifier)
+                        .imePadding(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Spacer(Modifier.height(24.dp))
+                    TranslationLanguageBar(
+                        swapLanguagesDescription = stringResource(labels.swapLanguagesDescriptionRes),
+                        modifier = Modifier.padding(horizontal = contentHorizontalPadding),
+                    )
+                    Spacer(Modifier.height(30.dp))
+                    VoiceMicrophone(
+                        isRecording = viewModel.isRecording,
+                        hasRecording = hasRecording,
+                        timerSeconds = viewModel.recordingTime,
+                        status = stringResource(
+                            when {
+                                viewModel.isRecording -> labels.listeningStatusRes
+                                hasRecording -> labels.reviewStatusRes
+                                else -> labels.idleStatusRes
+                            },
+                        ),
+                        description = stringResource(labels.microphoneDescriptionRes),
+                        amplitudeProvider = viewModel::currentRecordingAmplitude,
+                        onClick = {
+                            if (viewModel.isRecording) {
+                                viewModel.stopRecording()
+                                isEditing = true
+                            } else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                                startRecording()
+                            } else {
+                                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                            }
                         },
-                    ),
-                    description = stringResource(labels.microphoneDescriptionRes),
-                    amplitudeProvider = viewModel::currentRecordingAmplitude,
-                    onClick = {
-                        if (viewModel.isRecording) {
-                            viewModel.stopRecording()
-                            isEditing = true
-                        } else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-                            startRecording()
-                        } else {
-                            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    )
+                    if (viewModel.isRecording) {
+                        Spacer(Modifier.height(14.dp))
+                        TextButton(onClick = { viewModel.cancelRecording() }) {
+                            Text(stringResource(content.cancelBtnRes), color = WarmBrown)
                         }
-                    },
-                )
-                if (viewModel.isRecording) {
-                    Spacer(Modifier.height(4.dp))
-                    TextButton(onClick = { viewModel.cancelRecording() }) {
-                        Text(stringResource(content.cancelBtnRes), color = WarmBrown)
+                        Spacer(Modifier.height(24.dp))
+                    } else {
+                        Spacer(Modifier.height(28.dp))
                     }
-                    Spacer(Modifier.height(14.dp))
-                } else {
-                    Spacer(Modifier.height(18.dp))
-                }
-                RecognizedTextCard(
-                    label = stringResource(labels.recognizedTextLabelRes, TranslationState.sourceLanguage),
-                    value = recognizedText,
-                    placeholder = stringResource(labels.recognizedTextPlaceholderRes),
-                    isEditing = isEditing,
-                    showEditControl = hasRecording && recognizedText.isNotBlank(),
-                    editLabel = stringResource(if (isEditing) labels.doneEditingRes else labels.editRes),
-                    isTranscribing = viewModel.isRecording,
-                    transcribingText = stringResource(labels.transcribingRes),
-                    onEditToggle = { isEditing = !isEditing },
-                    onValueChange = { recognizedText = it },
-                )
-                Spacer(Modifier.height(16.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Button(
-                        onClick = {
-                            viewModel.translateVoiceText(recognizedText.trim())
-                            onTranslate()
-                        },
-                        enabled = recognizedText.isNotBlank() && !viewModel.isRecording,
-                        modifier = Modifier.weight(1f).height(48.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = ForestGreen,
-                            contentColor = WarmWhite,
-                            disabledContainerColor = Sand,
-                            disabledContentColor = WarmBrown.copy(alpha = 0.72f),
-                        ),
+                    RecognizedTextCard(
+                        label = stringResource(labels.recognizedTextLabelRes, TranslationState.sourceLanguage),
+                        value = recognizedText,
+                        placeholder = stringResource(labels.recognizedTextPlaceholderRes),
+                        isEditing = isEditing,
+                        showEditControl = hasRecording && recognizedText.isNotBlank(),
+                        editLabel = stringResource(if (isEditing) labels.doneEditingRes else labels.editRes),
+                        isTranscribing = viewModel.isRecording,
+                        transcribingText = stringResource(labels.transcribingRes),
+                        onEditToggle = { isEditing = !isEditing },
+                        onValueChange = { recognizedText = it },
+                        modifier = Modifier.padding(horizontal = contentHorizontalPadding),
+                    )
+                    Spacer(Modifier.height(24.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = contentHorizontalPadding),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        Text(stringResource(labels.translateRes), fontWeight = FontWeight.Bold)
+                        Button(
+                            onClick = {
+                                viewModel.translateVoiceText(recognizedText.trim())
+                                onTranslate()
+                            },
+                            enabled = recognizedText.isNotBlank() && !viewModel.isRecording,
+                            modifier = Modifier.weight(1f).height(70.dp),
+                            shape = RoundedCornerShape(24.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = ForestGreen,
+                                contentColor = WarmWhite,
+                                disabledContainerColor = Sand,
+                                disabledContentColor = WarmBrown.copy(alpha = 0.72f),
+                            ),
+                        ) {
+                            Text(stringResource(labels.translateRes), fontWeight = FontWeight.Bold)
+                        }
+                        Button(
+                            onClick = {
+                                recognizedText = ""
+                                isEditing = true
+                                viewModel.clearVoiceDraft()
+                            },
+                            enabled = !viewModel.isRecording,
+                            modifier = Modifier.weight(1f).height(70.dp),
+                            shape = RoundedCornerShape(24.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Sand,
+                                contentColor = WarmBrown,
+                                disabledContainerColor = Sand,
+                                disabledContentColor = WarmBrown.copy(alpha = 0.6f),
+                            ),
+                            elevation = ButtonDefaults.buttonElevation(0.dp),
+                        ) {
+                            Text(stringResource(labels.clearRes), fontWeight = FontWeight.SemiBold)
+                        }
                     }
-                    Button(
-                        onClick = {
-                            recognizedText = ""
-                            isEditing = true
-                            viewModel.clearVoiceDraft()
-                        },
-                        enabled = !viewModel.isRecording,
-                        modifier = Modifier.weight(1f).height(48.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Sand,
-                            contentColor = WarmBrown,
-                            disabledContainerColor = Sand,
-                            disabledContentColor = WarmBrown.copy(alpha = 0.6f),
-                        ),
-                        elevation = ButtonDefaults.buttonElevation(0.dp),
-                    ) {
-                        Text(stringResource(labels.clearRes), fontWeight = FontWeight.SemiBold)
+                    if (useScrollingLayout) {
+                        Spacer(Modifier.height(24.dp))
+                    } else {
+                        Spacer(Modifier.weight(1f))
                     }
                 }
-                Spacer(Modifier.navigationBarsPadding().height(8.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun SpeechRecognitionHeader(title: String, subtitle: String, onBack: () -> Unit) {
+    Box(Modifier.fillMaxWidth().background(PrimaryGreen).clipToBounds()) {
+        GeometricGreenBackground(
+            modifier = Modifier.matchParentSize(),
+            cellSize = 52.dp,
+            patternAlpha = 0.18f,
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = WarmWhite)
+            }
+            Spacer(Modifier.width(8.dp))
+            Icon(
+                painter = painterResource(R.drawable.ic_lucide_mic),
+                contentDescription = null,
+                tint = WarmWhite.copy(alpha = 0.72f),
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    color = WarmWhite,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.height(5.dp))
+                Text(
+                    text = subtitle,
+                    color = SoftGreen.copy(alpha = 0.78f),
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Clip,
+                )
             }
         }
     }
@@ -367,16 +427,16 @@ fun FeaturePatternHeader(
 }
 
 @Composable
-fun TranslationLanguageBar(swapLanguagesDescription: String) {
+fun TranslationLanguageBar(swapLanguagesDescription: String, modifier: Modifier = Modifier) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        modifier = modifier.fillMaxWidth().height(68.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = WarmWhite),
-        border = BorderStroke(1.dp, HomeCardBorder),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = BorderStroke(1.dp, HomeCardBorder.copy(alpha = 0.72f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 9.dp),
+            modifier = Modifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             CompactLanguageMenu(
@@ -384,26 +444,24 @@ fun TranslationLanguageBar(swapLanguagesDescription: String) {
                 onSelected = { TranslationState.sourceLanguage = it },
                 modifier = Modifier.weight(1f),
             )
-            VerticalDivider(
-                modifier = Modifier.height(38.dp),
-                thickness = 1.dp,
-                color = HomeCardBorder.copy(alpha = 0.8f),
-            )
-            IconButton(
-                onClick = {
-                    val source = TranslationState.sourceLanguage
-                    TranslationState.sourceLanguage = TranslationState.targetLanguage
-                    TranslationState.targetLanguage = source
-                },
-                modifier = Modifier.size(42.dp),
+            Row(
+                modifier = Modifier.width(60.dp).height(44.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
             ) {
-                Icon(Icons.Default.SwapHoriz, swapLanguagesDescription, tint = WarmBrown)
+                VerticalDivider(thickness = 1.dp, color = HomeCardBorder.copy(alpha = 0.72f))
+                IconButton(
+                    onClick = {
+                        val source = TranslationState.sourceLanguage
+                        TranslationState.sourceLanguage = TranslationState.targetLanguage
+                        TranslationState.targetLanguage = source
+                    },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(Icons.Default.SwapHoriz, swapLanguagesDescription, tint = WarmBrown)
+                }
+                VerticalDivider(thickness = 1.dp, color = HomeCardBorder.copy(alpha = 0.72f))
             }
-            VerticalDivider(
-                modifier = Modifier.height(38.dp),
-                thickness = 1.dp,
-                color = HomeCardBorder.copy(alpha = 0.8f),
-            )
             CompactLanguageMenu(
                 selected = TranslationState.targetLanguage,
                 onSelected = { TranslationState.targetLanguage = it },
@@ -591,15 +649,16 @@ private fun RecognizedTextCard(
     transcribingText: String,
     onEditToggle: () -> Unit,
     onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        modifier = modifier.fillMaxWidth().heightIn(min = 106.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = WarmWhite),
-        border = BorderStroke(1.dp, HomeCardBorder),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = BorderStroke(1.dp, HomeCardBorder.copy(alpha = 0.72f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
     ) {
-        Column(Modifier.padding(16.dp)) {
+        Column(Modifier.padding(horizontal = 20.dp, vertical = 18.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(label, modifier = Modifier.weight(1f), color = WarmBrown, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                 if (showEditControl) {
@@ -610,7 +669,7 @@ private fun RecognizedTextCard(
                     }
                 }
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(14.dp))
             if (isTranscribing) {
                 val dotTransition = rememberInfiniteTransition(label = "transcribingDots")
                 Row(
@@ -642,7 +701,7 @@ private fun RecognizedTextCard(
                 OutlinedTextField(
                     value = value,
                     onValueChange = onValueChange,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 108.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
                     enabled = isEditing,
                     placeholder = { Text(placeholder, color = WarmBrown.copy(alpha = 0.58f)) },
                     shape = RoundedCornerShape(14.dp),

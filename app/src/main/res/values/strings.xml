@@ -143,7 +143,10 @@
     <string name="language_name_english">English</string>
     <string name="language_name_filipino">Filipino</string>
     <string name="language_name_bulos">Bulos</string>
-    <string name="splash_logo_content_description">Microphone and language app logo</string>
+    <string name="splash_logo_content_description">Bulos Translator app icon</string>
+    <string name="splash_title">Dumagat Speech\nTranslator</string>
+    <string name="splash_subtitle">Preserving Indigenous Language\nThrough Technology</string>
+    <string name="splash_initiative">Bulos Language Preservation Initiative</string>
 
     <!-- Redesigned home screen: Filipino -->
     <string name="feature_speech_title_fil">Pagsasalin gamit ang Boses</string>

@@ -1,7 +1,12 @@
 <resources>
     <style name="Theme.BulosFrontEnd.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/splash_forest_green</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_placeholder</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_system_splash_transparent</item>
         <item name="postSplashScreenTheme">@style/Theme.BulosFrontEnd</item>
+        <item name="android:statusBarColor">@color/splash_forest_green</item>
+        <item name="android:navigationBarColor">@color/splash_forest_green</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:enforceNavigationBarContrast">false</item>
     </style>
 </resources>

@@ -18,13 +18,15 @@ fun GeometricGreenBackground(
     modifier: Modifier = Modifier,
     cellSize: Dp = 52.dp,
     patternAlpha: Float = 0.1f,
+    backgroundColor: Color = PrimaryGreen,
+    patternColor: Color = PatternGreen,
 ) {
     val tileSize = with(LocalDensity.current) { cellSize.toPx() }
     Canvas(modifier = modifier) {
-        drawRect(PrimaryGreen)
+        drawRect(backgroundColor)
 
         val scale = tileSize / FIGMA_TILE_SIZE
-        val patternColor = PatternGreen.copy(alpha = patternAlpha.coerceIn(0f, 1f))
+        val resolvedPatternColor = patternColor.copy(alpha = patternAlpha.coerceIn(0f, 1f))
         var tileTop = -tileSize
         while (tileTop < size.height + tileSize) {
             var tileLeft = -tileSize
@@ -32,7 +34,7 @@ fun GeometricGreenBackground(
                 drawFigmaPatternTile(
                     origin = Offset(tileLeft, tileTop),
                     scale = scale,
-                    color = patternColor,
+                    color = resolvedPatternColor,
                 )
                 tileLeft += tileSize
             }

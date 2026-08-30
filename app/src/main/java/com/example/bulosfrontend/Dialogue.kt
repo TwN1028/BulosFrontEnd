@@ -26,6 +26,23 @@ data class DialogueContent(
     val home: HomeDialogueContent,
     val speechResult: SpeechResultDialogueContent,
     val textTranslation: TextTranslationDialogueContent,
+    val preservationIntro: PreservationIntroDialogueContent,
+)
+
+data class PreservationIntroDialogueContent(
+    @StringRes val titleRes: Int,
+    @StringRes val supportRes: Int,
+    @StringRes val firstParagraphRes: Int,
+    @StringRes val secondParagraphRes: Int,
+    @StringRes val thirdParagraphRes: Int,
+    @StringRes val finalMessageRes: Int,
+    @StringRes val continueRes: Int,
+    @StringRes val iconDescriptionRes: Int,
+    @StringRes val indigenousLanguageRes: Int,
+    @StringRes val preservationRes: Int,
+    @StringRes val digitalAccessRes: Int,
+    @StringRes val finalLeadRes: Int,
+    @StringRes val finalDetailRes: Int,
 )
 
 data class TextTranslationDialogueContent(
@@ -73,6 +90,10 @@ data class HomeDialogueContent(
     @StringRes val homeBadgeRes: Int, @StringRes val settingsSubtitleRes: Int,
     @StringRes val supportedLanguagesRes: Int, @StringRes val supportedLanguagesDescriptionRes: Int,
     @StringRes val recentDynamicTitleRes: Int, @StringRes val viewHistoryRes: Int,
+    @StringRes val dictionarySearchRes: Int, @StringRes val dictionarySearchDescriptionRes: Int,
+    @StringRes val dictionaryEmptyRes: Int, @StringRes val dictionaryNoResultsRes: Int,
+    @StringRes val appearanceRes: Int, @StringRes val themeRes: Int,
+    @StringRes val lightThemeRes: Int, @StringRes val darkThemeRes: Int,
 )
 
 object DialogueProvider {
@@ -88,6 +109,7 @@ object DialogueProvider {
             home("eng"),
             speechResult("eng"),
             textTranslation("eng"),
+            preservationIntro("eng"),
         ),
         UiLanguage.FILIPINO to DialogueContent(
             R.string.ui_header_main_fil, R.string.ui_header_translate_fil, R.string.ui_header_result_fil,
@@ -100,6 +122,7 @@ object DialogueProvider {
             home("fil"),
             speechResult("fil"),
             textTranslation("fil"),
+            preservationIntro("fil"),
         ),
         UiLanguage.BULOS to DialogueContent(
             R.string.ui_header_main_bul, R.string.ui_header_translate_bul, R.string.ui_header_result_bul,
@@ -112,10 +135,59 @@ object DialogueProvider {
             home("bul"),
             speechResult("bul"),
             textTranslation("bul"),
+            preservationIntro("bul"),
         ),
     )
 
     fun getDialogue(language: UiLanguage): DialogueContent = dialogues.getValue(language)
+
+    private fun preservationIntro(suffix: String): PreservationIntroDialogueContent = when (suffix) {
+        "fil" -> PreservationIntroDialogueContent(
+            R.string.ui_preservation_title_fil,
+            R.string.ui_preservation_support_fil,
+            R.string.ui_preservation_paragraph_one_fil,
+            R.string.ui_preservation_paragraph_two_fil,
+            R.string.ui_preservation_paragraph_three_fil,
+            R.string.ui_preservation_final_message_fil,
+            R.string.ui_preservation_continue_fil,
+            R.string.ui_preservation_icon_description_fil,
+            R.string.ui_preservation_indigenous_language_fil,
+            R.string.ui_preservation_concept_fil,
+            R.string.ui_preservation_digital_access_fil,
+            R.string.ui_preservation_final_lead_fil,
+            R.string.ui_preservation_final_detail_fil,
+        )
+        "bul" -> PreservationIntroDialogueContent(
+            R.string.ui_preservation_title_bul,
+            R.string.ui_preservation_support_bul,
+            R.string.ui_preservation_paragraph_one_bul,
+            R.string.ui_preservation_paragraph_two_bul,
+            R.string.ui_preservation_paragraph_three_bul,
+            R.string.ui_preservation_final_message_bul,
+            R.string.ui_preservation_continue_bul,
+            R.string.ui_preservation_icon_description_bul,
+            R.string.ui_preservation_indigenous_language_bul,
+            R.string.ui_preservation_concept_bul,
+            R.string.ui_preservation_digital_access_bul,
+            R.string.ui_preservation_final_lead_bul,
+            R.string.ui_preservation_final_detail_bul,
+        )
+        else -> PreservationIntroDialogueContent(
+            R.string.ui_preservation_title_eng,
+            R.string.ui_preservation_support_eng,
+            R.string.ui_preservation_paragraph_one_eng,
+            R.string.ui_preservation_paragraph_two_eng,
+            R.string.ui_preservation_paragraph_three_eng,
+            R.string.ui_preservation_final_message_eng,
+            R.string.ui_preservation_continue_eng,
+            R.string.ui_preservation_icon_description_eng,
+            R.string.ui_preservation_indigenous_language_eng,
+            R.string.ui_preservation_concept_eng,
+            R.string.ui_preservation_digital_access_eng,
+            R.string.ui_preservation_final_lead_eng,
+            R.string.ui_preservation_final_detail_eng,
+        )
+    }
 
     private fun textTranslation(suffix: String): TextTranslationDialogueContent = when (suffix) {
         "fil" -> TextTranslationDialogueContent(
@@ -185,6 +257,10 @@ object DialogueProvider {
             R.string.ui_home_badge_fil, R.string.ui_settings_subtitle_fil,
             R.string.ui_supported_languages_fil, R.string.ui_supported_languages_description_fil,
             R.string.ui_recent_dynamic_title_fil, R.string.ui_view_history_fil,
+            R.string.ui_dictionary_search_fil, R.string.ui_dictionary_search_description_fil,
+            R.string.ui_dictionary_empty_fil, R.string.ui_dictionary_no_results_fil,
+            R.string.ui_appearance_fil, R.string.ui_theme_fil,
+            R.string.ui_theme_light_fil, R.string.ui_theme_dark_fil,
         )
         "bul" -> HomeDialogueContent(
             R.string.ui_selection_title_bul,
@@ -202,6 +278,10 @@ object DialogueProvider {
             R.string.ui_home_badge_bul, R.string.ui_settings_subtitle_bul,
             R.string.ui_supported_languages_bul, R.string.ui_supported_languages_description_bul,
             R.string.ui_recent_dynamic_title_bul, R.string.ui_view_history_bul,
+            R.string.ui_dictionary_search_bul, R.string.ui_dictionary_search_description_bul,
+            R.string.ui_dictionary_empty_bul, R.string.ui_dictionary_no_results_bul,
+            R.string.ui_appearance_bul, R.string.ui_theme_bul,
+            R.string.ui_theme_light_bul, R.string.ui_theme_dark_bul,
         )
         else -> HomeDialogueContent(
             R.string.ui_selection_title_eng,
@@ -219,6 +299,10 @@ object DialogueProvider {
             R.string.ui_home_badge_eng, R.string.ui_settings_subtitle_eng,
             R.string.ui_supported_languages_eng, R.string.ui_supported_languages_description_eng,
             R.string.ui_recent_dynamic_title_eng, R.string.ui_view_history_eng,
+            R.string.ui_dictionary_search_eng, R.string.ui_dictionary_search_description_eng,
+            R.string.ui_dictionary_empty_eng, R.string.ui_dictionary_no_results_eng,
+            R.string.ui_appearance_eng, R.string.ui_theme_eng,
+            R.string.ui_theme_light_eng, R.string.ui_theme_dark_eng,
         )
     }
 }

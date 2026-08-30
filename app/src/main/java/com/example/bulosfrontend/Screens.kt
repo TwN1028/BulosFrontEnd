@@ -29,7 +29,7 @@ fun TranslateTextScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBac
     val content = viewModel.content
     val labels = content.textTranslation
 
-    Surface(Modifier.fillMaxSize(), color = Cream) {
+    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(Modifier.fillMaxSize()) {
             FeaturePatternHeader(
                 title = stringResource(content.translateHeaderRes),
@@ -50,14 +50,14 @@ fun TranslateTextScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBac
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = WarmWhite),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, HomeCardBorder),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 ) {
                     Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) {
                         Text(
                             TranslationState.sourceLanguage.uppercase(Locale.getDefault()),
-                            color = WarmBrown,
+                            color = MaterialTheme.colorScheme.secondary,
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                         )
@@ -66,7 +66,7 @@ fun TranslateTextScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBac
                             value = text,
                             onValueChange = { if (it.length <= 100) text = it },
                             modifier = Modifier.fillMaxWidth().heightIn(min = 126.dp),
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(color = DeepForestGreen),
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Text,
                                 imeAction = ImeAction.Default,
@@ -76,7 +76,7 @@ fun TranslateTextScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBac
                                     if (text.isEmpty()) {
                                         Text(
                                             stringResource(labels.inputPlaceholderRes, TranslationState.sourceLanguage),
-                                            color = WarmBrown.copy(alpha = 0.58f),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             style = MaterialTheme.typography.bodyLarge,
                                         )
                                     }
@@ -87,7 +87,7 @@ fun TranslateTextScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBac
                         Spacer(Modifier.height(8.dp))
                         Text(
                             stringResource(content.characterCountRes, text.length, 100),
-                            color = WarmBrown.copy(alpha = 0.72f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.labelSmall,
                         )
                     }
@@ -99,14 +99,19 @@ fun TranslateTextScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBac
                         onTranslate()
                     },
                     enabled = text.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .widthIn(max = 480.dp)
+                        .fillMaxWidth()
+                        .height(56.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = ForestGreen,
                         contentColor = WarmWhite,
-                        disabledContainerColor = Sand,
-                        disabledContentColor = WarmBrown.copy(alpha = 0.72f),
+                        disabledContainerColor = Sand.copy(alpha = 0.50f),
+                        disabledContentColor = MutedText,
                     ),
+                    elevation = ButtonDefaults.buttonElevation(disabledElevation = 0.dp),
                 ) {
                     Text(
                         stringResource(labels.translateToRes, TranslationState.targetLanguage),

@@ -5,17 +5,18 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -23,6 +24,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.example.bulosfrontend.ui.theme.BulosFrontEndTheme
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
@@ -32,47 +34,68 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            BulosFrontEndTheme {
+            BulosFrontEndTheme(darkTheme = viewModel.selectedAppTheme == AppTheme.DARK) {
                 var minimumSplashDurationElapsed by remember { mutableStateOf(false) }
+                val preferenceRepository = remember { LanguagePreferenceRepository(applicationContext) }
+                val hasCompletedPreservationIntro by preferenceRepository.hasCompletedPreservationIntro
+                    .collectAsState(initial = null)
+                val coroutineScope = rememberCoroutineScope()
                 LaunchedEffect(Unit) {
                     delay(1_800L)
                     minimumSplashDurationElapsed = true
                 }
 
-                if (!viewModel.isLanguagePreferenceLoaded || !minimumSplashDurationElapsed) {
+                if (
+                    !viewModel.isLanguagePreferenceLoaded ||
+                    !viewModel.isThemePreferenceLoaded ||
+                    hasCompletedPreservationIntro == null ||
+                    !minimumSplashDurationElapsed
+                ) {
                     BrandedSplashScreen()
                     return@BulosFrontEndTheme
                 }
                 val navController = rememberNavController()
-                val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
-                val bottomNavigationRoutes = setOf(
-                    AppDestinations.HOME,
-                    AppDestinations.TEXT,
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = navBackStackEntry?.destination?.route
+                val featureRoutes = setOf(
                     AppDestinations.VOICE,
+                    AppDestinations.TEXT,
+                    AppDestinations.HISTORY,
                     AppDestinations.DICTIONARY,
                     AppDestinations.MORE,
                 )
-                val showBottomNavigation = currentRoute in bottomNavigationRoutes
 
-                fun navigateFromBottomBar(route: String) {
-                    when (route) {
-                        AppDestinations.TEXT, AppDestinations.VOICE -> navController.navigate(route)
-                        else -> navController.navigate(route) {
-                            popUpTo(AppDestinations.HOME)
-                            launchSingleTop = true
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                    bottomBar = {
+                        if (currentRoute in featureRoutes) {
+                            AppBottomNavigation(
+                                currentRoute = currentRoute,
+                                content = viewModel.content.home,
+                                onNavigate = { route ->
+                                    if (route != currentRoute) {
+                                        navController.navigate(route) {
+                                            launchSingleTop = true
+                                            restoreState = true
+                                            popUpTo(AppDestinations.HOME) {
+                                                saveState = true
+                                            }
+                                        }
+                                    }
+                                },
+                            )
                         }
-                    }
-                }
-
-                Box(Modifier.fillMaxSize()) {
+                    },
+                ) { navigationPadding ->
                     NavHost(
                         navController = navController,
-                        startDestination = if (viewModel.selectedUiLanguage == null) {
-                            AppDestinations.LANGUAGE_SELECTION
-                        } else {
-                            AppDestinations.HOME
+                        startDestination = when {
+                            viewModel.selectedUiLanguage == null -> AppDestinations.LANGUAGE_SELECTION
+                            hasCompletedPreservationIntro == false -> AppDestinations.PRESERVATION_INTRO
+                            else -> AppDestinations.HOME
                         },
-                        modifier = Modifier.fillMaxSize().padding(bottom = if (showBottomNavigation) 78.dp else 0.dp),
+                        modifier = Modifier.fillMaxSize().padding(navigationPadding),
                     ) {
                         composable(AppDestinations.LANGUAGE_SELECTION) {
                             LanguageSelectionScreen(
@@ -80,8 +103,23 @@ class MainActivity : ComponentActivity() {
                                 selectedLanguage = null,
                                 onLanguageSelected = { language ->
                                     viewModel.selectUiLanguage(language)
-                                    navController.navigate(AppDestinations.HOME) {
+                                    navController.navigate(AppDestinations.PRESERVATION_INTRO) {
                                         popUpTo(AppDestinations.LANGUAGE_SELECTION) { inclusive = true }
+                                    }
+                                },
+                                confirmationRequired = true,
+                            )
+                        }
+                        composable(AppDestinations.PRESERVATION_INTRO) {
+                            PreservationIntroScreen(
+                                content = viewModel.content.preservationIntro,
+                                onContinue = {
+                                    coroutineScope.launch {
+                                        preferenceRepository.markPreservationIntroCompleted()
+                                        navController.navigate(AppDestinations.HOME) {
+                                            launchSingleTop = true
+                                            popUpTo(AppDestinations.PRESERVATION_INTRO) { inclusive = true }
+                                        }
                                     }
                                 },
                             )
@@ -116,12 +154,7 @@ class MainActivity : ComponentActivity() {
                             HistoryScreen(viewModel) { navController.popBackStack() }
                         }
                         composable(AppDestinations.DICTIONARY) {
-                            PlaceholderScreen(
-                                viewModel.content.home.dictionaryTitleRes,
-                                viewModel.content.home.dictionaryMessageRes,
-                                viewModel.content.home.placeholderDescriptionRes,
-                                viewModel.content.home.appLogoDescriptionRes,
-                            )
+                            DictionaryScreen(viewModel)
                         }
                         composable(AppDestinations.MORE) {
                             SettingsScreen(viewModel) { navController.navigate(AppDestinations.LANGUAGE_SETTINGS) }
@@ -132,14 +165,6 @@ class MainActivity : ComponentActivity() {
                                 navController.popBackStack()
                             }
                         }
-                    }
-                    if (showBottomNavigation) {
-                        AppBottomNavigation(
-                            currentRoute = currentRoute,
-                            content = viewModel.content.home,
-                            onNavigate = ::navigateFromBottomBar,
-                            modifier = Modifier.align(Alignment.BottomCenter),
-                        )
                     }
                 }
             }

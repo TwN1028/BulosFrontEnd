@@ -1,25 +1,28 @@
 package com.example.bulosfrontend
 
 import androidx.annotation.StringRes
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.bulosfrontend.ui.theme.*
@@ -37,23 +40,24 @@ data class HomeFeature(
 
 @Composable
 fun HomeIdentityHeader(title: String, badge: String, modifier: Modifier = Modifier) {
+    val darkTheme = LocalBulosDarkTheme.current
     Column(modifier) {
         Text(
             title,
-            color = WarmWhiteCard,
+            color = if (darkTheme) DarkWarmText else WarmWhiteCard,
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontSize = 22.sp,
                 lineHeight = 27.sp,
                 letterSpacing = (-0.3).sp,
             ),
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.ExtraBold,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.height(10.dp))
         Surface(
-            color = SoftGreen.copy(alpha = 0.2f),
-            contentColor = WarmWhiteCard.copy(alpha = 0.82f),
+            color = if (darkTheme) DarkHomeHeaderMid.copy(alpha = 0.82f) else SoftGreen.copy(alpha = 0.2f),
+            contentColor = if (darkTheme) DarkWarmText else WarmWhiteCard.copy(alpha = 0.82f),
             shape = RoundedCornerShape(50),
         ) {
             Text(
@@ -74,6 +78,7 @@ fun HomeIdentityHeader(title: String, badge: String, modifier: Modifier = Modifi
 @Composable
 fun FeatureCard(feature: HomeFeature, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val isSpeechFeature = feature.route == AppDestinations.VOICE
+    val isHistoryFeature = feature.route == AppDestinations.HISTORY
     Card(
         onClick = onClick,
         modifier = modifier.heightIn(min = 116.dp),
@@ -81,7 +86,7 @@ fun FeatureCard(feature: HomeFeature, onClick: () -> Unit, modifier: Modifier = 
         colors = CardDefaults.cardColors(containerColor = feature.backgroundColor),
         border = BorderStroke(
             width = 1.dp,
-            color = if (isSpeechFeature) Color.White.copy(alpha = 0.20f) else MainText.copy(alpha = 0.05f),
+            color = if (isSpeechFeature) WarmWhiteCard.copy(alpha = 0.20f) else MainText.copy(alpha = 0.05f),
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = if (isSpeechFeature) 4.dp else 2.dp,
@@ -89,7 +94,24 @@ fun FeatureCard(feature: HomeFeature, onClick: () -> Unit, modifier: Modifier = 
         ),
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 12.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .then(
+                    if (isSpeechFeature) {
+                        Modifier.background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    SoftGreen.copy(alpha = 0.16f),
+                                    HomeSpeechGreen.copy(alpha = 0.30f),
+                                    Color.Transparent,
+                                ),
+                            ),
+                        )
+                    } else {
+                        Modifier
+                    },
+                )
+                .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
             Box(
@@ -105,7 +127,13 @@ fun FeatureCard(feature: HomeFeature, onClick: () -> Unit, modifier: Modifier = 
                     painter = feature.icon,
                     contentDescription = null,
                     tint = feature.accentColor,
-                    modifier = Modifier.size(if (isSpeechFeature) 25.dp else 22.dp),
+                    modifier = Modifier.size(
+                        when {
+                            isSpeechFeature -> 25.dp
+                            isHistoryFeature -> 20.dp
+                            else -> 22.dp
+                        },
+                    ),
                 )
             }
             Spacer(Modifier.height(10.dp))
@@ -147,19 +175,21 @@ fun FeatureCard(feature: HomeFeature, onClick: () -> Unit, modifier: Modifier = 
 fun SupportedLanguagesCard(
     @StringRes titleRes: Int,
     @StringRes descriptionRes: Int,
+    selectedLanguage: UiLanguage,
+    onLanguageSelected: (UiLanguage) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = WarmWhiteCard),
-        border = BorderStroke(1.dp, HomeCardBorder.copy(alpha = 0.65f)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
     ) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
             Text(
                 stringResource(titleRes).uppercase(),
-                color = MutedText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.labelLarge.copy(
                     fontSize = 10.sp,
                     lineHeight = 13.sp,
@@ -171,24 +201,40 @@ fun SupportedLanguagesCard(
             val bulos = stringResource(R.string.language_name_bulos)
             val filipino = stringResource(R.string.language_name_filipino)
             val english = stringResource(R.string.language_name_english)
-            Text(
-                buildAnnotatedString {
-                    withStyle(SpanStyle(color = ForestGreen, fontWeight = FontWeight.Bold)) { append(bulos) }
-                    withStyle(SpanStyle(color = MutedText.copy(alpha = 0.45f))) { append("  ·  ") }
-                    withStyle(SpanStyle(color = MainText, fontWeight = FontWeight.Bold)) { append(filipino) }
-                    withStyle(SpanStyle(color = MutedText.copy(alpha = 0.45f))) { append("  ·  ") }
-                    withStyle(SpanStyle(color = MainText, fontWeight = FontWeight.Bold)) { append(english) }
-                },
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontSize = 14.sp,
-                    lineHeight = 18.sp,
-                    letterSpacing = (-0.1).sp,
-                ),
+            val languageStyle = MaterialTheme.typography.titleLarge.copy(
+                fontSize = 14.sp,
+                lineHeight = 18.sp,
+                letterSpacing = (-0.1).sp,
             )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                LanguageSwitchLabel(
+                    text = bulos,
+                    language = UiLanguage.BULOS,
+                    selectedLanguage = selectedLanguage,
+                    onClick = onLanguageSelected,
+                    style = languageStyle,
+                )
+                Text("  ·  ", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f), style = languageStyle)
+                LanguageSwitchLabel(
+                    text = filipino,
+                    language = UiLanguage.FILIPINO,
+                    selectedLanguage = selectedLanguage,
+                    onClick = onLanguageSelected,
+                    style = languageStyle,
+                )
+                Text("  ·  ", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f), style = languageStyle)
+                LanguageSwitchLabel(
+                    text = english,
+                    language = UiLanguage.ENGLISH,
+                    selectedLanguage = selectedLanguage,
+                    onClick = onLanguageSelected,
+                    style = languageStyle,
+                )
+            }
             Spacer(Modifier.height(8.dp))
             Text(
                 stringResource(descriptionRes),
-                color = MutedText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = 10.sp,
                     lineHeight = 14.sp,
@@ -197,6 +243,28 @@ fun SupportedLanguagesCard(
             )
         }
     }
+}
+
+@Composable
+private fun LanguageSwitchLabel(
+    text: String,
+    language: UiLanguage,
+    selectedLanguage: UiLanguage,
+    onClick: (UiLanguage) -> Unit,
+    style: androidx.compose.ui.text.TextStyle,
+) {
+    val color by animateColorAsState(
+        targetValue = if (language == selectedLanguage) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
+        label = "languageSwitchColor",
+    )
+    Text(
+        text = text,
+        modifier = Modifier.clickable { onClick(language) },
+        color = color,
+        style = style,
+        fontWeight = FontWeight.Bold,
+    )
 }
 
 @Composable

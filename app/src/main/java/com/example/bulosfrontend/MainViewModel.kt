@@ -18,6 +18,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private set
     var isLanguagePreferenceLoaded by mutableStateOf(false)
         private set
+    var selectedAppTheme by mutableStateOf(AppTheme.LIGHT)
+        private set
+    var isThemePreferenceLoaded by mutableStateOf(false)
+        private set
     val uiLanguage: UiLanguage get() = selectedUiLanguage ?: UiLanguage.ENGLISH
     val content: DialogueContent get() = DialogueProvider.getDialogue(uiLanguage)
 
@@ -34,11 +38,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 isLanguagePreferenceLoaded = true
             }
         }
+        viewModelScope.launch {
+            languagePreferences.selectedTheme.collect { theme ->
+                selectedAppTheme = theme
+                isThemePreferenceLoaded = true
+            }
+        }
     }
 
     fun selectUiLanguage(language: UiLanguage) {
         selectedUiLanguage = language
         viewModelScope.launch { languagePreferences.saveLanguage(language) }
+    }
+
+    fun selectAppTheme(theme: AppTheme) {
+        selectedAppTheme = theme
+        viewModelScope.launch { languagePreferences.saveTheme(theme) }
     }
 
     fun translateText(text: String) {

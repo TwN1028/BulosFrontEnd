@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -90,6 +91,7 @@ import com.example.bulosfrontend.ui.theme.DeepForestGreen
 import com.example.bulosfrontend.ui.theme.ForestGreen
 import com.example.bulosfrontend.ui.theme.HomeCardBorder
 import com.example.bulosfrontend.ui.theme.LoudVoiceInner
+import com.example.bulosfrontend.ui.theme.MutedText
 import com.example.bulosfrontend.ui.theme.RecordingRed
 import com.example.bulosfrontend.ui.theme.ResultSage
 import com.example.bulosfrontend.ui.theme.Sand
@@ -126,7 +128,7 @@ fun TranslateVoiceScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBa
         if (granted) startRecording()
     }
 
-    Surface(Modifier.fillMaxSize(), color = Cream) {
+    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(Modifier.fillMaxSize()) {
             SpeechRecognitionHeader(
                 title = stringResource(content.voiceHeaderRes),
@@ -176,7 +178,7 @@ fun TranslateVoiceScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBa
                     if (viewModel.isRecording) {
                         Spacer(Modifier.height(14.dp))
                         TextButton(onClick = { viewModel.cancelRecording() }) {
-                            Text(stringResource(content.cancelBtnRes), color = WarmBrown)
+                            Text(stringResource(content.cancelBtnRes), color = MaterialTheme.colorScheme.secondary)
                         }
                         Spacer(Modifier.height(24.dp))
                     } else {
@@ -206,14 +208,15 @@ fun TranslateVoiceScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBa
                                 onTranslate()
                             },
                             enabled = recognizedText.isNotBlank() && !viewModel.isRecording,
-                            modifier = Modifier.weight(1f).height(70.dp),
+                            modifier = Modifier.weight(1f).height(56.dp),
                             shape = RoundedCornerShape(24.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = ForestGreen,
                                 contentColor = WarmWhite,
-                                disabledContainerColor = Sand,
-                                disabledContentColor = WarmBrown.copy(alpha = 0.72f),
+                                disabledContainerColor = Sand.copy(alpha = 0.50f),
+                                disabledContentColor = MutedText,
                             ),
+                            elevation = ButtonDefaults.buttonElevation(disabledElevation = 0.dp),
                         ) {
                             Text(stringResource(labels.translateRes), fontWeight = FontWeight.Bold)
                         }
@@ -224,13 +227,13 @@ fun TranslateVoiceScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBa
                                 viewModel.clearVoiceDraft()
                             },
                             enabled = !viewModel.isRecording,
-                            modifier = Modifier.weight(1f).height(70.dp),
+                            modifier = Modifier.weight(1f).height(56.dp),
                             shape = RoundedCornerShape(24.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Sand,
-                                contentColor = WarmBrown,
-                                disabledContainerColor = Sand,
-                                disabledContentColor = WarmBrown.copy(alpha = 0.6f),
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                                disabledContainerColor = Sand.copy(alpha = 0.50f),
+                                disabledContentColor = MutedText,
                             ),
                             elevation = ButtonDefaults.buttonElevation(0.dp),
                         ) {
@@ -304,7 +307,7 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
     val originalText = TranslationState.textToTranslate
     val translatedText = TranslationState.translatedText.ifEmpty { stringResource(content.resultPlaceholderRes) }
 
-    Surface(Modifier.fillMaxSize(), color = Cream) {
+    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Box(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {
                 FeaturePatternHeader(
@@ -322,13 +325,13 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
                     TranslationTextCard(
                         label = "${TranslationState.sourceLanguage.uppercase(Locale.getDefault())} · ${stringResource(labels.originalRes)}",
                         text = originalText,
-                        containerColor = WarmWhite,
+                        containerColor = MaterialTheme.colorScheme.surface,
                     )
                     LanguageDirectionPill(TranslationState.sourceLanguage, TranslationState.targetLanguage)
                     TranslationTextCard(
                         label = "${TranslationState.targetLanguage.uppercase(Locale.getDefault())} · ${stringResource(labels.translationRes)}",
                         text = translatedText,
-                        containerColor = ResultSage,
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
                     )
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         ResultSecondaryAction(
@@ -360,7 +363,11 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
                     }
                     Button(
                         onClick = onTranslateAgain,
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .widthIn(max = 480.dp)
+                            .fillMaxWidth()
+                            .height(56.dp),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = ForestGreen, contentColor = WarmWhite),
                     ) {
@@ -431,8 +438,8 @@ fun TranslationLanguageBar(swapLanguagesDescription: String, modifier: Modifier 
     Card(
         modifier = modifier.fillMaxWidth().height(68.dp),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = WarmWhite),
-        border = BorderStroke(1.dp, HomeCardBorder.copy(alpha = 0.72f)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
     ) {
         Row(
@@ -449,7 +456,7 @@ fun TranslationLanguageBar(swapLanguagesDescription: String, modifier: Modifier 
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
             ) {
-                VerticalDivider(thickness = 1.dp, color = HomeCardBorder.copy(alpha = 0.72f))
+                VerticalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 IconButton(
                     onClick = {
                         val source = TranslationState.sourceLanguage
@@ -458,9 +465,9 @@ fun TranslationLanguageBar(swapLanguagesDescription: String, modifier: Modifier 
                     },
                     modifier = Modifier.weight(1f),
                 ) {
-                    Icon(Icons.Default.SwapHoriz, swapLanguagesDescription, tint = WarmBrown)
+                    Icon(Icons.Default.SwapHoriz, swapLanguagesDescription, tint = MaterialTheme.colorScheme.secondary)
                 }
-                VerticalDivider(thickness = 1.dp, color = HomeCardBorder.copy(alpha = 0.72f))
+                VerticalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
             }
             CompactLanguageMenu(
                 selected = TranslationState.targetLanguage,
@@ -481,7 +488,7 @@ private fun CompactLanguageMenu(selected: String, onSelected: (String) -> Unit, 
     )
     Box(modifier) {
         TextButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
-            Text(selected, color = DeepForestGreen, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(selected, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             languages.forEach { language ->
@@ -616,7 +623,7 @@ private fun VoiceMicrophone(
             )
             Spacer(Modifier.height(3.dp))
         }
-        Text(status, color = WarmBrown, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
+        Text(status, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
     }
 }
 
@@ -654,13 +661,13 @@ private fun RecognizedTextCard(
     Card(
         modifier = modifier.fillMaxWidth().heightIn(min = 106.dp),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = WarmWhite),
-        border = BorderStroke(1.dp, HomeCardBorder.copy(alpha = 0.72f)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
     ) {
         Column(Modifier.padding(horizontal = 20.dp, vertical = 18.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(label, modifier = Modifier.weight(1f), color = WarmBrown, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                Text(label, modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                 if (showEditControl) {
                     TextButton(onClick = onEditToggle, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)) {
                         Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(15.dp))
@@ -695,7 +702,7 @@ private fun RecognizedTextCard(
                         )
                     }
                     Spacer(Modifier.width(5.dp))
-                    Text(transcribingText, color = WarmBrown.copy(alpha = 0.72f), style = MaterialTheme.typography.bodyMedium)
+                    Text(transcribingText, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                 }
             } else {
                 OutlinedTextField(
@@ -703,16 +710,16 @@ private fun RecognizedTextCard(
                     onValueChange = onValueChange,
                     modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
                     enabled = isEditing,
-                    placeholder = { Text(placeholder, color = WarmBrown.copy(alpha = 0.58f)) },
+                    placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     shape = RoundedCornerShape(14.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = ForestGreen,
-                        unfocusedBorderColor = HomeCardBorder,
-                        disabledBorderColor = HomeCardBorder,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                        disabledBorderColor = MaterialTheme.colorScheme.outlineVariant,
                         disabledTextColor = DeepForestGreen,
-                        focusedContainerColor = Cream.copy(alpha = 0.42f),
-                        unfocusedContainerColor = Cream.copy(alpha = 0.42f),
-                        disabledContainerColor = Cream.copy(alpha = 0.42f),
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
                     ),
                 )
             }
@@ -726,13 +733,13 @@ private fun TranslationTextCard(label: String, text: String, containerColor: Col
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
-        border = BorderStroke(1.dp, HomeCardBorder.copy(alpha = 0.85f)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Column(Modifier.fillMaxWidth().padding(18.dp)) {
-            Text(label, color = WarmBrown, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+            Text(label, color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(10.dp))
-            Text(text, color = DeepForestGreen, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Text(text, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -758,8 +765,8 @@ private fun ResultSecondaryAction(text: String, icon: androidx.compose.ui.graphi
         onClick = onClick,
         modifier = modifier.height(48.dp),
         shape = RoundedCornerShape(15.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = WarmWhite, contentColor = ForestGreen),
-        border = BorderStroke(1.dp, HomeCardBorder),
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.primary),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp),
     ) {
         Icon(icon, contentDescription = null, modifier = Modifier.size(17.dp))

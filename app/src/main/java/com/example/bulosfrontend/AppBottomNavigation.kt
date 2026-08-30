@@ -2,12 +2,9 @@ package com.example.bulosfrontend
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
@@ -20,8 +17,6 @@ import com.example.bulosfrontend.ui.theme.ForestGreen
 import com.example.bulosfrontend.ui.theme.HomeCardBorder
 import com.example.bulosfrontend.ui.theme.NavigationCream
 import com.example.bulosfrontend.ui.theme.WarmBrown
-import com.example.bulosfrontend.ui.theme.WarmWhite
-import com.example.bulosfrontend.ui.theme.VoiceReviewOrange
 
 private data class BottomItem(
     @StringRes val labelRes: Int,
@@ -37,87 +32,56 @@ fun AppBottomNavigation(
     modifier: Modifier = Modifier,
 ) {
     val items = listOf(
-        BottomItem(content.navHomeRes, painterResource(R.drawable.ic_lucide_home), AppDestinations.HOME),
-        BottomItem(content.navTranslateRes, painterResource(R.drawable.ic_lucide_languages), AppDestinations.TEXT),
         BottomItem(content.navSpeechRes, painterResource(R.drawable.ic_lucide_mic), AppDestinations.VOICE),
-        BottomItem(content.navDictionaryRes, painterResource(R.drawable.ic_lucide_book_open), AppDestinations.DICTIONARY),
-        BottomItem(content.navMoreRes, painterResource(R.drawable.ic_lucide_more_horizontal), AppDestinations.MORE),
+        BottomItem(content.navTranslateRes, painterResource(R.drawable.ic_lucide_languages), AppDestinations.TEXT),
+        BottomItem(content.historyTitleRes, painterResource(R.drawable.ic_lucide_history), AppDestinations.HISTORY),
+        BottomItem(content.navDictionaryRes, painterResource(R.drawable.ic_dictionary_book), AppDestinations.DICTIONARY),
+        BottomItem(content.settingsTitleRes, painterResource(R.drawable.ic_lucide_settings), AppDestinations.MORE),
     )
-    Box(modifier.fillMaxWidth().navigationBarsPadding().height(92.dp)) {
-        Column(Modifier.fillMaxWidth().align(Alignment.BottomCenter)) {
-            HorizontalDivider(color = HomeCardBorder.copy(alpha = 0.8f), thickness = 1.dp)
-            NavigationBar(
-                modifier = Modifier.fillMaxWidth().height(70.dp),
-                containerColor = NavigationCream,
-                tonalElevation = 0.dp,
-            ) {
-                items.forEachIndexed { index, item ->
-                    if (index == 2) {
-                        Spacer(Modifier.weight(1f))
-                    } else {
-                        NavigationBarItem(
-                            selected = currentRoute == item.route,
-                            onClick = { onNavigate(item.route) },
-                            icon = {
-                                Icon(
-                                    painter = item.icon,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(21.dp),
-                                )
-                            },
-                            label = {
-                                Text(
-                                    stringResource(item.labelRes),
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontSize = 9.sp,
-                                        lineHeight = 11.sp,
-                                        letterSpacing = 0.sp,
-                                    ),
-                                    fontWeight = if (currentRoute == item.route) FontWeight.Bold else FontWeight.Medium,
-                                    maxLines = 2,
-                                    textAlign = TextAlign.Center,
-                                )
-                            },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = ForestGreen,
-                                selectedTextColor = ForestGreen,
-                                indicatorColor = Color.Transparent,
-                                unselectedIconColor = WarmBrown.copy(alpha = 0.78f),
-                                unselectedTextColor = WarmBrown.copy(alpha = 0.88f),
-                            ),
-                        )
-                    }
-                }
-            }
-        }
-        Column(
-            modifier = Modifier.align(Alignment.TopCenter),
-            horizontalAlignment = Alignment.CenterHorizontally,
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .navigationBarsPadding(),
+    ) {
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
+        NavigationBar(
+            modifier = Modifier.fillMaxWidth().height(64.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
         ) {
-            FloatingActionButton(
-                onClick = { onNavigate(AppDestinations.VOICE) },
-                modifier = Modifier.size(56.dp).shadow(7.dp, CircleShape),
-                shape = CircleShape,
-                containerColor = if (currentRoute == AppDestinations.VOICE) VoiceReviewOrange else ForestGreen,
-                contentColor = WarmWhite,
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_lucide_mic),
-                    contentDescription = stringResource(content.navSpeechRes),
-                    modifier = Modifier.size(28.dp),
+            items.filterNot { it.route == currentRoute }.forEach { item ->
+                NavigationBarItem(
+                    selected = false,
+                    onClick = { onNavigate(item.route) },
+                    icon = {
+                        Icon(
+                            painter = item.icon,
+                            contentDescription = stringResource(item.labelRes),
+                            modifier = Modifier.size(20.dp),
+                        )
+                    },
+                    label = {
+                        Text(
+                            stringResource(item.labelRes),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = 9.sp,
+                                lineHeight = 10.sp,
+                                letterSpacing = 0.sp,
+                            ),
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 2,
+                            textAlign = TextAlign.Center,
+                        )
+                    },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                        selectedTextColor = MaterialTheme.colorScheme.primary,
+                        indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    ),
                 )
             }
-            Spacer(Modifier.height(3.dp))
-            Text(
-                stringResource(content.navSpeechRes),
-                color = if (currentRoute == AppDestinations.VOICE) VoiceReviewOrange else WarmBrown,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 9.sp,
-                    lineHeight = 11.sp,
-                    letterSpacing = 0.sp,
-                ),
-                fontWeight = FontWeight.SemiBold,
-            )
         }
     }
 }

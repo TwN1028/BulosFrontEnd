@@ -2,20 +2,28 @@ package com.example.bulosfrontend
 
 import androidx.annotation.StringRes
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.MarqueeAnimationMode
+import androidx.compose.foundation.MarqueeSpacing
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
@@ -38,6 +46,12 @@ data class HomeFeature(
     val route: String,
 )
 
+private val switchLanguageCardBrush = Brush.verticalGradient(
+    0.00f to Color(0xFFFDFBF9),
+    0.50f to Color(0xFFFDFCF9),
+    1.00f to Color(0xFFFCFCFA),
+)
+
 @Composable
 fun HomeIdentityHeader(title: String, badge: String, modifier: Modifier = Modifier) {
     val darkTheme = LocalBulosDarkTheme.current
@@ -46,124 +60,133 @@ fun HomeIdentityHeader(title: String, badge: String, modifier: Modifier = Modifi
             title,
             color = if (darkTheme) DarkWarmText else WarmWhiteCard,
             style = MaterialTheme.typography.headlineMedium.copy(
-                fontSize = 22.sp,
-                lineHeight = 27.sp,
+                fontSize = 23.sp,
+                lineHeight = 28.sp,
                 letterSpacing = (-0.3).sp,
             ),
             fontWeight = FontWeight.ExtraBold,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(6.dp))
         Surface(
+            modifier = Modifier.height(26.dp),
             color = if (darkTheme) DarkHomeHeaderMid.copy(alpha = 0.82f) else SoftGreen.copy(alpha = 0.2f),
             contentColor = if (darkTheme) DarkWarmText else WarmWhiteCard.copy(alpha = 0.82f),
             shape = RoundedCornerShape(50),
         ) {
-            Text(
-                badge,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                style = MaterialTheme.typography.labelLarge.copy(
-                    fontSize = 11.sp,
-                    lineHeight = 15.sp,
-                    letterSpacing = 0.sp,
-                ),
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 2,
-            )
+            Box(
+                modifier = Modifier.fillMaxHeight().padding(horizontal = 12.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    badge,
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp,
+                        letterSpacing = 0.sp,
+                    ),
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                )
+            }
         }
     }
 }
 
 @Composable
 fun FeatureCard(feature: HomeFeature, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val isSpeechFeature = feature.route == AppDestinations.VOICE
-    val isHistoryFeature = feature.route == AppDestinations.HISTORY
+    val isTextFeature = feature.route == AppDestinations.TEXT
+    val cardBorderColor = Color(0xFFFFFBF4)
+    val textColor = if (isTextFeature) cardBorderColor else Color.Black
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val cardElevation by animateDpAsState(
+        targetValue = if (pressed) 1.dp else 4.dp,
+        animationSpec = tween(durationMillis = 100),
+        label = "featureCardElevation",
+    )
+    val cardShape = RoundedCornerShape(16.dp)
+    val iconColor = when {
+        isTextFeature -> Color(0xFFB66D0B)
+        feature.route == AppDestinations.VOICE -> Color(0xFF2F6530)
+        else -> Color(0xFF315F32)
+    }
     Card(
         onClick = onClick,
-        modifier = modifier.heightIn(min = 116.dp),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = feature.backgroundColor),
+        modifier = modifier
+            .height(118.dp)
+            .shadow(
+                elevation = cardElevation,
+                shape = cardShape,
+                clip = false,
+                ambientColor = Color.Black.copy(alpha = 0.08f),
+                spotColor = Color.Black.copy(alpha = 0.08f),
+            ),
+        interactionSource = interactionSource,
+        shape = cardShape,
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         border = BorderStroke(
             width = 1.dp,
-            color = if (isSpeechFeature) WarmWhiteCard.copy(alpha = 0.20f) else MainText.copy(alpha = 0.05f),
+            color = cardBorderColor,
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isSpeechFeature) 4.dp else 2.dp,
-            pressedElevation = 1.dp,
+            defaultElevation = 0.dp,
+            pressedElevation = 0.dp,
         ),
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .then(
-                    if (isSpeechFeature) {
-                        Modifier.background(
-                            Brush.linearGradient(
-                                colors = listOf(
-                                    SoftGreen.copy(alpha = 0.16f),
-                                    HomeSpeechGreen.copy(alpha = 0.30f),
-                                    Color.Transparent,
-                                ),
-                            ),
-                        )
-                    } else {
-                        Modifier
-                    },
-                )
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
+                .background(feature.backgroundColor)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
         ) {
-            Box(
+            Surface(
                 modifier = Modifier
-                    .size(40.dp)
-                    .background(
-                        if (isSpeechFeature) WarmWhiteCard.copy(alpha = 0.2f) else WarmWhiteCard,
-                        CircleShape,
-                    ),
-                contentAlignment = Alignment.Center,
+                    .align(Alignment.TopStart)
+                    .size(40.dp),
+                shape = CircleShape,
+                color = Color(0xFFFFFEFA),
+                border = BorderStroke(0.75.dp, Color(0xFFE8E2D8)),
+                shadowElevation = 2.dp,
             ) {
-                Icon(
-                    painter = feature.icon,
-                    contentDescription = null,
-                    tint = feature.accentColor,
-                    modifier = Modifier.size(
-                        when {
-                            isSpeechFeature -> 25.dp
-                            isHistoryFeature -> 20.dp
-                            else -> 22.dp
-                        },
-                    ),
-                )
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        painter = feature.icon,
+                        contentDescription = null,
+                        tint = iconColor,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
             }
-            Spacer(Modifier.height(10.dp))
-            Column {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(top = 58.dp),
+            ) {
                 Text(
                     stringResource(feature.titleRes),
-                    color = feature.accentColor,
+                    color = textColor,
                     style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = 12.sp,
-                        lineHeight = 16.sp,
-                        letterSpacing = (-0.1).sp,
-                    ),
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    stringResource(feature.subtitleRes),
-                    color = if (isSpeechFeature) {
-                        WarmWhiteCard.copy(alpha = 0.78f)
-                    } else {
-                        MutedText
-                    },
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 10.sp,
-                        lineHeight = 14.sp,
+                        fontSize = 14.sp,
+                        lineHeight = 18.sp,
                         letterSpacing = 0.sp,
                     ),
-                    maxLines = 2,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    stringResource(feature.subtitleRes),
+                    color = textColor,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp,
+                        letterSpacing = 0.sp,
+                    ),
+                    fontWeight = FontWeight.Normal,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
@@ -179,25 +202,41 @@ fun SupportedLanguagesCard(
     onLanguageSelected: (UiLanguage) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val cardShape = RoundedCornerShape(16.dp)
     Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(63.dp)
+            .shadow(
+                elevation = 4.dp,
+                shape = cardShape,
+                clip = false,
+                ambientColor = Color.Black.copy(alpha = 0.08f),
+                spotColor = Color.Black.copy(alpha = 0.08f),
+            ),
+        shape = cardShape,
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        border = BorderStroke(1.dp, Color(0xFFFFFBF4)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .background(switchLanguageCardBrush)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.Center,
+        ) {
             Text(
                 stringResource(titleRes).uppercase(),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.labelLarge.copy(
                     fontSize = 10.sp,
                     lineHeight = 13.sp,
-                    letterSpacing = 1.35.sp,
+                    letterSpacing = 2.sp,
                 ),
                 fontWeight = FontWeight.Bold,
             )
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(2.dp))
             val bulos = stringResource(R.string.language_name_bulos)
             val filipino = stringResource(R.string.language_name_filipino)
             val english = stringResource(R.string.language_name_english)
@@ -231,16 +270,6 @@ fun SupportedLanguagesCard(
                     style = languageStyle,
                 )
             }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                stringResource(descriptionRes),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = 10.sp,
-                    lineHeight = 14.sp,
-                    letterSpacing = 0.sp,
-                ),
-            )
         }
     }
 }
@@ -277,54 +306,73 @@ fun HomeDynamicContentCard(
 ) {
     // Show up to 3 most recent items. HistoryProvider.history is newest-first.
     val recentItems = HistoryProvider.history.take(3)
+    val cardShape = RoundedCornerShape(16.dp)
 
-    Box(modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp))) {
-        GeometricGreenBackground(Modifier.matchParentSize(), cellSize = 52.dp, patternAlpha = 0.10f)
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 15.dp)) {
-            Text(
-                stringResource(titleRes).uppercase(),
-                color = SoftGreen.copy(alpha = 0.84f),
-                style = MaterialTheme.typography.labelLarge.copy(
-                    fontSize = 10.sp,
-                    lineHeight = 13.sp,
-                    letterSpacing = 1.25.sp,
-                ),
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.height(8.dp))
-
-            if (recentItems.isEmpty()) {
-                // Empty state
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(63.dp)
+            .shadow(
+                elevation = 4.dp,
+                shape = cardShape,
+                clip = false,
+                ambientColor = Color.Black.copy(alpha = 0.08f),
+                spotColor = Color.Black.copy(alpha = 0.08f),
+            ),
+        shape = cardShape,
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        border = BorderStroke(1.dp, Color(0xFFFFFBF4)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(HomeRecentTranslationCard)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Column(Modifier.weight(1f)) {
                 Text(
-                    stringResource(emptyRes),
-                    color = WarmWhite,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = 12.sp,
-                        lineHeight = 16.sp,
+                    stringResource(titleRes).uppercase(),
+                    color = PrimaryGreen,
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontSize = 10.sp,
+                        lineHeight = 13.sp,
+                        letterSpacing = 2.sp,
                     ),
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                 )
-            } else {
-                // Up to 3 compact translation rows
-                recentItems.forEachIndexed { index, historyItem ->
-                    RecentTranslationRow(historyItem)
-                    if (index < recentItems.lastIndex) {
-                        Spacer(Modifier.height(7.dp))
-                        HorizontalDivider(
-                            color = SoftGreen.copy(alpha = 0.18f),
-                            thickness = 0.5.dp,
-                        )
-                        Spacer(Modifier.height(7.dp))
+                Spacer(Modifier.height(2.dp))
+
+                if (recentItems.isEmpty()) {
+                    Text(
+                        stringResource(emptyRes),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 12.sp,
+                            lineHeight = 15.sp,
+                        ),
+                        fontWeight = FontWeight.Normal,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                } else {
+                    recentItems.forEachIndexed { index, historyItem ->
+                        RecentTranslationRow(historyItem)
+                        if (index < recentItems.lastIndex) {
+                            Spacer(Modifier.height(6.dp))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
+                            Spacer(Modifier.height(6.dp))
+                        }
                     }
                 }
             }
-
-            Spacer(Modifier.height(12.dp))
             HomeCardAction(
                 text = stringResource(historyActionRes),
                 iconPainter = painterResource(R.drawable.ic_lucide_history),
                 onClick = onHistoryClick,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.align(Alignment.CenterVertically),
             )
         }
     }
@@ -343,32 +391,28 @@ private fun RecentTranslationRow(item: HistoryItem) {
     // Input text — primary display
     Text(
         item.inputText,
-        color = WarmWhiteCard,
+        color = MaterialTheme.colorScheme.onSurface,
         style = MaterialTheme.typography.titleMedium.copy(
             fontSize = 13.sp,
             lineHeight = 17.sp,
             letterSpacing = (-0.15).sp,
         ),
         fontWeight = FontWeight.Bold,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
     )
     // Translated text — secondary
     Text(
         item.translatedText,
-        color = WarmWhiteCard.copy(alpha = 0.70f),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         style = MaterialTheme.typography.bodyMedium.copy(
             fontSize = 10.sp,
             lineHeight = 14.sp,
             letterSpacing = 0.sp,
         ),
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
     )
     // Timestamp
     Text(
         DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(item.timestamp)),
-        color = SoftGreen.copy(alpha = 0.65f),
+        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 13.sp),
     )
 }
@@ -382,22 +426,43 @@ private fun HomeCardAction(
 ) {
     Button(
         onClick = onClick,
-        modifier = modifier.heightIn(min = 48.dp),
-        shape = RoundedCornerShape(50),
+        modifier = modifier.width(108.dp).height(30.dp),
+        shape = RoundedCornerShape(15.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = SoftGreen.copy(alpha = 0.22f),
+            containerColor = PrimaryGreen,
             contentColor = WarmWhiteCard,
         ),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 9.dp),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp),
     ) {
-        Icon(painter = iconPainter, contentDescription = null, modifier = Modifier.size(16.dp))
-        Spacer(Modifier.width(7.dp))
-        Text(
-            text,
-            style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp, lineHeight = 15.sp),
-            fontWeight = FontWeight.Bold,
-            maxLines = 2,
+        Icon(
+            painter = iconPainter,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp).align(Alignment.CenterVertically),
         )
+        Spacer(Modifier.width(6.dp))
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .clipToBounds(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = text,
+                modifier = Modifier.basicMarquee(
+                    iterations = Int.MAX_VALUE,
+                    animationMode = MarqueeAnimationMode.Immediately,
+                    repeatDelayMillis = 1_200,
+                    initialDelayMillis = 1_200,
+                    spacing = MarqueeSpacing(20.dp),
+                    velocity = 22.dp,
+                ),
+                style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp, lineHeight = 15.sp),
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Clip,
+            )
+        }
     }
 }

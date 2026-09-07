@@ -11,6 +11,35 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 @Composable
+fun VoiceGuidedDemoScreen(onBack: () -> Unit) {
+    Scaffold(
+        topBar = {
+            SharedTopAppBar(
+                title = stringResource(R.string.ui_voice_guided_demo_title),
+                logoDescriptionRes = R.string.ui_feature_help_title,
+                iconRes = R.drawable.ic_lucide_circle_help,
+            )
+        },
+    ) { padding ->
+        Column(
+            modifier = Modifier.fillMaxSize().padding(padding).padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = stringResource(R.string.ui_voice_guided_demo_message),
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(24.dp))
+            Button(onClick = onBack) {
+                Text(stringResource(R.string.ui_voice_guided_demo_back))
+            }
+        }
+    }
+}
+
+@Composable
 fun PlaceholderScreen(
     @StringRes titleRes: Int,
     @StringRes messageRes: Int,

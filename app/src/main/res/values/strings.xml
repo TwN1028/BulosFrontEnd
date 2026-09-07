@@ -134,6 +134,11 @@
     <string name="feature_dictionary_subtitle">Browse words</string>
     <string name="feature_history_title">Saved History</string>
     <string name="feature_history_subtitle">Past translations</string>
+    <string name="ui_feature_help_title">Help</string>
+    <string name="ui_feature_help_subtitle">How to use the app</string>
+    <string name="ui_voice_guided_demo_title">Voice-Guided Demo</string>
+    <string name="ui_voice_guided_demo_message">A voice-guided demonstration on how to use the app will be available here.</string>
+    <string name="ui_voice_guided_demo_back">Back</string>
     <string name="recent_translations">Recent Translations</string>
     <string name="see_all">See all</string>
     <string name="no_recent_translations">Your recent translations will appear here.</string>
@@ -164,7 +169,7 @@
     <string name="splash_logo_content_description">Bulos Translator app icon</string>
     <string name="splash_title">Dumagat Speech\nTranslator</string>
     <string name="splash_subtitle">Preserving Indigenous Language\nThrough Technology</string>
-    <string name="splash_initiative">Bulos Language Preservation Initiative</string>
+    <string name="splash_initiative">Dumagat Speech Translator v2.0 · Interactive Prototype</string>
 
     <!-- Redesigned home screen: Filipino -->
     <string name="feature_speech_title_fil">Pagsasalin gamit ang Boses</string>

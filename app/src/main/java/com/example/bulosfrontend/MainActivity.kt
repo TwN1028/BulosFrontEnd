@@ -1,7 +1,9 @@
 package com.example.bulosfrontend
 
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -22,6 +25,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.WindowCompat
 import com.example.bulosfrontend.ui.theme.BulosFrontEndTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -32,16 +36,20 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+        )
+        applyWhiteStatusBarContent()
         setContent {
             BulosFrontEndTheme(darkTheme = viewModel.selectedAppTheme == AppTheme.DARK) {
+                SideEffect { applyWhiteStatusBarContent() }
                 var minimumSplashDurationElapsed by remember { mutableStateOf(false) }
                 val preferenceRepository = remember { LanguagePreferenceRepository(applicationContext) }
                 val hasCompletedPreservationIntro by preferenceRepository.hasCompletedPreservationIntro
                     .collectAsState(initial = null)
                 val coroutineScope = rememberCoroutineScope()
                 LaunchedEffect(Unit) {
-                    delay(1_800L)
+                    delay(3_000L)
                     minimumSplashDurationElapsed = true
                 }
 
@@ -159,6 +167,9 @@ class MainActivity : ComponentActivity() {
                         composable(AppDestinations.MORE) {
                             SettingsScreen(viewModel) { navController.navigate(AppDestinations.LANGUAGE_SETTINGS) }
                         }
+                        composable(AppDestinations.HELP) {
+                            VoiceGuidedDemoScreen(onBack = { navController.popBackStack() })
+                        }
                         composable(AppDestinations.LANGUAGE_SETTINGS) {
                             LanguageSettingsScreen(viewModel) { language ->
                                 viewModel.selectUiLanguage(language)
@@ -169,5 +180,14 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        applyWhiteStatusBarContent()
+    }
+
+    private fun applyWhiteStatusBarContent() {
+        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = false
     }
 }

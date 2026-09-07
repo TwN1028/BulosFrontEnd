@@ -5,10 +5,10 @@
     android:viewportHeight="96">
     <!-- Temporary artwork. Replace this drawable with the official Bulos Translator app icon. -->
     <path
-        android:fillColor="@android:color/white"
+        android:fillColor="#FF1E3F20"
         android:pathData="M35,22C29.5,22 25,26.5 25,32V48C25,53.5 29.5,58 35,58C40.5,58 45,53.5 45,48V32C45,26.5 40.5,22 35,22ZM30,32C30,29.2 32.2,27 35,27C37.8,27 40,29.2 40,32V48C40,50.8 37.8,53 35,53C32.2,53 30,50.8 30,48Z" />
     <path
-        android:fillColor="@android:color/white"
+        android:fillColor="#FF1E3F20"
         android:pathData="M20,45H25V48C25,55 29.5,61 35,61C40.5,61 45,55 45,48V45H50V48C50,56.8 44.5,64.2 37.5,65.8V74H32.5V65.8C25.5,64.2 20,56.8 20,48Z" />
     <path
         android:fillColor="@color/splash_gold"

@@ -10,5 +10,6 @@ object AppDestinations {
     const val HISTORY = "history"
     const val DICTIONARY = "dictionary"
     const val MORE = "more"
+    const val HELP = "help"
     const val LANGUAGE_SETTINGS = "language_settings"
 }

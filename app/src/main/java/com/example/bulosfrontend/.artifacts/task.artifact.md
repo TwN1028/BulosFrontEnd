@@ -1,9 +1,16 @@
-# Tasks: Strict 3-Tier Translation Hierarchy
+# Tasks: Restore Modern UI & Preserve Logic
 
-- `[x]` Update `DictionaryManager.kt` to support 3-tier matching
-    - `[x]` Enhance "Deep Clean" and Punctuation Handling
-    - `[x]` Implement Tier 1: Full Sentence Match (with punctuation re-attachment)
-    - `[x]` Implement Tier 2: Greedy Phrase Match (Longest-first across all sheets)
-    - `[x]` Implement Tier 3: Word-by-Word Match
-- `[x]` Enhance `DEBUG_DICT` command with sheet breakdown
-- `[x]` Verification & Final Build
+- `[ ]` Restore UI files from `b0d1099` (Modern UI commit)
+    - `[ ]` `Design.kt`
+    - `[ ]` `HomeScreen.kt`
+    - `[ ]` `SpeechResultScreens.kt`
+    - `[ ]` `Screens.kt`
+    - `[ ]` `MainActivity.kt`
+    - `[ ]` `ui/theme/` (Color, Type, Theme)
+    - `[ ]` Other support UI files
+- `[ ]` Re-add `LanguageModelMap` to `Design.kt`
+- `[ ]` Integrate Spreadsheet logic into `TranslateTextScreen` (in `Screens.kt`)
+- `[ ]` Integrate Vosk ASR logic into `TranslateVoiceScreen` (in `SpeechResultScreens.kt`)
+- `[ ]` Sync `MainViewModel.kt` with restored UI structures
+- `[ ]` Clean up redundant files (`TextTranslationScreen.kt`, `HistoryScreen.kt`)
+- `[ ]` Final Verification & Build

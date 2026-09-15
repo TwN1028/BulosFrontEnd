@@ -21,7 +21,7 @@
     <string name="ui_voice_recording_eng">Voice Recording</string>
     <string name="ui_character_count_eng">%1$d / %2$d</string>
     <string name="ui_feature_speech_title_eng">Speech Translation</string>
-    <string name="ui_feature_speech_subtitle_eng">Speak &amp; translate</string>
+    <string name="ui_feature_speech_subtitle_eng">Tap to Speak</string>
     <string name="ui_feature_text_title_eng">Text Translation</string>
     <string name="ui_feature_text_subtitle_eng">Type &amp; translate</string>
     <string name="ui_feature_dictionary_title_eng">Dictionary</string>
@@ -63,6 +63,11 @@
     <string name="ui_app_logo_description_eng">App logo</string>
     <string name="ui_home_badge_eng">English Interface</string>
     <string name="ui_settings_subtitle_eng">Customize app</string>
+    <string name="ui_help_card_title_eng">Help</string>
+    <string name="ui_help_card_subtitle_eng">How to use the app</string>
+    <string name="ui_help_screen_title_eng">Voice-Guided Demo</string>
+    <string name="ui_help_message_eng">A voice-guided demonstration on how to use the app will be available here.</string>
+    <string name="ui_help_back_eng">Back</string>
     <string name="ui_appearance_eng">Appearance</string>
     <string name="ui_theme_eng">Theme</string>
     <string name="ui_theme_light_eng">Light</string>
@@ -70,7 +75,7 @@
     <string name="ui_supported_languages_eng">Switch Language</string>
     <string name="ui_supported_languages_description_eng">Translate between Bulos, Filipino, and English.</string>
     <string name="ui_recent_dynamic_title_eng">Recent Translation</string>
-    <string name="ui_view_history_eng">View History</string>
+    <string name="ui_view_history_eng">View</string>
     <string name="ui_text_subtitle_eng">Type in any supported language</string>
     <string name="ui_text_input_placeholder_eng">Enter text in %1$s…</string>
     <string name="ui_translate_to_eng">Translate to %1$s</string>

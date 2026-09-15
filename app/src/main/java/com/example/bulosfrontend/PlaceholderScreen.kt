@@ -17,7 +17,7 @@ fun VoiceGuidedDemoScreen(onBack: () -> Unit) {
             SharedTopAppBar(
                 title = stringResource(R.string.ui_voice_guided_demo_title),
                 logoDescriptionRes = R.string.ui_feature_help_title,
-                iconRes = R.drawable.ic_launcher_background,
+                iconRes = R.drawable.ic_lucide_circle_help,
             )
         },
     ) { padding ->
@@ -44,7 +44,7 @@ fun PlaceholderScreen(
     @StringRes titleRes: Int,
     @StringRes messageRes: Int,
     @StringRes descriptionRes: Int,
-    @StringRes logoDescriptionRes: Int = R.string.ui_app_logo_description_eng,
+    @StringRes logoDescriptionRes: Int = R.string.app_logo_content_description,
 ) {
     Scaffold(topBar = { SharedTopAppBar(stringResource(titleRes), logoDescriptionRes, R.drawable.ic_lucide_book_open) }) { padding ->
         Column(

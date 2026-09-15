@@ -48,7 +48,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -86,7 +85,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.bulosfrontend.ui.theme.Cream
 import com.example.bulosfrontend.ui.theme.DeepForestGreen
@@ -118,18 +116,6 @@ fun TranslateVoiceScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBa
     var recognizedText by rememberSaveable { mutableStateOf(TranslationState.textToTranslate) }
     var isEditing by rememberSaveable { mutableStateOf(true) }
     val hasRecording = TranslationState.recordedAudioPath != null
-
-    LaunchedEffect(Unit) {
-        viewModel.prepareModelForSourceLanguage()
-    }
-    
-    LaunchedEffect(TranslationState.sourceLanguage) {
-        viewModel.prepareModelForSourceLanguage()
-    }
-
-    LaunchedEffect(TranslationState.textToTranslate) {
-        recognizedText = TranslationState.textToTranslate
-    }
 
     fun startRecording() {
         recognizedText = ""
@@ -168,22 +154,19 @@ fun TranslateVoiceScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBa
                     VoiceMicrophone(
                         isRecording = viewModel.isRecording,
                         hasRecording = hasRecording,
-                        isLoading = viewModel.isModelLoading,
                         timerSeconds = viewModel.recordingTime,
-                        status = when {
-                            viewModel.isModelLoading -> stringResource(R.string.ui_transcribing_eng)
-                            viewModel.isRecording -> stringResource(labels.listeningStatusRes)
-                            hasRecording -> stringResource(labels.reviewStatusRes)
-                            else -> stringResource(labels.idleStatusRes)
-                        },
+                        status = stringResource(
+                            when {
+                                viewModel.isRecording -> labels.listeningStatusRes
+                                hasRecording -> labels.reviewStatusRes
+                                else -> labels.idleStatusRes
+                            },
+                        ),
                         description = stringResource(labels.microphoneDescriptionRes),
                         amplitudeProvider = viewModel::currentRecordingAmplitude,
                         onClick = {
-                            if (viewModel.isModelLoading) return@VoiceMicrophone
-                            
                             if (viewModel.isRecording) {
                                 viewModel.stopRecording()
-                                recognizedText = TranslationState.textToTranslate
                                 isEditing = true
                             } else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
                                 startRecording()
@@ -202,14 +185,14 @@ fun TranslateVoiceScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBa
                         Spacer(Modifier.height(28.dp))
                     }
                     RecognizedTextCard(
-                        label = stringResource(labels.recognizedTextLabelRes, stringResource(TranslationState.sourceLanguage.displayNameRes)),
+                        label = stringResource(labels.recognizedTextLabelRes, TranslationState.sourceLanguage),
                         value = recognizedText,
                         placeholder = stringResource(labels.recognizedTextPlaceholderRes),
                         isEditing = isEditing,
                         showEditControl = hasRecording && recognizedText.isNotBlank(),
                         editLabel = stringResource(if (isEditing) labels.doneEditingRes else labels.editRes),
                         isTranscribing = viewModel.isRecording,
-                        asrStatus = viewModel.asrStatus,
+                        transcribingText = stringResource(labels.transcribingRes),
                         onEditToggle = { isEditing = !isEditing },
                         onValueChange = { recognizedText = it },
                         modifier = Modifier.padding(horizontal = contentHorizontalPadding),
@@ -340,13 +323,13 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     TranslationTextCard(
-                        label = "${stringResource(TranslationState.sourceLanguage.displayNameRes).uppercase()} · ${stringResource(labels.originalRes)}",
+                        label = "${TranslationState.sourceLanguage.uppercase(Locale.getDefault())} · ${stringResource(labels.originalRes)}",
                         text = originalText,
                         containerColor = MaterialTheme.colorScheme.surface,
                     )
-                    LanguageDirectionPill(stringResource(TranslationState.sourceLanguage.displayNameRes), stringResource(TranslationState.targetLanguage.displayNameRes))
+                    LanguageDirectionPill(TranslationState.sourceLanguage, TranslationState.targetLanguage)
                     TranslationTextCard(
-                        label = "${stringResource(TranslationState.targetLanguage.displayNameRes).uppercase()} · ${stringResource(labels.translationRes)}",
+                        label = "${TranslationState.targetLanguage.uppercase(Locale.getDefault())} · ${stringResource(labels.translationRes)}",
                         text = translatedText,
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
                     )
@@ -362,17 +345,18 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
                             },
                             modifier = Modifier.weight(1f),
                         )
-                        val shareBody = stringResource(labels.shareBodyRes, originalText, TranslationState.translatedText)
-                        val shareChooserTitle = stringResource(labels.shareChooserTitleRes)
                         ResultSecondaryAction(
                             text = stringResource(labels.shareRes),
                             icon = Icons.Default.Share,
                             onClick = {
                                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                     type = "text/plain"
-                                    putExtra(Intent.EXTRA_TEXT, shareBody)
+                                    putExtra(
+                                        Intent.EXTRA_TEXT,
+                                        context.getString(labels.shareBodyRes, originalText, TranslationState.translatedText),
+                                    )
                                 }
-                                context.startActivity(Intent.createChooser(shareIntent, shareChooserTitle))
+                                context.startActivity(Intent.createChooser(shareIntent, context.getString(labels.shareChooserTitleRes)))
                             },
                             modifier = Modifier.weight(1f),
                         )
@@ -495,17 +479,21 @@ fun TranslationLanguageBar(swapLanguagesDescription: String, modifier: Modifier 
 }
 
 @Composable
-private fun CompactLanguageMenu(selected: UiLanguage, onSelected: (UiLanguage) -> Unit, modifier: Modifier = Modifier) {
+private fun CompactLanguageMenu(selected: String, onSelected: (String) -> Unit, modifier: Modifier = Modifier) {
     var expanded by remember { mutableStateOf(false) }
-    val languages = UiLanguage.entries
+    val languages = listOf(
+        stringResource(R.string.lang_label_eng),
+        stringResource(R.string.lang_label_fil),
+        stringResource(R.string.lang_label_bul),
+    )
     Box(modifier) {
         TextButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(selected.displayNameRes), color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(selected, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             languages.forEach { language ->
                 DropdownMenuItem(
-                    text = { Text(stringResource(language.displayNameRes)) },
+                    text = { Text(language) },
                     onClick = {
                         onSelected(language)
                         expanded = false
@@ -520,7 +508,6 @@ private fun CompactLanguageMenu(selected: UiLanguage, onSelected: (UiLanguage) -
 private fun VoiceMicrophone(
     isRecording: Boolean,
     hasRecording: Boolean,
-    isLoading: Boolean,
     timerSeconds: Long,
     status: String,
     description: String,
@@ -609,7 +596,6 @@ private fun VoiceMicrophone(
             }
             IconButton(
                 onClick = onClick,
-                enabled = !isLoading,
                 modifier = Modifier
                     .graphicsLayer {
                         scaleX = buttonScale
@@ -617,22 +603,14 @@ private fun VoiceMicrophone(
                     }
                     .shadow(4.dp, CircleShape)
                     .size(100.dp)
-                    .background(if (isLoading) Color.Gray else buttonColor, CircleShape),
+                    .background(buttonColor, CircleShape),
             ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(40.dp),
-                        color = Color.White,
-                        strokeWidth = 3.dp
-                    )
-                } else {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_lucide_mic),
-                        contentDescription = description,
-                        tint = Color.White,
-                        modifier = Modifier.size(40.dp),
-                    )
-                }
+                Icon(
+                    painter = painterResource(R.drawable.ic_lucide_mic),
+                    contentDescription = description,
+                    tint = Color.White,
+                    modifier = Modifier.size(40.dp),
+                )
             }
         }
         Spacer(Modifier.height(4.dp))
@@ -675,7 +653,7 @@ private fun RecognizedTextCard(
     showEditControl: Boolean,
     editLabel: String,
     isTranscribing: Boolean,
-    asrStatus: String,
+    transcribingText: String,
     onEditToggle: () -> Unit,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -699,46 +677,51 @@ private fun RecognizedTextCard(
                 }
             }
             Spacer(Modifier.height(14.dp))
-            Box(Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
+            if (isTranscribing) {
+                val dotTransition = rememberInfiniteTransition(label = "transcribingDots")
+                Row(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp).padding(horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    repeat(3) { index ->
+                        val dotAlpha by dotTransition.animateFloat(
+                            initialValue = 0.28f,
+                            targetValue = 0.9f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(durationMillis = 520, delayMillis = index * 130),
+                                repeatMode = RepeatMode.Reverse,
+                            ),
+                            label = "transcribingDot$index",
+                        )
+                        Box(
+                            Modifier
+                                .padding(end = 5.dp)
+                                .size(6.dp)
+                                .graphicsLayer { alpha = dotAlpha }
+                                .background(RecordingRed, CircleShape),
+                        )
+                    }
+                    Spacer(Modifier.width(5.dp))
+                    Text(transcribingText, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                }
+            } else {
                 OutlinedTextField(
                     value = value,
                     onValueChange = onValueChange,
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = isEditing && !isTranscribing,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                    enabled = isEditing,
                     placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     shape = RoundedCornerShape(14.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = ForestGreen,
                         unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                         disabledBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                        disabledTextColor = if (isTranscribing) MaterialTheme.colorScheme.onSurface else DeepForestGreen,
+                        disabledTextColor = DeepForestGreen,
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
                         disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
                     ),
                 )
-                
-                if (isTranscribing) {
-                    Row(
-                        modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        val dotTransition = rememberInfiniteTransition(label = "transcribingDots")
-                        repeat(3) { index ->
-                            val dotAlpha by dotTransition.animateFloat(
-                                initialValue = 0.28f,
-                                targetValue = 0.9f,
-                                animationSpec = infiniteRepeatable(
-                                    animation = tween(520, delayMillis = index * 130),
-                                    repeatMode = RepeatMode.Reverse,
-                                ),
-                                label = "transcribingDot$index",
-                            )
-                            Box(Modifier.padding(end = 4.dp).size(4.dp).graphicsLayer { alpha = dotAlpha }.background(RecordingRed, CircleShape))
-                        }
-                        Text(asrStatus, style = MaterialTheme.typography.labelSmall, color = RecordingRed)
-                    }
-                }
             }
         }
     }

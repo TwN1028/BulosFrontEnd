@@ -21,7 +21,7 @@
     <string name="ui_voice_recording_fil">Recording ng Boses</string>
     <string name="ui_character_count_fil">%1$d / %2$d</string>
     <string name="ui_feature_speech_title_fil">Pagsasalin gamit ang Boses</string>
-    <string name="ui_feature_speech_subtitle_fil">Magsalita at magsalin</string>
+    <string name="ui_feature_speech_subtitle_fil">Pindutin para Magsalita</string>
     <string name="ui_feature_text_title_fil">Pagsasalin ng Teksto</string>
     <string name="ui_feature_text_subtitle_fil">Mag-type at magsalin</string>
     <string name="ui_feature_dictionary_title_fil">Diksyunaryo</string>
@@ -63,6 +63,11 @@
     <string name="ui_app_logo_description_fil">Logo ng app</string>
     <string name="ui_home_badge_fil">Interface sa Filipino</string>
     <string name="ui_settings_subtitle_fil">I-customize ang app</string>
+    <string name="ui_help_card_title_fil">Tulong</string>
+    <string name="ui_help_card_subtitle_fil">Paano gamitin ang app</string>
+    <string name="ui_help_screen_title_fil">Demo na may Gabay ng Boses</string>
+    <string name="ui_help_message_fil">Magkakaroon dito ng demo na may gabay ng boses kung paano gamitin ang app.</string>
+    <string name="ui_help_back_fil">Bumalik</string>
     <string name="ui_appearance_fil">Hitsura</string>
     <string name="ui_theme_fil">Tema</string>
     <string name="ui_theme_light_fil">Maliwanag</string>
@@ -70,7 +75,7 @@
     <string name="ui_supported_languages_fil">Palitan ang Wika</string>
     <string name="ui_supported_languages_description_fil">Magsalin sa pagitan ng Bulos, Filipino, at English.</string>
     <string name="ui_recent_dynamic_title_fil">Kamakailang Salin</string>
-    <string name="ui_view_history_fil">Tingnan ang History</string>
+    <string name="ui_view_history_fil">Tingnan</string>
     <string name="ui_text_subtitle_fil">Mag-type sa alinmang sinusuportahang wika</string>
     <string name="ui_text_input_placeholder_fil">Maglagay ng teksto sa %1$s…</string>
     <string name="ui_translate_to_fil">Isalin sa %1$s</string>

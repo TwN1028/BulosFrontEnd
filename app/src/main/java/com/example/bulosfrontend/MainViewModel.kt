@@ -1,10 +1,11 @@
 package com.example.bulosfrontend
 
 import android.app.Application
+import android.media.MediaRecorder
+import android.os.Build
 import androidx.compose.runtime.*
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
@@ -24,27 +25,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val uiLanguage: UiLanguage get() = selectedUiLanguage ?: UiLanguage.ENGLISH
     val content: DialogueContent get() = DialogueProvider.getDialogue(uiLanguage)
 
-    // Vosk ASR
-    private var voskManager: VoskManager? = null
-    var isModelLoaded by mutableStateOf(false)
-        private set
-    var isModelLoading by mutableStateOf(false)
-        private set
-    private var currentLoadedLanguage: UiLanguage? = null
-    var asrStatus by mutableStateOf("Ready")
-        private set
-
     // Recording State
     var isRecording by mutableStateOf(false)
     var recordingTime by mutableLongStateOf(0L)
-    private var audioRecorder: AudioRecorder? = null
+    private var recorder: MediaRecorder? = null
     private var audioFile: File? = null
-    private var timerJob: Job? = null
-
-    // Dictionary
-    private val dictionaryManager = DictionaryManager(application)
-    var isDictionaryLoaded by mutableStateOf(false)
-        private set
 
     init {
         viewModelScope.launch {
@@ -58,68 +43,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 selectedAppTheme = theme
                 isThemePreferenceLoaded = true
             }
-        }
-        viewModelScope.launch {
-            dictionaryManager.load()
-            isDictionaryLoaded = true // Explicitly track completion
-        }
-        initVosk()
-    }
-
-    private fun initVosk() {
-        voskManager = VoskManager(
-            getApplication(),
-            onPartialResultCallback = { partial ->
-                viewModelScope.launch {
-                    TranslationState.textToTranslate = partial
-                    asrStatus = "Listening..."
-                }
-            },
-            onResultCallback = { result ->
-                viewModelScope.launch {
-                    if (result.isNotBlank()) {
-                        TranslationState.textToTranslate = result
-                        asrStatus = "Captured"
-                    }
-                }
-            },
-            onErrorCallback = { e -> 
-                viewModelScope.launch {
-                    e.printStackTrace()
-                    asrStatus = "Error: ${e.message}"
-                }
-            }
-        )
-    }
-
-    fun prepareModelForSourceLanguage() {
-        val sourceLang = TranslationState.sourceLanguage
-        if (currentLoadedLanguage == sourceLang && isModelLoaded) return
-        
-        val modelPath = Design.LanguageModelMap[sourceLang] ?: return
-        
-        val assets = getApplication<Application>().assets
-        val exists = try {
-            assets.list(modelPath)?.isNotEmpty() == true
-        } catch (_: Exception) {
-            false
-        }
-
-        if (!exists) {
-            isModelLoaded = false
-            isModelLoading = false
-            asrStatus = "Model not found"
-            return
-        }
-
-        isModelLoaded = false
-        isModelLoading = true
-        asrStatus = "Loading model..."
-        voskManager?.loadModel(sourceLang, modelPath) { loaded ->
-            currentLoadedLanguage = if (loaded) sourceLang else null
-            isModelLoaded = loaded
-            isModelLoading = false
-            asrStatus = if (loaded) "Ready" else "Load failed"
         }
     }
 
@@ -135,22 +58,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun translateText(text: String) {
         TranslationState.textToTranslate = text
-        TranslationState.translatedText = dictionaryManager.translate(
-            text,
-            TranslationState.sourceLanguage,
-            TranslationState.targetLanguage
-        )
+        // Placeholder for actual translation logic
+        TranslationState.translatedText = text
         saveToHistory()
     }
 
     fun translateVoiceText(text: String) {
-        if (text.isBlank()) return
         TranslationState.textToTranslate = text
-        TranslationState.translatedText = dictionaryManager.translate(
-            text,
-            TranslationState.sourceLanguage,
-            TranslationState.targetLanguage
-        )
+        // Placeholder for the existing translation integration. No speech text is fabricated.
+        TranslationState.translatedText = text
         saveToHistory()
     }
 
@@ -163,8 +79,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun saveToHistory() {
         if (TranslationState.textToTranslate.isNotEmpty() && TranslationState.translatedText.isNotEmpty()) {
             HistoryProvider.addEntry(
-                sourceLang = TranslationState.sourceLanguage.name,
-                targetLang = TranslationState.targetLanguage.name,
+                sourceLang = TranslationState.sourceLanguage,
+                targetLang = TranslationState.targetLanguage,
                 inputText = TranslationState.textToTranslate,
                 translatedText = TranslationState.translatedText
             )
@@ -172,66 +88,78 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun startRecording() {
-        audioFile = File(getApplication<Application>().externalCacheDir, "recording_${System.currentTimeMillis()}.m4a")
-        
-        if (isModelLoaded) {
-            voskManager?.start()
-            asrStatus = "Listening..."
-        }
-        
-        audioRecorder = AudioRecorder(audioFile!!) { buffer, length ->
-            if (isModelLoaded) {
-                voskManager?.feedAudio(buffer, length)
+        val context = getApplication<Application>()
+        audioFile = File(context.externalCacheDir, "recording_${System.currentTimeMillis()}.mp3")
+        recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) MediaRecorder(context) else MediaRecorder()
+        recorder?.apply {
+            setAudioSource(MediaRecorder.AudioSource.MIC)
+            setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+            setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+            setOutputFile(audioFile?.absolutePath)
+            try {
+                prepare()
+                start()
+                isRecording = true
+                startTimer()
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
-        
-        audioRecorder?.start()
-        isRecording = true
-        startTimer()
     }
 
-    fun currentRecordingAmplitude(): Int = audioRecorder?.currentAmplitude ?: 0
+    fun currentRecordingAmplitude(): Int {
+        if (!isRecording) return 0
+        return try {
+            recorder?.maxAmplitude ?: 0
+        } catch (_: IllegalStateException) {
+            0
+        } catch (_: RuntimeException) {
+            0
+        }
+    }
 
     private fun startTimer() {
-        timerJob?.cancel()
-        timerJob = viewModelScope.launch {
+        viewModelScope.launch {
             recordingTime = 0L
             while (isRecording && recordingTime < 60) {
                 delay(1.seconds)
                 recordingTime++
             }
-            if (isRecording) stopRecording()
+            if (isRecording) {
+                stopRecording()
+            }
         }
     }
 
     fun stopRecording() {
-        timerJob?.cancel()
-        audioRecorder?.stop()
-        if (isModelLoaded) {
-            val finalResult = voskManager?.stop() ?: ""
-            if (finalResult.isNotEmpty()) TranslationState.textToTranslate = finalResult
+        try {
+            recorder?.stop()
+            recorder?.release()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            recorder = null
+            isRecording = false
+            TranslationState.recordedAudioPath = audioFile?.absolutePath
         }
-        
-        isRecording = false
-        TranslationState.recordedAudioPath = audioFile?.absolutePath
     }
 
     fun cancelRecording() {
-        timerJob?.cancel()
-        audioRecorder?.stop()
-        if (isModelLoaded) {
-            voskManager?.stop()
+        try {
+            recorder?.stop()
+            recorder?.release()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            recorder = null
+            isRecording = false
+            audioFile?.delete()
+            audioFile = null
         }
-        isRecording = false
-        TranslationState.textToTranslate = ""
-        audioFile?.delete()
-        audioFile = null
     }
 
     override fun onCleared() {
         super.onCleared()
-        voskManager?.release()
-        audioRecorder?.stop()
-        timerJob?.cancel()
+        recorder?.release()
     }
 }

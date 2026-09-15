@@ -21,7 +21,7 @@
     <string name="ui_voice_recording_bul">[BULOS: Voice Recording]</string>
     <string name="ui_character_count_bul">%1$d / %2$d</string>
     <string name="ui_feature_speech_title_bul">[BULOS: Speech Translation]</string>
-    <string name="ui_feature_speech_subtitle_bul">[BULOS: Speak &amp; translate]</string>
+    <string name="ui_feature_speech_subtitle_bul">[BULOS: Tap to Speak]</string>
     <string name="ui_feature_text_title_bul">[BULOS: Text Translation]</string>
     <string name="ui_feature_text_subtitle_bul">[BULOS: Type &amp; translate]</string>
     <string name="ui_feature_dictionary_title_bul">[BULOS: Dictionary]</string>
@@ -63,6 +63,11 @@
     <string name="ui_app_logo_description_bul">[BULOS: App logo]</string>
     <string name="ui_home_badge_bul">[BULOS: Interface]</string>
     <string name="ui_settings_subtitle_bul">[BULOS: Customize app]</string>
+    <string name="ui_help_card_title_bul">[BULOS: Help]</string>
+    <string name="ui_help_card_subtitle_bul">[BULOS: How to use the app]</string>
+    <string name="ui_help_screen_title_bul">[BULOS: Voice-Guided Demo]</string>
+    <string name="ui_help_message_bul">[BULOS: A voice-guided demonstration on how to use the app will be available here.]</string>
+    <string name="ui_help_back_bul">[BULOS: Back]</string>
     <string name="ui_appearance_bul">[BULOS: Appearance]</string>
     <string name="ui_theme_bul">[BULOS: Theme]</string>
     <string name="ui_theme_light_bul">[BULOS: Light]</string>
@@ -70,7 +75,7 @@
     <string name="ui_supported_languages_bul">[BULOS: Switch Language]</string>
     <string name="ui_supported_languages_description_bul">[BULOS: Translate between Bulos, Filipino, and English.]</string>
     <string name="ui_recent_dynamic_title_bul">[BULOS: Recent Translation]</string>
-    <string name="ui_view_history_bul">[BULOS: View History]</string>
+    <string name="ui_view_history_bul">[BULOS: View]</string>
     <string name="ui_text_subtitle_bul">[BULOS: Type in any supported language]</string>
     <string name="ui_text_input_placeholder_bul">[BULOS: Enter text in %1$s…]</string>
     <string name="ui_translate_to_bul">[BULOS: Translate to %1$s]</string>

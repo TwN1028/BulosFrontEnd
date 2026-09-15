@@ -27,6 +27,15 @@ data class DialogueContent(
     val speechResult: SpeechResultDialogueContent,
     val textTranslation: TextTranslationDialogueContent,
     val preservationIntro: PreservationIntroDialogueContent,
+    val help: HelpDialogueContent,
+)
+
+data class HelpDialogueContent(
+    @StringRes val cardTitleRes: Int,
+    @StringRes val cardSubtitleRes: Int,
+    @StringRes val screenTitleRes: Int,
+    @StringRes val messageRes: Int,
+    @StringRes val backRes: Int,
 )
 
 data class PreservationIntroDialogueContent(
@@ -110,6 +119,7 @@ object DialogueProvider {
             speechResult("eng"),
             textTranslation("eng"),
             preservationIntro("eng"),
+            help("eng"),
         ),
         UiLanguage.FILIPINO to DialogueContent(
             R.string.ui_header_main_fil, R.string.ui_header_translate_fil, R.string.ui_header_result_fil,
@@ -123,6 +133,7 @@ object DialogueProvider {
             speechResult("fil"),
             textTranslation("fil"),
             preservationIntro("fil"),
+            help("fil"),
         ),
         UiLanguage.BULOS to DialogueContent(
             R.string.ui_header_main_bul, R.string.ui_header_translate_bul, R.string.ui_header_result_bul,
@@ -136,10 +147,35 @@ object DialogueProvider {
             speechResult("bul"),
             textTranslation("bul"),
             preservationIntro("bul"),
+            help("bul"),
         ),
     )
 
     fun getDialogue(language: UiLanguage): DialogueContent = dialogues.getValue(language)
+
+    private fun help(suffix: String): HelpDialogueContent = when (suffix) {
+        "fil" -> HelpDialogueContent(
+            R.string.ui_help_card_title_fil,
+            R.string.ui_help_card_subtitle_fil,
+            R.string.ui_help_screen_title_fil,
+            R.string.ui_help_message_fil,
+            R.string.ui_help_back_fil,
+        )
+        "bul" -> HelpDialogueContent(
+            R.string.ui_help_card_title_bul,
+            R.string.ui_help_card_subtitle_bul,
+            R.string.ui_help_screen_title_bul,
+            R.string.ui_help_message_bul,
+            R.string.ui_help_back_bul,
+        )
+        else -> HelpDialogueContent(
+            R.string.ui_help_card_title_eng,
+            R.string.ui_help_card_subtitle_eng,
+            R.string.ui_help_screen_title_eng,
+            R.string.ui_help_message_eng,
+            R.string.ui_help_back_eng,
+        )
+    }
 
     private fun preservationIntro(suffix: String): PreservationIntroDialogueContent = when (suffix) {
         "fil" -> PreservationIntroDialogueContent(

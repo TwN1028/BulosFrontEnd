@@ -32,9 +32,9 @@ fun AppBottomNavigation(
     modifier: Modifier = Modifier,
 ) {
     val items = listOf(
-        BottomItem(content.navSpeechRes, painterResource(R.drawable.ic_lucide_mic), AppDestinations.VOICE),
+        BottomItem(content.navSpeechRes, painterResource(R.drawable.ic_lucide_mic), AppDestinations.HOME_RECORDING),
         BottomItem(content.navTranslateRes, painterResource(R.drawable.ic_lucide_languages), AppDestinations.TEXT),
-        BottomItem(content.historyTitleRes, painterResource(R.drawable.ic_lucide_history), AppDestinations.HISTORY),
+        BottomItem(content.historyTitleRes, painterResource(R.drawable.ic_saved_history_reference), AppDestinations.HISTORY),
         BottomItem(content.navDictionaryRes, painterResource(R.drawable.ic_dictionary_book), AppDestinations.DICTIONARY),
         BottomItem(content.settingsTitleRes, painterResource(R.drawable.ic_lucide_settings), AppDestinations.MORE),
     )

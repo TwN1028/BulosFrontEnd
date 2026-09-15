@@ -9,11 +9,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,7 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -36,9 +33,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.bulosfrontend.ui.theme.BulosFrontEndTheme
 
-private val DarkForestGreen = Color(0xFF1E3F20)
-private val MutedGreen = Color(0xFF5E7A4A)
-private val PaleCreamGreen = Color(0xFFEAEBD9)
 private val SplashCream = Color(0xFFFFFBF4)
 
 @Composable
@@ -46,21 +40,12 @@ fun BrandedSplashScreen(modifier: Modifier = Modifier) {
     Box(
         modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colorStops = arrayOf(
-                        0.00f to DarkForestGreen,
-                        0.45f to DarkForestGreen,
-                        0.78f to MutedGreen,
-                        1.00f to PaleCreamGreen,
-                    ),
-                ),
-            ),
+            .background(homeHeaderGradientBrush()),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.statusBars.union(WindowInsets.navigationBars)),
+                .windowInsetsPadding(WindowInsets.safeDrawing),
         ) {
             Column(
                 modifier = Modifier.align(Alignment.Center).padding(horizontal = 24.dp),

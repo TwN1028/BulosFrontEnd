@@ -115,27 +115,15 @@ fun PreservationIntroScreen(
                                 ),
                             ),
                     ) {
-                        GeometricGreenBackground(
-                            modifier = Modifier.matchParentSize(),
-                            cellSize = 52.dp,
-                            patternAlpha = 0.10f,
-                        )
                         Box(
                             modifier = Modifier
                                 .matchParentSize()
-                                .background(
-                                    Brush.verticalGradient(
-                                        listOf(
-                                            Color.Transparent,
-                                            HomeSpeechGreen.copy(alpha = 0.16f),
-                                        ),
-                                    ),
-                                ),
+                                .background(appHeaderGradientBrush()),
                         )
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .statusBarsPadding()
+                                .safeHeaderInsets()
                                 .padding(horizontal = 24.dp, vertical = 16.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {

@@ -2,19 +2,58 @@ package com.example.bulosfrontend
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.draw.*
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.bulosfrontend.ui.theme.Aileron
+
+@Composable
+internal fun Modifier.safeHeaderInsets(): Modifier = windowInsetsPadding(
+    WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+)
+
+@Composable
+internal fun OverlappingHeaderLayout(
+    overlap: Dp,
+    modifier: Modifier = Modifier,
+    header: @Composable () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    SubcomposeLayout(modifier = modifier) { constraints ->
+        val headerPlaceable = subcompose("header") { header() }
+            .first()
+            .measure(constraints.copy(minHeight = 0))
+        val overlapPx = overlap.roundToPx().coerceAtMost(headerPlaceable.height)
+        val contentTop = headerPlaceable.height - overlapPx
+        val contentHeight = (constraints.maxHeight - contentTop).coerceAtLeast(0)
+        val contentPlaceable = subcompose("content") { content() }
+            .first()
+            .measure(
+                constraints.copy(
+                    minHeight = contentHeight,
+                    maxHeight = contentHeight,
+                ),
+            )
+        layout(constraints.maxWidth, constraints.maxHeight) {
+            headerPlaceable.placeRelative(0, 0)
+            contentPlaceable.placeRelative(0, contentTop)
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -22,16 +61,43 @@ fun SharedTopAppBar(
     title: String,
     @androidx.annotation.StringRes logoDescriptionRes: Int = R.string.app_logo_content_description,
     @androidx.annotation.DrawableRes iconRes: Int? = null,
-) = TopAppBar(
-    title = { Text(title) },
-    navigationIcon = {
+    subtitle: String? = null,
+    trailingContent: @Composable RowScope.() -> Unit = {},
+) = Column(Modifier.background(appHeaderGradientBrush())) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .safeHeaderInsets()
+            .padding(start = 4.dp, top = AppHeaderTitleTopPadding, end = 16.dp, bottom = 7.dp)
+            .height(48.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Icon(
             painter = painterResource(iconRes ?: R.drawable.ic_launcher_foreground),
             contentDescription = stringResource(logoDescriptionRes),
+            tint = Color.White,
             modifier = if (iconRes != null) Modifier.size(48.dp).padding(12.dp) else Modifier.size(48.dp).padding(8.dp),
         )
-    },
-)
+        Spacer(Modifier.width(4.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, color = Color.White, style = MaterialTheme.typography.titleLarge)
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 15.sp,
+                        lineHeight = 20.sp,
+                    ),
+                    fontWeight = FontWeight.Normal,
+                    maxLines = 1,
+                )
+            }
+        }
+        trailingContent()
+    }
+    Spacer(Modifier.height(AppHeaderTailHeight))
+}
 
 @Composable
 fun PoppingIconButton(onClick: () -> Unit, icon: ImageVector, contentDescription: String?, modifier: Modifier = Modifier) {

@@ -7,6 +7,11 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.WindowInsets
@@ -67,7 +72,7 @@ class MainActivity : ComponentActivity() {
                 val currentRoute = navBackStackEntry?.destination?.route
                 val featureRoutes = setOf(
                     AppDestinations.VOICE,
-                    AppDestinations.TEXT,
+                    AppDestinations.RESULT,
                     AppDestinations.HISTORY,
                     AppDestinations.DICTIONARY,
                     AppDestinations.MORE,
@@ -133,7 +138,40 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         composable(AppDestinations.HOME) {
-                            HomeScreen(viewModel) { route -> navController.navigate(route) }
+                            HomeScreen(viewModel) { route ->
+                                navController.navigate(route) { launchSingleTop = true }
+                            }
+                        }
+                        composable(
+                            route = AppDestinations.HOME_RECORDING,
+                            enterTransition = {
+                                fadeIn(tween(300)) + scaleIn(tween(300), initialScale = 0.96f)
+                            },
+                            exitTransition = {
+                                fadeOut(tween(300)) + scaleOut(tween(300), targetScale = 0.96f)
+                            },
+                            popEnterTransition = {
+                                fadeIn(tween(300)) + scaleIn(tween(300), initialScale = 0.96f)
+                            },
+                            popExitTransition = {
+                                fadeOut(tween(300)) + scaleOut(tween(300), targetScale = 0.96f)
+                            },
+                        ) {
+                            HomeRecordingScreen(
+                                viewModel = viewModel,
+                                onBack = {
+                                    navController.navigate(AppDestinations.HOME) {
+                                        launchSingleTop = true
+                                        popUpTo(AppDestinations.HOME_RECORDING) { inclusive = true }
+                                    }
+                                },
+                                onRecordingFinished = {
+                                    navController.navigate(AppDestinations.VOICE) {
+                                        launchSingleTop = true
+                                        popUpTo(AppDestinations.HOME_RECORDING) { inclusive = true }
+                                    }
+                                },
+                            )
                         }
                         composable(AppDestinations.TEXT) {
                             TranslateTextScreen(
@@ -168,7 +206,7 @@ class MainActivity : ComponentActivity() {
                             SettingsScreen(viewModel) { navController.navigate(AppDestinations.LANGUAGE_SETTINGS) }
                         }
                         composable(AppDestinations.HELP) {
-                            VoiceGuidedDemoScreen(onBack = { navController.popBackStack() })
+                            VoiceGuidedDemoScreen(viewModel, onBack = { navController.popBackStack() })
                         }
                         composable(AppDestinations.LANGUAGE_SETTINGS) {
                             LanguageSettingsScreen(viewModel) { language ->

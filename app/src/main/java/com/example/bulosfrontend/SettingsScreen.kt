@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -22,16 +23,24 @@ import androidx.compose.ui.unit.sp
 fun SettingsScreen(viewModel: MainViewModel, onLanguageClick: () -> Unit) {
     val content = viewModel.content
     val home = content.home
-    Scaffold(
-        topBar = {
+    Surface(Modifier.fillMaxSize(), color = Color(0xFFFFFBF4)) {
+        OverlappingHeaderLayout(
+            overlap = 31.dp,
+            modifier = Modifier.fillMaxSize(),
+            header = {
             SharedTopAppBar(
                 stringResource(home.settingsTitleRes),
                 home.appLogoDescriptionRes,
                 R.drawable.ic_lucide_settings,
+                subtitle = stringResource(home.settingsSubtitleRes),
             )
-        },
-    ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
+            },
+        ) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+        ) {
             Card(
                 onClick = onLanguageClick,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 88.dp),
@@ -126,6 +135,7 @@ fun SettingsScreen(viewModel: MainViewModel, onLanguageClick: () -> Unit) {
                     )
                 }
             }
+        }
         }
     }
 }

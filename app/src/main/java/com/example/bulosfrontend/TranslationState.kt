@@ -6,11 +6,11 @@ import androidx.compose.runtime.setValue
 
 /**
  * Singleton object to hold the current translation state.
- * Decoupled from the ViewModel to allow custom API integration.
+ * Using enums for logic to prevent localization-based bugs.
  */
 object TranslationState {
-    var sourceLanguage by mutableStateOf("English")
-    var targetLanguage by mutableStateOf("Bulos")
+    var sourceLanguage by mutableStateOf(UiLanguage.ENGLISH)
+    var targetLanguage by mutableStateOf(UiLanguage.BULOS)
     var textToTranslate by mutableStateOf("")
     var translatedText by mutableStateOf("")
     var recordedAudioPath by mutableStateOf<String?>(null)

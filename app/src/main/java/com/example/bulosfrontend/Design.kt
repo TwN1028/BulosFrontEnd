@@ -12,7 +12,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 object Design {
-    // Colors
+    // Colors - Core Palette
     val EarthlyBrown = Color(0xFF5D4037)
     val OnEarthlyBrown = Color(0xFFFFF8E1)
     val ButtonBrown = Color(0xFF795548)
@@ -21,21 +21,37 @@ object Design {
     val DarkForestGreen = Color(0xFF1B5E20)
     val LightButtonRed = Color(0xFFEF9A9A)
     val DarkButtonRed = Color(0xFFB71C1C)
+    
+    // UI Palette
+    val BackgroundCream = Color(0xFFFFFBF4)
+    val BackgroundHeroStart = Color(0xFF1E3F20)
+    val BackgroundHeroMid = Color(0xFF5E7A4A)
+    val BackgroundHeroEnd = Color(0xFFEAEBD9)
+    val BackgroundHeroBase = Color(0xFFF7F8F2)
+    val AuraCream = Color(0xFFFFF3DA)
 
     // Alpha & Transparency
     val AlphaSecondary = 0.5f
     val AlphaFooter = 0.7f
+    val AlphaPattern = 0.08f
+    val AlphaPatternLarge = 0.18f
+    val AlphaPatternMedium = 0.10f
 
     // Shapes
     val ButtonShape = RoundedCornerShape(12.dp)
     val CardShape = RoundedCornerShape(16.dp)
     val DashboardShape = RoundedCornerShape(24.dp)
+    val LargeCardShape = RoundedCornerShape(28.dp)
+    val HeroShape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
     val Circle = RoundedCornerShape(50)
 
     // Dimensions - Paddings & Spacings
     val PaddingScreen = 32.dp
+    val PaddingHorizontal = 24.dp
+    val PaddingHorizontalSmall = 20.dp
     val PaddingElement = 16.dp
     val PaddingSmall = 8.dp
+    val PaddingMicro = 4.dp
     val SpacingLarge = 24.dp
     val SpacingMedium = 16.dp
     val SpacingSmall = 8.dp
@@ -44,18 +60,29 @@ object Design {
     val ButtonHeightLarge = 80.dp
     val ButtonHeightMedium = 64.dp
     val ButtonHeightSmall = 48.dp
+    val ButtonHeightAction = 56.dp
     val ButtonHeightSelector = 56.dp
+    val HeaderHeightSmall = 68.dp
+    val TopBarHeight = 112.dp
     
     val IconSizeLarge = 200.dp
+    val IconSizeHero = 112.dp
     val IconSizeMedium = 120.dp
     val IconSizeSmall = 48.dp
     val IconSizeMini = 24.dp
+    val IconSizeMicro = 16.dp
     val IconSizeHistory = 12.dp
     val IconPadding = 8.dp
     
     val DashboardButtonSize = 160.dp
+    val DashboardHeroSize = 254.dp
     val ToastPaddingH = 24.dp
     val ToastPaddingV = 8.dp
+    
+    val ElevationDefault = 2.dp
+    val ElevationLow = 1.dp
+    val ElevationHigh = 14.dp
+    val ShadowAura = 2.dp
 
     // Typography SP
     val FontDisplayLarge = 64.sp
@@ -76,8 +103,13 @@ object Design {
     
     val TimerFontSize = 60.sp
     val FontBold = FontWeight.Bold
+    val FontExtraBold = FontWeight.ExtraBold
+    val FontBlack = FontWeight.Black
 
     // Animation
+    val DurationLong = 600
+    val DurationMedium = 250
+    val DurationShort = 100
     val PopDuration = 100
     val PopScale = 1.2f
 
@@ -88,6 +120,13 @@ object Design {
     val CenterV = Alignment.CenterVertically
     val CenterArr = Arrangement.Center
     val CenterAlign = Alignment.Center
+
+    // ASR Configuration
+    val LanguageModelMap = mapOf(
+        UiLanguage.ENGLISH to "model-en",
+        UiLanguage.FILIPINO to "model-fil",
+        UiLanguage.BULOS to "model-bul"
+    )
 
     @Composable
     fun primaryColors() = ButtonDefaults.buttonColors(containerColor = LightForestGreen, contentColor = DarkForestGreen)

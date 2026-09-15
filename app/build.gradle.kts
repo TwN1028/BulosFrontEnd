@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.bulosfrontend"
-        minSdk = 23
+        minSdk = 26
         @Suppress("OldTargetApi")
         targetSdk = 36
         versionCode = 1
@@ -33,6 +33,15 @@ android {
         compose = true
         viewBinding = true
     }
+    packaging {
+        resources {
+            excludes += "/META-INF/DEPENDENCIES"
+            excludes += "/META-INF/NOTICE"
+            excludes += "/META-INF/LICENSE"
+            excludes += "/META-INF/LICENSE.txt"
+            excludes += "/META-INF/NOTICE.txt"
+        }
+    }
 }
 
 dependencies {
@@ -54,6 +63,9 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.core.splashscreen)
+    implementation(libs.vosk.android)
+    implementation(libs.poi.main)
+    implementation(libs.poi.ooxml)
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
     implementation(libs.material)

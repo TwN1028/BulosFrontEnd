@@ -17,113 +17,59 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.bulosfrontend.ui.theme.*
 
 @Composable
 fun SettingsScreen(viewModel: MainViewModel, onLanguageClick: () -> Unit) {
     val content = viewModel.content
     val home = content.home
     Scaffold(
-        topBar = {
-            SharedTopAppBar(
-                stringResource(home.settingsTitleRes),
-                home.appLogoDescriptionRes,
-                R.drawable.ic_lucide_settings,
-            )
-        },
+        topBar = { SharedTopAppBar(stringResource(home.settingsTitleRes), home.appLogoDescriptionRes, R.drawable.ic_lucide_settings) },
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
+        Column(Modifier.fillMaxSize().padding(padding).padding(Design.PaddingElement)) {
             Card(
                 onClick = onLanguageClick,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 88.dp),
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                elevation = CardDefaults.cardElevation(Design.ElevationDefault),
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(18.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(Icons.Default.Language, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.width(16.dp))
+                Row(modifier = Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Language, null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(Design.PaddingElement))
                     Column(Modifier.weight(1f)) {
-                        Text(stringResource(home.languageRes), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(home.languageRes), style = MaterialTheme.typography.titleMedium, fontWeight = Design.FontBold)
                         Spacer(Modifier.height(3.dp))
                         Text(stringResource(home.languageSummaryRes), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.secondary)
                         Spacer(Modifier.height(3.dp))
-                        Text(
-                            stringResource(home.currentLanguageRes, stringResource(viewModel.uiLanguage.displayNameRes)),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
+                        Text(stringResource(home.currentLanguageRes, stringResource(viewModel.uiLanguage.displayNameRes)), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                     }
                     Spacer(Modifier.width(12.dp))
-                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = MaterialTheme.colorScheme.secondary)
                 }
             }
-            Spacer(Modifier.height(24.dp))
-            Text(
-                text = stringResource(home.appearanceRes).uppercase(),
-                modifier = Modifier.padding(horizontal = 4.dp),
-                color = MaterialTheme.colorScheme.secondary,
-                style = MaterialTheme.typography.labelLarge.copy(
-                    fontSize = 10.sp,
-                    letterSpacing = 1.35.sp,
-                ),
-                fontWeight = FontWeight.Bold,
-            )
+            Spacer(Modifier.height(Design.PaddingHorizontal))
+            Text(stringResource(home.appearanceRes).uppercase(), Modifier.padding(horizontal = Design.PaddingMicro), color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.labelLarge.copy(fontSize = 10.sp, letterSpacing = 1.35.sp), fontWeight = Design.FontBold)
             Spacer(Modifier.height(10.dp))
             Card(
                 modifier = Modifier.fillMaxWidth().heightIn(min = 88.dp),
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                elevation = CardDefaults.cardElevation(Design.ElevationDefault),
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(18.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Surface(
-                        modifier = Modifier.size(36.dp),
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.primary,
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = if (viewModel.selectedAppTheme == AppTheme.DARK) {
-                                    Icons.Default.DarkMode
-                                } else {
-                                    Icons.Default.LightMode
-                                },
-                                contentDescription = null,
-                                modifier = Modifier.size(19.dp),
-                            )
-                        }
+                Row(modifier = Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Surface(modifier = Modifier.size(36.dp), shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.primary) {
+                        Box(contentAlignment = Alignment.Center) { Icon(if (viewModel.selectedAppTheme == AppTheme.DARK) Icons.Default.DarkMode else Icons.Default.LightMode, null, modifier = Modifier.size(19.dp)) }
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(home.themeRes),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                        )
+                        Text(stringResource(home.themeRes), style = MaterialTheme.typography.titleMedium, fontWeight = Design.FontBold)
                         Spacer(Modifier.height(3.dp))
-                        Text(
-                            text = stringResource(
-                                if (viewModel.selectedAppTheme == AppTheme.DARK) home.darkThemeRes else home.lightThemeRes,
-                            ),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.secondary,
-                        )
+                        Text(stringResource(if (viewModel.selectedAppTheme == AppTheme.DARK) home.darkThemeRes else home.lightThemeRes), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.secondary)
                     }
                     Spacer(Modifier.width(10.dp))
-                    ThemeSelector(
-                        selectedTheme = viewModel.selectedAppTheme,
-                        lightLabel = stringResource(home.lightThemeRes),
-                        darkLabel = stringResource(home.darkThemeRes),
-                        onThemeSelected = viewModel::selectAppTheme,
-                    )
+                    ThemeSelector(viewModel.selectedAppTheme, stringResource(home.lightThemeRes), stringResource(home.darkThemeRes), viewModel::selectAppTheme)
                 }
             }
         }
@@ -131,63 +77,21 @@ fun SettingsScreen(viewModel: MainViewModel, onLanguageClick: () -> Unit) {
 }
 
 @Composable
-private fun ThemeSelector(
-    selectedTheme: AppTheme,
-    lightLabel: String,
-    darkLabel: String,
-    onThemeSelected: (AppTheme) -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .height(34.dp)
-            .width(124.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        ThemeOption(
-            label = lightLabel,
-            selected = selectedTheme == AppTheme.LIGHT,
-            onClick = { onThemeSelected(AppTheme.LIGHT) },
-            modifier = Modifier.weight(1f),
-        )
-        ThemeOption(
-            label = darkLabel,
-            selected = selectedTheme == AppTheme.DARK,
-            onClick = { onThemeSelected(AppTheme.DARK) },
-            modifier = Modifier.weight(1f),
-        )
-    }
+private fun ThemeSelector(sel: AppTheme, light: String, dark: String, onSel: (AppTheme) -> Unit) = Row(Modifier.height(34.dp).width(124.dp), Arrangement.spacedBy(4.dp)) {
+    ThemeOption(light, sel == AppTheme.LIGHT, { onSel(AppTheme.LIGHT) }, Modifier.weight(1f))
+    ThemeOption(dark, sel == AppTheme.DARK, { onSel(AppTheme.DARK) }, Modifier.weight(1f))
 }
 
 @Composable
-private fun ThemeOption(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
+private fun ThemeOption(label: String, sel: Boolean, onClick: () -> Unit, mod: Modifier = Modifier) = Surface(
+    modifier = mod.fillMaxHeight().clickable(onClick = onClick), shape = RoundedCornerShape(10.dp),
+    color = if (sel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+    contentColor = if (sel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
 ) {
-    Surface(
-        modifier = modifier.fillMaxHeight().clickable(onClick = onClick),
-        shape = RoundedCornerShape(10.dp),
-        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-        contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-            )
-        }
-    }
+    Box(contentAlignment = Alignment.Center) { Text(label, style = MaterialTheme.typography.labelMedium, fontWeight = Design.FontBold, maxLines = 1) }
 }
 
 @Composable
 fun LanguageSettingsScreen(viewModel: MainViewModel, onLanguageSelected: (UiLanguage) -> Unit) {
-    val content = viewModel.content
-    LanguageSelectionScreen(
-        titleRes = content.home.languageScreenTitleRes,
-        selectedLanguage = viewModel.selectedUiLanguage,
-        onLanguageSelected = onLanguageSelected,
-    )
+    LanguageSelectionScreen(viewModel.content.home.languageScreenTitleRes, viewModel.selectedUiLanguage, onLanguageSelected)
 }

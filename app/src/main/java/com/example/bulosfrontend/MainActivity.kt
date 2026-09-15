@@ -7,9 +7,9 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -20,15 +20,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.WindowCompat
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.core.view.WindowCompat
 import com.example.bulosfrontend.ui.theme.BulosFrontEndTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.seconds
 
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
@@ -49,7 +50,7 @@ class MainActivity : ComponentActivity() {
                     .collectAsState(initial = null)
                 val coroutineScope = rememberCoroutineScope()
                 LaunchedEffect(Unit) {
-                    delay(3_000L)
+                    delay(3.seconds)
                     minimumSplashDurationElapsed = true
                 }
 
@@ -139,17 +140,15 @@ class MainActivity : ComponentActivity() {
                             TranslateTextScreen(
                                 viewModel,
                                 onTranslate = { navController.navigate(AppDestinations.RESULT) },
-                            ) {
-                                navController.popBackStack()
-                            }
+                                onBack = { navController.popBackStack() }
+                            )
                         }
                         composable(AppDestinations.VOICE) {
                             TranslateVoiceScreen(
                                 viewModel,
                                 onTranslate = { navController.navigate(AppDestinations.RESULT) },
-                            ) {
-                                navController.popBackStack()
-                            }
+                                onBack = { navController.popBackStack() }
+                            )
                         }
                         composable(AppDestinations.RESULT) {
                             ResultScreen(

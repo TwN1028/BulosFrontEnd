@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -34,19 +35,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.example.bulosfrontend.ui.theme.Cream
-import com.example.bulosfrontend.ui.theme.GoldenAccent
-import com.example.bulosfrontend.ui.theme.HomeCardBorder
-import com.example.bulosfrontend.ui.theme.HomeSpeechGreen
-import com.example.bulosfrontend.ui.theme.MainText
-import com.example.bulosfrontend.ui.theme.MutedText
-import com.example.bulosfrontend.ui.theme.PrimaryGreen
-import com.example.bulosfrontend.ui.theme.Sand
-import com.example.bulosfrontend.ui.theme.WarmWhiteCard
+import com.example.bulosfrontend.ui.theme.*
 import kotlinx.coroutines.delay
 
-private val BulosLanguageBrown = Color(0xFF5C3D1A)
 private val GlobeGold = Color(0xFFF5C47C)
 private val BulosSelectedMatte = Color(0xFF6B5138)
 private val FilipinoSelectedMatte = Color(0xFFA8643C)
@@ -82,7 +73,7 @@ private val languageOptions = listOf(
         R.string.language_badge_english,
         R.string.language_name_english,
         R.string.language_option_english,
-        PrimaryGreen,
+        Design.DarkForestGreen,
         HomeSpeechGreen,
     ),
     LanguageOption(
@@ -98,7 +89,7 @@ private val languageOptions = listOf(
         R.string.language_badge_bulos,
         R.string.language_name_bulos,
         R.string.language_option_bulos,
-        BulosLanguageBrown,
+        Design.ButtonBrown,
         BulosSelectedMatte,
     ),
 )
@@ -137,7 +128,7 @@ fun LanguageSelectionScreen(
         .firstOrNull { it.language == pendingLanguage }
         ?.selectedColor
         ?.let(::matteContinueColor)
-        ?: PrimaryGreen
+        ?: Design.DarkForestGreen
 
     Box(modifier = modifier.fillMaxSize()) {
         Scaffold(
@@ -145,12 +136,12 @@ fun LanguageSelectionScreen(
             containerColor = MaterialTheme.colorScheme.background,
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             bottomBar = {
-                Surface(color = MaterialTheme.colorScheme.background, tonalElevation = 0.dp, shadowElevation = 0.dp) {
+                Surface(color = MaterialTheme.colorScheme.background, tonalElevation = 0.dp) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding()
-                        .padding(start = 32.dp, top = 12.dp, end = 32.dp, bottom = 16.dp),
+                        .padding(start = Design.PaddingScreen, top = 12.dp, end = Design.PaddingScreen, bottom = Design.PaddingElement),
                     contentAlignment = Alignment.Center,
                 ) {
                     Button(
@@ -159,16 +150,16 @@ fun LanguageSelectionScreen(
                         modifier = Modifier
                             .widthIn(max = 480.dp)
                             .fillMaxWidth()
-                            .height(56.dp),
-                        shape = RoundedCornerShape(16.dp),
+                            .height(Design.ButtonHeightAction),
+                        shape = Design.CardShape,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = continueButtonColor,
                             contentColor = MainText,
-                            disabledContainerColor = Sand.copy(alpha = 0.50f),
+                            disabledContainerColor = Sand.copy(alpha = Design.AlphaSecondary),
                             disabledContentColor = MutedText,
                         ),
                         elevation = ButtonDefaults.buttonElevation(
-                            defaultElevation = 2.dp,
+                            defaultElevation = Design.ElevationDefault,
                             pressedElevation = 0.dp,
                             disabledElevation = 0.dp,
                         ),
@@ -180,8 +171,8 @@ fun LanguageSelectionScreen(
                         ) {
                             Text(
                                 text = stringResource(R.string.language_selection_continue),
-                                style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp),
-                                fontWeight = if (pendingLanguage == null) FontWeight.ExtraBold else FontWeight.Bold,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = if (pendingLanguage == null) Design.FontExtraBold else Design.FontBold,
                                 textAlign = TextAlign.Center,
                             )
                         }
@@ -204,18 +195,18 @@ fun LanguageSelectionScreen(
                     GeometricGreenBackground(
                         modifier = Modifier.matchParentSize(),
                         cellSize = 52.dp,
-                        patternAlpha = 0.18f,
+                        patternAlpha = Design.AlphaPatternLarge,
                     )
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .statusBarsPadding()
-                            .padding(start = 24.dp, top = 40.dp, end = 24.dp, bottom = 20.dp),
+                            .padding(start = Design.PaddingHorizontal, top = 40.dp, end = Design.PaddingHorizontal, bottom = 20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Surface(
-                            modifier = Modifier.size(48.dp),
-                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.size(Design.IconSizeSmall),
+                            shape = Design.CardShape,
                             color = Color.White.copy(alpha = 0.15f),
                             contentColor = GlobeGold,
                             border = BorderStroke(1.dp, Color.White.copy(alpha = 0.20f)),
@@ -232,19 +223,15 @@ fun LanguageSelectionScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(48.dp)
+                                .height(Design.IconSizeSmall)
                                 .graphicsLayer { alpha = headingAlpha.value },
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
                                 text = stringResource(rotatingHeadingResources[headingIndex]),
                                 color = Color.White,
-                                style = MaterialTheme.typography.headlineSmall.copy(
-                                    fontSize = 20.sp,
-                                    lineHeight = 24.sp,
-                                    letterSpacing = (-0.2).sp,
-                                ),
-                                fontWeight = FontWeight.ExtraBold,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = Design.FontExtraBold,
                                 textAlign = TextAlign.Center,
                                 maxLines = 2,
                             )
@@ -257,14 +244,14 @@ fun LanguageSelectionScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 32.dp, top = 48.dp, end = 32.dp, bottom = 24.dp),
+                        .padding(start = Design.PaddingScreen, top = Design.IconSizeSmall, end = Design.PaddingScreen, bottom = Design.PaddingHorizontal),
                     contentAlignment = Alignment.TopCenter,
                 ) {
                     Column(
                         modifier = Modifier
                             .widthIn(max = 480.dp)
                             .fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(Design.SpacingSmall + 4.dp),
                     ) {
                         languageOptions.asReversed().forEach { option ->
                             ReferenceLanguageCard(
@@ -301,7 +288,7 @@ private fun ReferenceLanguageCard(
             .fillMaxWidth()
             .heightIn(min = 84.dp)
             .scale(scale),
-        shape = RoundedCornerShape(16.dp),
+        shape = Design.CardShape,
         colors = CardDefaults.cardColors(
             containerColor = if (selected) option.selectedColor else MaterialTheme.colorScheme.surface,
         ),
@@ -310,7 +297,7 @@ private fun ReferenceLanguageCard(
             color = if (selected) Color.White.copy(alpha = 0.42f) else MaterialTheme.colorScheme.outlineVariant,
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (selected) 2.dp else 1.dp,
+            defaultElevation = if (selected) Design.ElevationDefault else Design.ElevationLow,
             pressedElevation = 0.5.dp,
         ),
     ) {
@@ -318,24 +305,24 @@ private fun ReferenceLanguageCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 84.dp)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(horizontal = Design.PaddingElement, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Surface(
-                modifier = Modifier.size(48.dp),
-                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.size(Design.IconSizeSmall),
+                shape = Design.ButtonShape,
                 color = if (selected) WarmWhiteCard.copy(alpha = 0.20f) else option.color.copy(alpha = 0.09f),
                 contentColor = if (selected) WarmWhiteCard else option.color,
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         text = stringResource(option.badgeRes),
-                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp),
-                        fontWeight = FontWeight.ExtraBold,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = Design.FontExtraBold,
                     )
                 }
             }
-            Spacer(Modifier.width(16.dp))
+            Spacer(Modifier.width(Design.PaddingElement))
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.Center,
@@ -344,23 +331,16 @@ private fun ReferenceLanguageCard(
                 Text(
                     text = stringResource(option.nameRes),
                     color = contentColor,
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontSize = 16.sp,
-                        lineHeight = 20.sp,
-                        letterSpacing = (-0.1).sp,
-                    ),
-                    fontWeight = FontWeight.Black,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = Design.FontBlack,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(Design.PaddingMicro))
                 Text(
                     text = stringResource(option.descriptionRes),
                     color = descriptionColor,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 12.sp,
-                        lineHeight = 18.sp,
-                    ),
+                    style = MaterialTheme.typography.bodyMedium,
                 )
             }
             Spacer(Modifier.width(12.dp))
@@ -373,7 +353,7 @@ private fun ReferenceLanguageCard(
 private fun LanguageSelectionControl(selected: Boolean, selectedColor: Color) {
     Box(
         modifier = Modifier
-            .size(24.dp)
+            .size(Design.IconSizeMini)
             .then(
                 if (selected) {
                     Modifier.background(Color.White, CircleShape)
@@ -404,7 +384,7 @@ private fun ImmediateLanguageSelectionScreen(
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 32.dp),
+            contentPadding = PaddingValues(horizontal = Design.PaddingHorizontal, vertical = Design.PaddingScreen),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -423,16 +403,16 @@ private fun ImmediateLanguageSelectionScreen(
                 Text(
                     stringResource(titleRes),
                     style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = Design.FontBold,
                     textAlign = TextAlign.Center,
                 )
-                Spacer(Modifier.height(28.dp))
+                Spacer(Modifier.height(Design.SpacingLarge + 4.dp))
             }
             items(languageOptions) { option ->
                 Card(
                     onClick = { onLanguageSelected(option.language) },
                     modifier = Modifier.fillMaxWidth().heightIn(min = 84.dp),
-                    shape = RoundedCornerShape(18.dp),
+                    shape = Design.CardShape.copy(all = CornerSize(18.dp)),
                     colors = CardDefaults.cardColors(
                         containerColor = if (selectedLanguage == option.language) {
                             MaterialTheme.colorScheme.primaryContainer
@@ -440,10 +420,10 @@ private fun ImmediateLanguageSelectionScreen(
                             MaterialTheme.colorScheme.surface
                         },
                     ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = Design.ElevationDefault),
                 ) {
                     Box(
-                        Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 22.dp),
+                        Modifier.fillMaxWidth().padding(horizontal = Design.PaddingHorizontalSmall, vertical = 22.dp),
                         contentAlignment = Alignment.CenterStart,
                     ) {
                         Text(
@@ -453,7 +433,7 @@ private fun ImmediateLanguageSelectionScreen(
                         )
                     }
                 }
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(Design.PaddingElement))
             }
         }
     }

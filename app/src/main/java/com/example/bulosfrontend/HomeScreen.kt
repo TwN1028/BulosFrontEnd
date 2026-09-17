@@ -67,6 +67,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.Fill
@@ -88,7 +89,11 @@ import kotlin.math.pow
 import kotlin.math.sin
 
 @Composable
-fun HomeScreen(viewModel: MainViewModel, onNavigate: (String) -> Unit) {
+fun HomeScreen(
+    viewModel: MainViewModel,
+    dictionaryFabProgress: Float = 1f,
+    onNavigate: (String) -> Unit,
+) {
     val listState = rememberLazyListState()
     LaunchedEffect(Unit) {
         listState.scrollToItem(0)
@@ -104,6 +109,7 @@ fun HomeScreen(viewModel: MainViewModel, onNavigate: (String) -> Unit) {
             onLanguageSelected = viewModel::selectUiLanguage,
             onNavigate = onNavigate,
             listState = listState,
+            dictionaryFabProgress = dictionaryFabProgress,
         )
     }
 }
@@ -115,6 +121,7 @@ private fun HomeScreenContent(
     onLanguageSelected: (UiLanguage) -> Unit,
     onNavigate: (String) -> Unit,
     listState: LazyListState,
+    dictionaryFabProgress: Float,
 ) {
     val darkTheme = LocalBulosDarkTheme.current
     val labels = content.home
@@ -223,15 +230,38 @@ private fun HomeScreenContent(
                 }
             }
         }
-        Column(
+        HomeFabShortcut(
+            iconRes = R.drawable.ic_dictionary_book,
+            label = stringResource(labels.navDictionaryRes),
+            onClick = { onNavigate(AppDestinations.DICTIONARY) },
+            enabled = dictionaryFabProgress >= 0.99f,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
-                .padding(bottom = 4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
+                .padding(bottom = 4.dp)
+                .graphicsLayer {
+                    alpha = dictionaryFabProgress
+                    val animatedScale = 0.92f + 0.08f * dictionaryFabProgress
+                    scaleX = animatedScale
+                    scaleY = animatedScale
+                },
+        )
+    }
+}
+
+@Composable
+internal fun HomeFabShortcut(
+    @androidx.annotation.DrawableRes iconRes: Int,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) {
             Surface(
-                onClick = { onNavigate(AppDestinations.DICTIONARY) },
+                onClick = onClick,
+                enabled = enabled,
                 modifier = Modifier.size(52.dp),
                 shape = CircleShape,
                 color = SoftGreen,
@@ -240,20 +270,20 @@ private fun HomeScreenContent(
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
-                        painter = painterResource(R.drawable.ic_dictionary_book),
-                        contentDescription = stringResource(labels.navDictionaryRes),
+                        painter = painterResource(iconRes),
+                        contentDescription = label,
                         modifier = Modifier.size(29.dp),
                     )
                 }
             }
-            Spacer(Modifier.height(12.dp))
-            Text(
-                text = stringResource(labels.navDictionaryRes),
-                color = PrimaryGreen,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
-                fontWeight = FontWeight.SemiBold,
-            )
         }
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = label,
+            color = PrimaryGreen,
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
 
@@ -262,6 +292,7 @@ fun HomeRecordingScreen(
     viewModel: MainViewModel,
     onBack: () -> Unit,
     onRecordingFinished: () -> Unit,
+    autoStartRecording: Boolean = true,
 ) {
     val context = LocalContext.current
     var actionHandled by remember { mutableStateOf(false) }
@@ -308,7 +339,8 @@ fun HomeRecordingScreen(
         if (granted) startRecordingOnce() else cancelOnce()
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(autoStartRecording) {
+        if (!autoStartRecording) return@LaunchedEffect
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
             startRecordingOnce()
         } else {
@@ -365,16 +397,16 @@ fun HomeRecordingScreen(
             Column(Modifier.weight(1f)) {
                 Text(
                     text = stringResource(viewModel.content.voiceHeaderRes),
-                    color = WarmWhite,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text = stringResource(viewModel.content.speechResult.speechSubtitleRes),
-                    color = WarmWhite,
+                    color = Color.White,
                     style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = 15.sp,
+                        fontSize = 13.sp,
                         lineHeight = 20.sp,
                     ),
                     fontWeight = FontWeight.Normal,
@@ -415,6 +447,7 @@ fun HomeRecordingScreen(
                 amplitudeProvider = viewModel::currentRecordingAmplitude,
                 showPrompt = false,
                 useSpeechRecordingAura = true,
+                showCancelledIdleGlow = viewModel.wasRecordingCancelled,
                 speechAuraDiameter = speechAuraDiameter,
                 speechAuraMaxDiameter = speechAuraMaxDiameter,
             )
@@ -431,7 +464,7 @@ fun HomeRecordingScreen(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(54.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -477,6 +510,7 @@ private const val HOME_ENVELOPE_CONTRACTION_COEFFICIENT = 0.055f
 private const val HOME_RADIUS_CHANGE_THRESHOLD = 0.008f
 private const val HOME_AURA_EXPANSION_DURATION_MS = 170
 private const val HOME_AURA_CONTRACTION_DURATION_MS = 320
+internal const val SPEECH_IDLE_GLOW_TRANSITION_MS = 300
 private val HomeAuraMovementEasing = CubicBezierEasing(0.22f, 1f, 0.36f, 1f)
 
 private fun normalizeHomeMicrophoneAmplitude(rawAmplitude: Int): Float {
@@ -499,6 +533,7 @@ private fun HomeVoiceHero(
     amplitudeProvider: () -> Int = { 0 },
     showPrompt: Boolean = true,
     useSpeechRecordingAura: Boolean = false,
+    showCancelledIdleGlow: Boolean = false,
     speechAuraDiameter: Dp = 280.dp,
     speechAuraMaxDiameter: Dp = 280.dp,
 ) {
@@ -558,6 +593,14 @@ private fun HomeVoiceHero(
         animationSpec = tween(durationMillis = 90),
         label = "homeMicrophoneButtonScale",
     )
+    val cancelledIdleTransition by animateFloatAsState(
+        targetValue = if (useSpeechRecordingAura && showCancelledIdleGlow && !isRecording) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = SPEECH_IDLE_GLOW_TRANSITION_MS,
+            easing = FastOutSlowInEasing,
+        ),
+        label = "speechCancelledIdleGlowTransition",
+    )
     val ringMotion = rememberInfiniteTransition(label = "homeMicrophoneRingMotion")
     val recordingPulse by ringMotion.animateFloat(
         initialValue = 0f,
@@ -600,12 +643,15 @@ private fun HomeVoiceHero(
             drawCircle(
                 brush = if (useSpeechRecordingAura) {
                     val auraRadius = size.minDimension / 2f
+                    val glowCore = lerp(MicrophoneGlowCore, RecordingRed, cancelledIdleTransition)
+                    val glowMid = lerp(MicrophoneGlowMid, InnerVoiceRing, cancelledIdleTransition)
+                    val glowEdge = lerp(MicrophoneGlowEdge, OuterVoiceRing, cancelledIdleTransition)
                     Brush.radialGradient(
-                        0.00f to MicrophoneGlowCore.copy(alpha = 0.94f),
-                        0.20f to MicrophoneGlowCore.copy(alpha = 0.88f),
-                        0.48f to MicrophoneGlowMid.copy(alpha = 0.72f),
-                        0.74f to MicrophoneGlowEdge.copy(alpha = 0.52f),
-                        0.90f to MicrophoneGlowEdge.copy(alpha = 0.22f),
+                        0.00f to glowCore.copy(alpha = 0.94f),
+                        0.20f to glowCore.copy(alpha = 0.88f),
+                        0.48f to glowMid.copy(alpha = 0.72f),
+                        0.74f to glowEdge.copy(alpha = 0.52f),
+                        0.90f to glowEdge.copy(alpha = 0.22f),
                         1.00f to Color.Transparent,
                         center = center,
                         radius = auraRadius,

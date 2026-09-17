@@ -1,11 +1,12 @@
 package com.example.bulosfrontend
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -13,10 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.bulosfrontend.ui.theme.ForestGreen
-import com.example.bulosfrontend.ui.theme.HomeCardBorder
 import com.example.bulosfrontend.ui.theme.NavigationCream
-import com.example.bulosfrontend.ui.theme.WarmBrown
 
 private data class BottomItem(
     @StringRes val labelRes: Int,
@@ -30,6 +28,9 @@ fun AppBottomNavigation(
     content: HomeDialogueContent,
     onNavigate: (String) -> Unit,
     modifier: Modifier = Modifier,
+    activeFunctionRoute: String? = currentRoute,
+    enabled: Boolean = true,
+    contentAlpha: Float = 1f,
 ) {
     val items = listOf(
         BottomItem(content.navSpeechRes, painterResource(R.drawable.ic_lucide_mic), AppDestinations.HOME_RECORDING),
@@ -41,17 +42,26 @@ fun AppBottomNavigation(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .background(NavigationCream)
             .navigationBarsPadding(),
     ) {
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
+        HorizontalDivider(
+            modifier = Modifier.graphicsLayer { alpha = contentAlpha },
+            color = TranslationInputBorderColor,
+            thickness = 1.dp,
+        )
         NavigationBar(
-            modifier = Modifier.fillMaxWidth().height(64.dp),
-            containerColor = MaterialTheme.colorScheme.surface,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(64.dp)
+                .graphicsLayer { alpha = contentAlpha },
+            containerColor = NavigationCream,
             tonalElevation = 0.dp,
         ) {
-            items.filterNot { it.route == currentRoute }.forEach { item ->
+            items.filterNot { it.route == activeFunctionRoute }.forEach { item ->
                 NavigationBarItem(
                     selected = false,
+                    enabled = enabled,
                     onClick = { onNavigate(item.route) },
                     icon = {
                         Icon(

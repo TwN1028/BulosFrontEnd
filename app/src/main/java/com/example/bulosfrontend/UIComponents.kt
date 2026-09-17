@@ -63,6 +63,8 @@ fun SharedTopAppBar(
     @androidx.annotation.DrawableRes iconRes: Int? = null,
     subtitle: String? = null,
     trailingContent: @Composable RowScope.() -> Unit = {},
+    selectionMode: Boolean = false,
+    selectionContent: @Composable RowScope.() -> Unit = {},
 ) = Column(Modifier.background(appHeaderGradientBrush())) {
     Row(
         modifier = Modifier
@@ -72,29 +74,49 @@ fun SharedTopAppBar(
             .height(48.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            painter = painterResource(iconRes ?: R.drawable.ic_launcher_foreground),
-            contentDescription = stringResource(logoDescriptionRes),
-            tint = Color.White,
-            modifier = if (iconRes != null) Modifier.size(48.dp).padding(12.dp) else Modifier.size(48.dp).padding(8.dp),
-        )
-        Spacer(Modifier.width(4.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, color = Color.White, style = MaterialTheme.typography.titleLarge)
-            if (subtitle != null) {
-                Text(
-                    text = subtitle,
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = 15.sp,
-                        lineHeight = 20.sp,
-                    ),
-                    fontWeight = FontWeight.Normal,
-                    maxLines = 1,
+        AnimatedContent(
+            targetState = selectionMode,
+            modifier = Modifier.fillMaxSize(),
+            transitionSpec = {
+                (fadeIn(tween(160)) togetherWith fadeOut(tween(120))).using(
+                    SizeTransform(clip = false, sizeAnimationSpec = { _, _ -> snap() }),
                 )
+            },
+            label = "sharedHeaderMode",
+        ) { selecting ->
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (selecting) {
+                    selectionContent()
+                } else {
+                    Icon(
+                        painter = painterResource(iconRes ?: R.drawable.ic_launcher_foreground),
+                        contentDescription = stringResource(logoDescriptionRes),
+                        tint = Color.White,
+                        modifier = if (iconRes != null) Modifier.size(48.dp).padding(12.dp) else Modifier.size(48.dp).padding(8.dp),
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(title, color = Color.White, style = MaterialTheme.typography.titleLarge)
+                        if (subtitle != null) {
+                            Text(
+                                text = subtitle,
+                                color = Color.White,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = 13.sp,
+                                    lineHeight = 20.sp,
+                                ),
+                                fontWeight = FontWeight.Normal,
+                                maxLines = 1,
+                            )
+                        }
+                    }
+                    trailingContent()
+                }
             }
         }
-        trailingContent()
     }
     Spacer(Modifier.height(AppHeaderTailHeight))
 }

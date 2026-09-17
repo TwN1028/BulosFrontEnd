@@ -15,4 +15,9 @@ class SpeechRecordingAuraTest {
         assertEquals(387.28f, 412f * SPEECH_AURA_SCREEN_WIDTH_FRACTION, 0.001f)
         assertEquals(403.76f, 412f * SPEECH_AURA_MAX_SCREEN_WIDTH_FRACTION, 0.001f)
     }
+
+    @Test
+    fun cancelledIdleGlowTransitionIsWithinRequestedRange() {
+        assertEquals(300, SPEECH_IDLE_GLOW_TRANSITION_MS)
+    }
 }

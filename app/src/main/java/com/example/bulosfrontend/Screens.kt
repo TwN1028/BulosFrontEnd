@@ -4,14 +4,13 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.os.Build
-import androidx.compose.animation.Crossfade
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -24,24 +23,44 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.os.ConfigurationCompat
 import com.example.bulosfrontend.ui.theme.*
 import java.util.Locale
 
 @Composable
-fun TranslateTextScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBack: () -> Unit) {
+fun TranslateTextScreen(
+    viewModel: MainViewModel,
+    onTranslate: () -> Unit,
+    onBack: () -> Unit,
+) {
     var text by remember { mutableStateOf("") }
     val content = viewModel.content
     val labels = content.textTranslation
     val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val currentLocale = remember(configuration) {
+        ConfigurationCompat.getLocales(configuration)[0] ?: Locale.ROOT
+    }
+    val isTranslationLoading = viewModel.textTranslationState is TextTranslationUiState.Loading
+
+    LaunchedEffect(viewModel) {
+        viewModel.textTranslationEvents.collect { event ->
+            when (event) {
+                TextTranslationEvent.NavigateToResult -> onTranslate()
+                is TextTranslationEvent.ShowError ->
+                    Toast.makeText(context, event.message, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     Surface(Modifier.fillMaxSize(), color = Color(0xFFFFFBF4)) {
+        Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             FeaturePatternHeader(
                 title = stringResource(content.translateHeaderRes),
@@ -66,59 +85,12 @@ fun TranslateTextScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBac
                     useHomeCardStyle = true,
                 )
                 Spacer(Modifier.height(18.dp))
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = TranslationCardMinHeight)
-                        .shadow(
-                            elevation = 4.dp,
-                            shape = RoundedCornerShape(16.dp),
-                            clip = false,
-                            ambientColor = Color.Black.copy(alpha = 0.08f),
-                            spotColor = Color.Black.copy(alpha = 0.08f),
-                        ),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = androidx.compose.foundation.BorderStroke(
-                        0.5.dp,
-                        Color(0xFFE5DDD2).copy(alpha = 0.65f),
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                ) {
-                    Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) {
-                        Text(
-                            TranslationState.sourceLanguage.uppercase(Locale.getDefault()),
-                            color = MaterialTheme.colorScheme.secondary,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        BasicTextField(
-                            value = text,
-                            onValueChange = { if (it.length <= 100) text = it },
-                            modifier = Modifier.fillMaxWidth().height(252.dp),
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontFamily = Aileron,
-                            ),
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Text,
-                                imeAction = ImeAction.Default,
-                            ),
-                            decorationBox = { innerTextField ->
-                                Box(Modifier.fillMaxSize()) {
-                                    if (text.isEmpty()) {
-                                        Text(
-                                            stringResource(labels.inputPlaceholderRes, TranslationState.sourceLanguage),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            style = MaterialTheme.typography.bodyLarge.copy(fontFamily = Aileron),
-                                        )
-                                    }
-                                    innerTextField()
-                                }
-                            },
-                        )
-                        Spacer(Modifier.height(8.dp))
+                TranslationInputCard(
+                    label = TranslationState.sourceLanguage.uppercase(currentLocale),
+                    value = text,
+                    placeholder = stringResource(labels.inputPlaceholderRes, TranslationState.sourceLanguage),
+                    onValueChange = { if (it.length <= 100) text = it },
+                    footer = {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -149,15 +121,14 @@ fun TranslateTextScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBac
                                 )
                             }
                         }
-                    }
-                }
+                    },
+                )
                 Spacer(Modifier.height(16.dp))
                 Button(
                     onClick = {
                         viewModel.translateText(text)
-                        onTranslate()
                     },
-                    enabled = text.isNotBlank(),
+                    enabled = text.isNotBlank() && !isTranslationLoading,
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
                         .widthIn(max = 480.dp)
@@ -192,6 +163,7 @@ fun TranslateTextScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBac
                 Spacer(Modifier.height(12.dp))
             }
         }
+        }
     }
 }
 
@@ -202,15 +174,22 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
     var selectedTimestamps by remember { mutableStateOf(emptySet<Long>()) }
     var selectionMode by remember { mutableStateOf(false) }
     var showHistoryMenu by remember { mutableStateOf(false) }
+    val allItemsSelected = historyItems.isNotEmpty() && selectedTimestamps.size == historyItems.size
 
     LaunchedEffect(historyItems.toList()) {
         selectedTimestamps = selectedTimestamps.intersect(historyItems.mapTo(mutableSetOf()) { it.timestamp })
         if (historyItems.isEmpty()) selectionMode = false
     }
 
+    BackHandler(enabled = selectionMode) {
+        selectedTimestamps = emptySet()
+        selectionMode = false
+    }
+
     Surface(Modifier.fillMaxSize(), color = Color(0xFFFFFBF4)) {
         OverlappingHeaderLayout(
-            overlap = 31.dp,
+            // The list has 16.dp top padding, leaving a visible 24.dp card overlap.
+            overlap = 40.dp,
             modifier = Modifier.fillMaxSize(),
             header = {
             SharedTopAppBar(
@@ -219,81 +198,82 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                 iconRes = R.drawable.ic_saved_history_reference,
                 subtitle = stringResource(content.home.historySubtitleRes),
                 trailingContent = {
-                    Crossfade(targetState = selectionMode, label = "historyHeaderActions") { selecting ->
-                        if (selecting) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                TextButton(
-                                    onClick = {
-                                        selectedTimestamps = historyItems.mapTo(mutableSetOf()) { it.timestamp }
-                                    },
-                                ) {
-                                    Text(
-                                        stringResource(R.string.select_all),
-                                        color = WarmWhite,
-                                        style = MaterialTheme.typography.labelMedium,
-                                    )
-                                }
-                                IconButton(
-                                    onClick = {
-                                        viewModel.deleteSavedTranslations(selectedTimestamps)
-                                        selectedTimestamps = emptySet()
-                                        selectionMode = false
-                                    },
-                                    enabled = selectedTimestamps.isNotEmpty(),
-                                ) {
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        contentDescription = stringResource(R.string.delete_selected),
-                                        tint = WarmWhite,
-                                    )
-                                }
-                                IconButton(
-                                    onClick = {
-                                        selectedTimestamps = emptySet()
-                                        selectionMode = false
-                                    },
-                                ) {
-                                    Icon(
-                                        Icons.Default.Close,
-                                        contentDescription = stringResource(R.string.cancel_selection),
-                                        tint = WarmWhite,
-                                    )
-                                }
-                            }
-                        } else {
-                            Box {
-                                IconButton(onClick = { showHistoryMenu = true }) {
-                                    Icon(
-                                        Icons.Default.MoreVert,
-                                        contentDescription = stringResource(R.string.saved_history_options),
-                                        tint = WarmWhite,
-                                    )
-                                }
-                                DropdownMenu(
-                                    expanded = showHistoryMenu,
-                                    onDismissRequest = { showHistoryMenu = false },
-                                ) {
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.clear_all)) },
-                                        onClick = {
-                                            showHistoryMenu = false
-                                            selectedTimestamps = emptySet()
-                                            viewModel.clearSavedTranslations()
-                                        },
-                                        enabled = historyItems.isNotEmpty(),
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.select_multiple)) },
-                                        onClick = {
-                                            showHistoryMenu = false
-                                            selectionMode = true
-                                            selectedTimestamps = emptySet()
-                                        },
-                                        enabled = historyItems.isNotEmpty(),
-                                    )
-                                }
-                            }
+                    Box {
+                        IconButton(onClick = { showHistoryMenu = true }) {
+                            Icon(
+                                Icons.Default.MoreVert,
+                                contentDescription = stringResource(R.string.saved_history_options),
+                                tint = WarmWhite,
+                            )
                         }
+                        DropdownMenu(
+                            expanded = showHistoryMenu,
+                            onDismissRequest = { showHistoryMenu = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.clear_all)) },
+                                onClick = {
+                                    showHistoryMenu = false
+                                    selectedTimestamps = emptySet()
+                                    viewModel.clearSavedTranslations()
+                                },
+                                enabled = historyItems.isNotEmpty(),
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.select_multiple)) },
+                                onClick = {
+                                    showHistoryMenu = false
+                                    selectionMode = true
+                                    selectedTimestamps = emptySet()
+                                },
+                                enabled = historyItems.isNotEmpty(),
+                            )
+                        }
+                    }
+                },
+                selectionMode = selectionMode,
+                selectionContent = {
+                    IconButton(
+                        onClick = {
+                            selectedTimestamps = emptySet()
+                            selectionMode = false
+                        },
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = stringResource(R.string.cancel_selection),
+                            tint = WarmWhite,
+                        )
+                    }
+                    Spacer(Modifier.weight(1f))
+                    TextButton(
+                        onClick = {
+                            selectedTimestamps = if (allItemsSelected) {
+                                emptySet()
+                            } else {
+                                historyItems.mapTo(mutableSetOf()) { it.timestamp }
+                            }
+                        },
+                    ) {
+                        Text(
+                            stringResource(if (allItemsSelected) R.string.deselect_all else R.string.select_all),
+                            color = WarmWhite,
+                            style = MaterialTheme.typography.labelMedium,
+                        )
+                    }
+                    IconButton(
+                        onClick = {
+                            viewModel.deleteSavedTranslations(selectedTimestamps)
+                            selectedTimestamps = emptySet()
+                            selectionMode = false
+                        },
+                        enabled = selectedTimestamps.isNotEmpty(),
+                    ) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = stringResource(R.string.delete_selected),
+                            tint = WarmWhite,
+                        )
                     }
                 },
             )
@@ -386,48 +366,6 @@ fun HistoryCard(
             Text(item.inputText, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(4.dp))
             Text(item.translatedText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
-fun LanguageLabel(modifier: Modifier = Modifier, language: String) = Surface(
-    modifier = modifier.height(56.dp),
-    shape = RoundedCornerShape(12.dp),
-    color = MaterialTheme.colorScheme.primaryContainer,
-    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-) {
-    Box(contentAlignment = Alignment.Center) {
-        Text(language, textAlign = TextAlign.Center, style = MaterialTheme.typography.titleLarge)
-    }
-}
-
-@Composable
-fun LanguageSelector(modifier: Modifier = Modifier, selected: String, onSelected: (String) -> Unit) {
-    var exp by remember { mutableStateOf(false) }
-    val langs = listOf(
-        stringResource(R.string.lang_label_eng),
-        stringResource(R.string.lang_label_fil),
-        stringResource(R.string.lang_label_bul)
-    )
-    Box(modifier) {
-        Button(
-            onClick = { exp = true },
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text(selected, textAlign = TextAlign.Center, style = MaterialTheme.typography.titleMedium)
-        }
-        DropdownMenu(expanded = exp, onDismissRequest = { exp = false }, modifier = Modifier.fillMaxWidth(0.4f)) {
-            langs.forEach { lang ->
-                DropdownMenuItem(
-                    text = { Text(lang) },
-                    onClick = {
-                        onSelected(lang)
-                        exp = false
-                    }
-                )
-            }
         }
     }
 }

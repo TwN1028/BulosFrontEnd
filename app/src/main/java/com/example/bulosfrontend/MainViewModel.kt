@@ -13,6 +13,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.time.Duration.Companion.seconds
@@ -20,6 +22,12 @@ import kotlin.time.Duration.Companion.seconds
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val languagePreferences = LanguagePreferenceRepository(application)
     private val savedTranslationRepository = SavedTranslationRepository(application)
+    private val translationRepository = TranslationServiceProvider.repository(application)
+    private val textTranslationEventsChannel = Channel<TextTranslationEvent>(Channel.BUFFERED)
+
+    var textTranslationState by mutableStateOf<TextTranslationUiState>(TextTranslationUiState.Idle)
+        private set
+    val textTranslationEvents = textTranslationEventsChannel.receiveAsFlow()
 
     var selectedUiLanguage by mutableStateOf<UiLanguage?>(null)
         private set
@@ -49,6 +57,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var speechSessionFinished by mutableStateOf(false)
         private set
     var speechRecognitionError by mutableStateOf<String?>(null)
+        private set
+    var wasRecordingCancelled by mutableStateOf(false)
         private set
 
     init {
@@ -83,9 +93,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun translateText(text: String) {
+        if (textTranslationState is TextTranslationUiState.Loading || text.isBlank()) return
+        val sourceLanguage = TranslationState.sourceLanguage
+        val targetLanguage = TranslationState.targetLanguage
         TranslationState.textToTranslate = text
-        // Placeholder for actual translation logic
-        TranslationState.translatedText = text
+        TranslationState.translatedText = ""
+        textTranslationState = TextTranslationUiState.Loading
+        viewModelScope.launch {
+            when (
+                val result = translationRepository.translate(
+                    sourceLanguage = sourceLanguage,
+                    targetLanguage = targetLanguage,
+                    text = text,
+                )
+            ) {
+                is TranslationResult.Success -> {
+                    TranslationState.sourceLanguage = sourceLanguage
+                    TranslationState.targetLanguage = targetLanguage
+                    TranslationState.textToTranslate = result.response.originalText
+                    TranslationState.translatedText = result.response.translatedText
+                    textTranslationState = TextTranslationUiState.Success(result.response)
+                    textTranslationEventsChannel.send(TextTranslationEvent.NavigateToResult)
+                }
+                is TranslationResult.Failure -> {
+                    textTranslationState = TextTranslationUiState.Error(result.message)
+                    textTranslationEventsChannel.send(TextTranslationEvent.ShowError(result.message))
+                }
+            }
+        }
     }
 
     fun translateVoiceText(text: String) {
@@ -135,6 +170,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun startRecording() {
         if (isRecording || recorder != null || speechRecognizer != null || isRecorderStarting) return
+        wasRecordingCancelled = false
         voiceInputReady = false
         speechSessionFinished = false
         speechRecognitionError = null
@@ -254,7 +290,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         isRecorderStarting = true
         val context = getApplication<Application>()
         audioFile = File(context.externalCacheDir, "recording_${System.currentTimeMillis()}.mp3")
-        recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) MediaRecorder(context) else MediaRecorder()
+        recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            MediaRecorder(context)
+        } else {
+            createLegacyMediaRecorder()
+        }
         recorder?.apply {
             setAudioSource(MediaRecorder.AudioSource.MIC)
             setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
@@ -288,6 +328,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             0
         }
     }
+
+    @Suppress("DEPRECATION")
+    private fun createLegacyMediaRecorder(): MediaRecorder = MediaRecorder()
 
     private fun startTimer() {
         recordingTimerJob?.cancel()
@@ -362,11 +405,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             speechRecognitionError = null
             isSpeechProcessing = false
             usesBuiltInSpeechRecognizer = false
+            wasRecordingCancelled = true
         }
     }
 
     override fun onCleared() {
-        super.onCleared()
         recordingTimerJob?.cancel()
         recordingTimerJob = null
         speechRecognizer?.cancel()
@@ -375,4 +418,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         recorder?.release()
         recorder = null
     }
+}
+
+sealed interface TextTranslationUiState {
+    data object Idle : TextTranslationUiState
+    data object Loading : TextTranslationUiState
+    data class Success(val response: TranslationResponse) : TextTranslationUiState
+    data class Error(val message: String) : TextTranslationUiState
+}
+
+sealed interface TextTranslationEvent {
+    data object NavigateToResult : TextTranslationEvent
+    data class ShowError(val message: String) : TextTranslationEvent
 }

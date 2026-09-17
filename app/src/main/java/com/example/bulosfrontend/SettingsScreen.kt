@@ -25,7 +25,8 @@ fun SettingsScreen(viewModel: MainViewModel, onLanguageClick: () -> Unit) {
     val home = content.home
     Surface(Modifier.fillMaxSize(), color = Color(0xFFFFFBF4)) {
         OverlappingHeaderLayout(
-            overlap = 31.dp,
+            // The content has 16.dp top padding, leaving a visible 24.dp card overlap.
+            overlap = 40.dp,
             modifier = Modifier.fillMaxSize(),
             header = {
             SharedTopAppBar(

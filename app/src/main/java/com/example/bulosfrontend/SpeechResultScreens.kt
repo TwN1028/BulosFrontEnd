@@ -1,5 +1,6 @@
 package com.example.bulosfrontend
 
+import android.content.ClipData
 import android.content.Intent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -14,7 +15,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
@@ -43,8 +43,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -53,6 +51,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -62,25 +61,23 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.os.ConfigurationCompat
-import com.example.bulosfrontend.ui.theme.DeepForestGreen
 import com.example.bulosfrontend.ui.theme.ForestGreen
-import com.example.bulosfrontend.ui.theme.MutedText
 import com.example.bulosfrontend.ui.theme.PrimaryGreen
-import com.example.bulosfrontend.ui.theme.Sand
 import com.example.bulosfrontend.ui.theme.SoftGreen
 import com.example.bulosfrontend.ui.theme.WarmWhite
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 @Composable
@@ -137,43 +134,25 @@ fun TranslateVoiceScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBa
                         modifier = Modifier.fillMaxWidth().padding(horizontal = contentHorizontalPadding),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        Button(
-                            onClick = {
-                                viewModel.translateVoiceText(recognizedText.trim())
-                                onTranslate()
-                            },
-                            enabled = recognizedText.isNotBlank(),
-                            modifier = Modifier.weight(1f).height(56.dp),
-                            shape = RoundedCornerShape(24.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = ForestGreen,
-                                contentColor = WarmWhite,
-                                disabledContainerColor = Sand.copy(alpha = 0.50f),
-                                disabledContentColor = MutedText,
-                            ),
-                            elevation = ButtonDefaults.buttonElevation(disabledElevation = 0.dp),
-                        ) {
-                            Text(stringResource(labels.translateRes), fontWeight = FontWeight.Bold)
-                        }
-                        Button(
+                        ResultSecondaryAction(
+                            text = stringResource(labels.clearRes),
                             onClick = {
                                 recognizedText = ""
                                 isEditing = true
                                 viewModel.clearVoiceDraft()
                             },
-                            enabled = true,
-                            modifier = Modifier.weight(1f).height(56.dp),
-                            shape = RoundedCornerShape(24.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                                disabledContainerColor = Sand.copy(alpha = 0.50f),
-                                disabledContentColor = MutedText,
-                            ),
-                            elevation = ButtonDefaults.buttonElevation(0.dp),
-                        ) {
-                            Text(stringResource(labels.clearRes), fontWeight = FontWeight.SemiBold)
-                        }
+                            modifier = Modifier.weight(1f),
+                        )
+                        ResultSecondaryAction(
+                            text = stringResource(labels.translateRes),
+                            onClick = {
+                                viewModel.translateVoiceText(recognizedText.trim())
+                                onTranslate()
+                            },
+                            enabled = recognizedText.isNotBlank(),
+                            modifier = Modifier.weight(1f),
+                            emphasized = true,
+                        )
                     }
                     if (useScrollingLayout) {
                         Spacer(Modifier.height(24.dp))
@@ -190,7 +169,8 @@ fun TranslateVoiceScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBa
 fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain: () -> Unit) {
     val content = viewModel.content
     val labels = content.speechResult
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val currentLocale = remember(configuration) {
@@ -211,7 +191,7 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
     Surface(Modifier.fillMaxSize(), color = HomeContentCream) {
         Box(Modifier.fillMaxSize()) {
             OverlappingHeaderLayout(
-                overlap = 31.dp,
+                overlap = 40.dp,
                 modifier = Modifier.fillMaxSize(),
                 header = {
                 FeaturePatternHeader(
@@ -233,7 +213,7 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
                 )
                 },
             ) {
-                BoxWithConstraints(Modifier.fillMaxSize()) {
+                Box(Modifier.fillMaxSize()) {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -268,8 +248,17 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
                             icon = Icons.Default.ContentCopy,
                             onClick = {
                                 if (TranslationState.translatedText.isNotEmpty()) {
-                                    clipboard.setText(AnnotatedString(TranslationState.translatedText))
-                                    showNotification = true
+                                    coroutineScope.launch {
+                                        clipboard.setClipEntry(
+                                            ClipEntry(
+                                                ClipData.newPlainText(
+                                                    "Translated text",
+                                                    TranslationState.translatedText,
+                                                ),
+                                            ),
+                                        )
+                                        showNotification = true
+                                    }
                                 }
                             },
                             modifier = Modifier.weight(1f),
@@ -355,14 +344,19 @@ fun FeaturePatternHeader(
             )
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text(title, color = WarmWhite, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(
+                    title,
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
                 if (subtitle != null) {
                     Spacer(Modifier.height(2.dp))
                     Text(
                         subtitle,
-                        color = WarmWhite,
+                        color = Color.White,
                         style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = 15.sp,
+                            fontSize = 13.sp,
                             lineHeight = 20.sp,
                         ),
                         fontWeight = FontWeight.Normal,
@@ -509,44 +503,31 @@ private fun RecognizedTextCard(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier = modifier.fillMaxWidth().heightIn(min = 106.dp),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
-    ) {
-        Column(Modifier.padding(horizontal = 20.dp, vertical = 18.dp)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(label, modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                if (showEditControl) {
-                    TextButton(onClick = onEditToggle, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)) {
+    TranslationInputCard(
+        label = label,
+        value = value,
+        placeholder = placeholder,
+        onValueChange = onValueChange,
+        editingEnabled = isEditing,
+        modifier = modifier,
+        footer = if (showEditControl) {
+            {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(
+                        onClick = onEditToggle,
+                        modifier = Modifier.height(28.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                    ) {
                         Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(15.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text(editLabel)
+                        Text(editLabel, style = MaterialTheme.typography.labelSmall)
                     }
                 }
             }
-            Spacer(Modifier.height(14.dp))
-            OutlinedTextField(
-                value = value,
-                onValueChange = onValueChange,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
-                enabled = isEditing,
-                placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                shape = RoundedCornerShape(14.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = ForestGreen,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                    disabledBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                    disabledTextColor = DeepForestGreen,
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
-                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
-                ),
-            )
-        }
-    }
+        } else {
+            null
+        },
+    )
 }
 
 @Composable
@@ -569,7 +550,7 @@ private fun TranslationTextCard(
             ),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
-        border = BorderStroke(0.5.dp, Color(0xFFE5DDD2).copy(alpha = 0.65f)),
+        border = BorderStroke(TranslationInputBorderWidth, TranslationInputBorderColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
@@ -615,22 +596,31 @@ private fun LanguageDirectionPill(source: String, target: String) {
 @Composable
 private fun ResultSecondaryAction(
     text: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     emphasized: Boolean = false,
+    enabled: Boolean = true,
 ) {
     Button(
         onClick = onClick,
+        enabled = enabled,
         modifier = modifier.height(52.dp),
         shape = RoundedCornerShape(18.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (emphasized) PrimaryGreen else Color(0xFFFFFEFA),
             contentColor = if (emphasized) Color(0xFFFFFBF4) else PrimaryGreen,
         ),
+        border = if (emphasized) {
+            null
+        } else {
+            BorderStroke(TranslationInputBorderWidth, TranslationInputBorderColor)
+        },
     ) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(17.dp))
-        Spacer(Modifier.width(7.dp))
+        if (icon != null) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(17.dp))
+            Spacer(Modifier.width(7.dp))
+        }
         Text(text, fontWeight = FontWeight.SemiBold)
     }
 }

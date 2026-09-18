@@ -11,11 +11,13 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
@@ -32,6 +34,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import com.example.bulosfrontend.ui.theme.BulosFrontEndTheme
+import com.example.bulosfrontend.ui.theme.LocalBulosDarkTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.seconds
@@ -71,22 +74,67 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
+                var resultOriginRoute by remember { mutableStateOf<String?>(null) }
+                val bottomNavigationAlpha = remember { Animatable(0f) }
+                val dictionaryFabProgress = remember { Animatable(0f) }
                 val featureRoutes = setOf(
                     AppDestinations.VOICE,
+                    AppDestinations.TEXT,
                     AppDestinations.RESULT,
                     AppDestinations.HISTORY,
                     AppDestinations.DICTIONARY,
                     AppDestinations.MORE,
                 )
+                LaunchedEffect(currentRoute) {
+                    bottomNavigationAlpha.snapTo(0f)
+                    if (currentRoute in featureRoutes) {
+                        delay(300L)
+                        bottomNavigationAlpha.animateTo(
+                            targetValue = 1f,
+                            animationSpec = tween(durationMillis = 180),
+                        )
+                    }
+                }
+                LaunchedEffect(currentRoute) {
+                    dictionaryFabProgress.snapTo(0f)
+                    if (currentRoute == AppDestinations.HOME) {
+                        delay(300L)
+                        dictionaryFabProgress.animateTo(
+                            targetValue = 1f,
+                            animationSpec = tween(durationMillis = 180),
+                        )
+                    }
+                }
+                val darkTheme = LocalBulosDarkTheme.current
 
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
+                    containerColor = if (darkTheme) {
+                        MaterialTheme.colorScheme.background
+                    } else {
+                        HomeContentCream
+                    },
                     contentWindowInsets = WindowInsets(0, 0, 0, 0),
                     bottomBar = {
-                        if (currentRoute in featureRoutes) {
+                        if (
+                            currentRoute in featureRoutes &&
+                            bottomNavigationAlpha.value > 0f
+                        ) {
+                            val activeFunctionRoute = when (currentRoute) {
+                                AppDestinations.HOME_RECORDING,
+                                AppDestinations.VOICE,
+                                -> AppDestinations.HOME_RECORDING
+
+                                AppDestinations.RESULT -> resultOriginRoute
+
+                                else -> currentRoute
+                            }
                             AppBottomNavigation(
                                 currentRoute = currentRoute,
+                                activeFunctionRoute = activeFunctionRoute,
                                 content = viewModel.content.home,
+                                contentAlpha = bottomNavigationAlpha.value,
+                                enabled = bottomNavigationAlpha.value >= 0.99f,
                                 onNavigate = { route ->
                                     if (route != currentRoute) {
                                         navController.navigate(route) {
@@ -139,7 +187,10 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         composable(AppDestinations.HOME) {
-                            HomeScreen(viewModel) { route ->
+                            HomeScreen(
+                                viewModel = viewModel,
+                                dictionaryFabProgress = dictionaryFabProgress.value,
+                            ) { route ->
                                 navController.navigate(route) { launchSingleTop = true }
                             }
                         }
@@ -177,7 +228,10 @@ class MainActivity : ComponentActivity() {
                         composable(AppDestinations.TEXT) {
                             TranslateTextScreen(
                                 viewModel,
-                                onTranslate = { navController.navigate(AppDestinations.RESULT) },
+                                onTranslate = {
+                                    resultOriginRoute = AppDestinations.TEXT
+                                    navController.navigate(AppDestinations.RESULT)
+                                },
                             ) {
                                 navController.popBackStack()
                             }
@@ -185,7 +239,10 @@ class MainActivity : ComponentActivity() {
                         composable(AppDestinations.VOICE) {
                             TranslateVoiceScreen(
                                 viewModel,
-                                onTranslate = { navController.navigate(AppDestinations.RESULT) },
+                                onTranslate = {
+                                    resultOriginRoute = AppDestinations.HOME_RECORDING
+                                    navController.navigate(AppDestinations.RESULT)
+                                },
                             ) {
                                 navController.popBackStack()
                             }

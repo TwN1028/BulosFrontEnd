@@ -5,6 +5,7 @@
     <string name="saved_history_options">Saved history options</string>
     <string name="select_multiple">Select Multiple</string>
     <string name="select_all">Select All</string>
+    <string name="deselect_all">Deselect All</string>
     <string name="cancel_selection">Cancel</string>
     <string name="app_name">BulosFrontEnd</string>
     <!-- Strings used for fragments for navigation -->

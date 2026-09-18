@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -51,7 +52,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
@@ -67,6 +67,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.Fill
@@ -75,26 +76,24 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.bulosfrontend.ui.theme.*
 import kotlinx.coroutines.delay
-import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.ln
 import kotlin.math.pow
 import kotlin.math.sin
-import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
-
-internal const val SPEECH_AURA_SCREEN_WIDTH_FRACTION = 0.94f
-internal const val SPEECH_AURA_MAX_SCREEN_WIDTH_FRACTION = 0.98f
 
 @Composable
-fun HomeScreen(viewModel: MainViewModel, onNavigate: (String) -> Unit) {
+fun HomeScreen(
+    viewModel: MainViewModel,
+    dictionaryFabProgress: Float = 1f,
+    onNavigate: (String) -> Unit,
+) {
     val listState = rememberLazyListState()
     LaunchedEffect(Unit) {
         listState.scrollToItem(0)
@@ -108,10 +107,12 @@ fun HomeScreen(viewModel: MainViewModel, onNavigate: (String) -> Unit) {
             content = DialogueProvider.getDialogue(language),
             selectedLanguage = viewModel.uiLanguage,
             isOnline = viewModel.isOnline,
+            isServerReady = viewModel.isServerReady,
             historyItems = viewModel.historyItems,
             onLanguageSelected = viewModel::selectUiLanguage,
             onNavigate = onNavigate,
             listState = listState,
+            dictionaryFabProgress = dictionaryFabProgress,
         )
     }
 }
@@ -121,10 +122,12 @@ private fun HomeScreenContent(
     content: DialogueContent,
     selectedLanguage: UiLanguage,
     isOnline: Boolean,
+    isServerReady: Boolean,
     historyItems: List<HistoryItem>,
     onLanguageSelected: (UiLanguage) -> Unit,
     onNavigate: (String) -> Unit,
     listState: LazyListState,
+    dictionaryFabProgress: Float,
 ) {
     val darkTheme = LocalBulosDarkTheme.current
     val labels = content.home
@@ -141,44 +144,16 @@ private fun HomeScreenContent(
         )
     }
     val features = listOf(
-        HomeFeature(
-            labels.textTitleRes,
-            labels.textSubtitleRes,
-            painterResource(R.drawable.ic_lucide_languages),
-            if (darkTheme) DarkHomeTextTranslationCard else HomeTextTranslationCard,
-            GoldenAccent,
-            AppDestinations.TEXT
-        ),
-        HomeFeature(
-            labels.historyTitleRes,
-            labels.historySubtitleRes,
-            painterResource(R.drawable.ic_saved_history_reference),
-            if (darkTheme) DarkHomeSavedHistoryCard else HomeSavedHistoryCard,
-            MainText,
-            AppDestinations.HISTORY
-        ),
-        HomeFeature(
-            labels.settingsTitleRes,
-            labels.settingsSubtitleRes,
-            painterResource(R.drawable.ic_lucide_settings),
-            if (darkTheme) DarkHomeSettingsCard else HomeSettingsCard,
-            PrimaryGreen,
-            AppDestinations.MORE
-        ),
-        HomeFeature(
-            content.help.cardTitleRes,
-            content.help.cardSubtitleRes,
-            painterResource(R.drawable.ic_help_reference),
-            if (darkTheme) DarkHomeHelpCard else HomeHelpCard,
-            PrimaryGreen,
-            AppDestinations.HELP
-        ),
+        HomeFeature(labels.textTitleRes, labels.textSubtitleRes, painterResource(R.drawable.ic_lucide_languages), HomeTextTranslationCard, GoldenAccent, AppDestinations.TEXT),
+        HomeFeature(labels.historyTitleRes, labels.historySubtitleRes, painterResource(R.drawable.ic_saved_history_reference), HomeSavedHistoryCard, MainText, AppDestinations.HISTORY),
+        HomeFeature(labels.settingsTitleRes, labels.settingsSubtitleRes, painterResource(R.drawable.ic_lucide_settings), HomeSettingsCard, PrimaryGreen, AppDestinations.MORE),
+        HomeFeature(content.help.cardTitleRes, content.help.cardSubtitleRes, painterResource(R.drawable.ic_help_reference), HomeHelpCard, PrimaryGreen, AppDestinations.HELP),
     )
 
     Box(
         Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+            .background(if (darkTheme) MaterialTheme.colorScheme.background else HomeContentCream),
     ) {
         val firstRowCardTop = 402.dp
         val creamBackgroundTop = firstRowCardTop + 24.dp
@@ -197,6 +172,7 @@ private fun HomeScreenContent(
             )
             ConnectivityStatusPill(
                 isOnline = isOnline,
+                isServerReady = isServerReady,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(top = 32.dp, end = 22.dp)
@@ -234,8 +210,7 @@ private fun HomeScreenContent(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(118.dp)
-                            .graphicsLayer { alpha = 1f },
+                            .height(118.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         features.subList(rowIndex * 2, rowIndex * 2 + 2).forEach { feature ->
@@ -269,15 +244,38 @@ private fun HomeScreenContent(
                 }
             }
         }
-        Column(
+        HomeFabShortcut(
+            iconRes = R.drawable.ic_dictionary_book,
+            label = stringResource(labels.navDictionaryRes),
+            onClick = { onNavigate(AppDestinations.DICTIONARY) },
+            enabled = dictionaryFabProgress >= 0.99f,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
-                .padding(bottom = 4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
+                .padding(bottom = 4.dp)
+                .graphicsLayer {
+                    alpha = dictionaryFabProgress
+                    val animatedScale = 0.92f + 0.08f * dictionaryFabProgress
+                    scaleX = animatedScale
+                    scaleY = animatedScale
+                },
+        )
+    }
+}
+
+@Composable
+internal fun HomeFabShortcut(
+    @androidx.annotation.DrawableRes iconRes: Int,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) {
             Surface(
-                onClick = { onNavigate(AppDestinations.DICTIONARY) },
+                onClick = onClick,
+                enabled = enabled,
                 modifier = Modifier.size(52.dp),
                 shape = CircleShape,
                 color = SoftGreen,
@@ -286,20 +284,20 @@ private fun HomeScreenContent(
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
-                        painter = painterResource(R.drawable.ic_dictionary_book),
-                        contentDescription = stringResource(labels.navDictionaryRes),
+                        painter = painterResource(iconRes),
+                        contentDescription = label,
                         modifier = Modifier.size(29.dp),
                     )
                 }
             }
-            Spacer(Modifier.height(12.dp))
-            Text(
-                text = stringResource(labels.navDictionaryRes),
-                color = PrimaryGreen,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
-                fontWeight = FontWeight.SemiBold,
-            )
         }
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = label,
+            color = PrimaryGreen,
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
 
@@ -308,10 +306,11 @@ fun HomeRecordingScreen(
     viewModel: MainViewModel,
     onBack: () -> Unit,
     onRecordingFinished: () -> Unit,
+    autoStartRecording: Boolean = true,
 ) {
     val context = LocalContext.current
-    var actionHandled by remember { mutableStateOf(value = false) }
-    var finishRequested by remember { mutableStateOf(value = false) }
+    var actionHandled by remember { mutableStateOf(false) }
+    var finishRequested by remember { mutableStateOf(false) }
 
     fun cancelOnce() {
         actionHandled = true
@@ -333,19 +332,14 @@ fun HomeRecordingScreen(
     }
 
     fun completeRecordingOnce() {
-        if (actionHandled || viewModel.isSpeechProcessing) return
+        if (actionHandled) return
         actionHandled = true
         finishRequested = true
         if (viewModel.isRecording) {
             viewModel.stopRecording()
-        } else {
-            // If already stopped but somehow didn't navigate
-            if (viewModel.voiceInputReady) {
-                onRecordingFinished()
-            } else if (!viewModel.isSpeechProcessing) {
-                actionHandled = false
-                finishRequested = false
-            }
+        } else if (!viewModel.voiceInputReady && !viewModel.isSpeechProcessing) {
+            actionHandled = false
+            finishRequested = false
         }
     }
 
@@ -359,15 +353,8 @@ fun HomeRecordingScreen(
         if (granted) startRecordingOnce() else cancelOnce()
     }
 
-    // Ensure model is ready before recording
-    LaunchedEffect(Unit) {
-        viewModel.prepareModelForSourceLanguage()
-    }
-    LaunchedEffect(TranslationState.sourceLanguage) {
-        viewModel.prepareModelForSourceLanguage()
-    }
-
-    LaunchedEffect(Unit) {
+    LaunchedEffect(autoStartRecording) {
+        if (!autoStartRecording) return@LaunchedEffect
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
             startRecordingOnce()
         } else {
@@ -377,11 +364,12 @@ fun HomeRecordingScreen(
 
     LaunchedEffect(viewModel.voiceInputReady, viewModel.speechSessionFinished, finishRequested) {
         if (!finishRequested) return@LaunchedEffect
-        if (viewModel.voiceInputReady) {
-            onRecordingFinished()
-        } else if (viewModel.speechSessionFinished) {
-            actionHandled = false
-            finishRequested = false
+        when {
+            viewModel.voiceInputReady -> onRecordingFinished()
+            viewModel.speechSessionFinished -> {
+                actionHandled = false
+                finishRequested = false
+            }
         }
     }
 
@@ -423,16 +411,16 @@ fun HomeRecordingScreen(
             Column(Modifier.weight(1f)) {
                 Text(
                     text = stringResource(viewModel.content.voiceHeaderRes),
-                    color = WarmWhite,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text = stringResource(viewModel.content.speechResult.speechSubtitleRes),
-                    color = WarmWhite,
+                    color = Color.White,
                     style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = 15.sp,
+                        fontSize = 13.sp,
                         lineHeight = 20.sp,
                     ),
                     fontWeight = FontWeight.Normal,
@@ -440,6 +428,7 @@ fun HomeRecordingScreen(
             }
             ConnectivityStatusPill(
                 isOnline = viewModel.isOnline,
+                isServerReady = viewModel.isServerReady,
                 modifier = Modifier.padding(end = 16.dp)
             )
         }
@@ -477,53 +466,30 @@ fun HomeRecordingScreen(
                 amplitudeProvider = viewModel::currentRecordingAmplitude,
                 showPrompt = false,
                 useSpeechRecordingAura = true,
+                showCancelledIdleGlow = viewModel.wasRecordingCancelled,
                 speechAuraDiameter = speechAuraDiameter,
                 speechAuraMaxDiameter = speechAuraMaxDiameter,
             )
             Spacer(Modifier.height(18.dp))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                if (viewModel.isRecording) {
-                    val infiniteTransition = rememberInfiniteTransition(label = "recDot")
-                    val alpha by infiniteTransition.animateFloat(
-                        initialValue = 1f,
-                        targetValue = 0.2f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(500),
-                            repeatMode = RepeatMode.Reverse
-                        ),
-                        label = "recAlpha"
-                    )
-                    Box(
-                        Modifier
-                            .size(10.dp)
-                            .graphicsLayer { this.alpha = alpha }
-                            .background(RecordingRed, CircleShape)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                }
-                Text(
-                    text = when {
-                        viewModel.asrStatus.startsWith("Error") -> viewModel.asrStatus
-                        viewModel.isSpeechProcessing -> "Processing speech..."
-                        viewModel.isRecording -> "Recording... (${String.format(Locale.US, "%d:%02d", viewModel.recordingTime / 60, viewModel.recordingTime % 60)} / 1:00)"
-                        viewModel.voiceInputReady -> "Speech captured. Tap Done to continue."
-                        TranslationState.recordedAudioPath != null -> "No speech detected. Tap the mic to try again."
-                        else -> "Tap the microphone to start."
-                    },
-                    color = if (viewModel.isRecording || viewModel.isSpeechProcessing) RecordingRed else MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
-            }
-            Spacer(Modifier.height(24.dp))
+            Text(
+                text = when {
+                    viewModel.speechRecognitionError != null -> viewModel.speechRecognitionError.orEmpty()
+                    viewModel.isSpeechProcessing -> "Processing speech…"
+                    viewModel.isRecording -> "Recording Audio, Speak Now"
+                    viewModel.voiceInputReady -> "Speech captured. Tap Done to continue."
+                    else -> "Tap the microphone to try again."
+                },
+                color = PrimaryGreen,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(54.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Button(
                     onClick = ::cancelOnce,
-                    enabled = !viewModel.isSpeechProcessing,
                     modifier = Modifier.weight(1f).height(52.dp),
                     shape = RoundedCornerShape(18.dp),
                     colors = ButtonDefaults.buttonColors(
@@ -535,7 +501,6 @@ fun HomeRecordingScreen(
                 }
                 Button(
                     onClick = ::completeRecordingOnce,
-                    enabled = !viewModel.isSpeechProcessing,
                     modifier = Modifier.weight(1f).height(52.dp),
                     shape = RoundedCornerShape(18.dp),
                     colors = ButtonDefaults.buttonColors(
@@ -543,11 +508,7 @@ fun HomeRecordingScreen(
                         contentColor = Color(0xFFFFFBF4),
                     ),
                 ) {
-                    if (viewModel.isSpeechProcessing) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                    } else {
-                        Text("Done", fontWeight = FontWeight.SemiBold)
-                    }
+                    Text("Done", fontWeight = FontWeight.SemiBold)
                 }
             }
                 Spacer(Modifier.weight(1.1f))
@@ -560,9 +521,25 @@ private val CreamAura = Color(0xFFFFF3DA)
 private val MicrophoneGlowCore = Color(0xFFFFF3B0)
 private val MicrophoneGlowMid = Color(0xFFDFE7A8)
 private val MicrophoneGlowEdge = Color(0xFFDCE9D2)
+internal const val SPEECH_AURA_SCREEN_WIDTH_FRACTION = 0.94f
+internal const val SPEECH_AURA_MAX_SCREEN_WIDTH_FRACTION = 0.98f
+private const val HOME_VISUAL_NOISE_FLOOR = 0.08f
+private const val HOME_ENVELOPE_EXPANSION_COEFFICIENT = 0.12f
+private const val HOME_ENVELOPE_CONTRACTION_COEFFICIENT = 0.055f
+private const val HOME_RADIUS_CHANGE_THRESHOLD = 0.008f
+private const val HOME_AURA_EXPANSION_DURATION_MS = 170
+private const val HOME_AURA_CONTRACTION_DURATION_MS = 320
+internal const val SPEECH_IDLE_GLOW_TRANSITION_MS = 300
+private val HomeAuraMovementEasing = CubicBezierEasing(0.22f, 1f, 0.36f, 1f)
 
-internal fun normalizeHomeMicrophoneAmplitude(rawAmplitude: Int): Float {
-    return Design.normalizeAmplitude(rawAmplitude)
+private fun normalizeHomeMicrophoneAmplitude(rawAmplitude: Int): Float {
+    val noiseFloor = 300f
+    val cappedAmplitude = rawAmplitude.coerceIn(0, 32767).toFloat()
+    if (cappedAmplitude <= noiseFloor) return 0f
+
+    return (
+        (ln(cappedAmplitude) - ln(noiseFloor)) / (ln(32767f) - ln(noiseFloor))
+    ).coerceIn(0f, 1f)
 }
 
 @Composable
@@ -575,6 +552,7 @@ private fun HomeVoiceHero(
     amplitudeProvider: () -> Int = { 0 },
     showPrompt: Boolean = true,
     useSpeechRecordingAura: Boolean = false,
+    showCancelledIdleGlow: Boolean = false,
     speechAuraDiameter: Dp = 280.dp,
     speechAuraMaxDiameter: Dp = 280.dp,
 ) {
@@ -587,17 +565,17 @@ private fun HomeVoiceHero(
                 val normalizedAmplitude = normalizeHomeMicrophoneAmplitude(amplitudeProvider())
                 smoothedAmplitude = smoothedAmplitude * 0.72f + normalizedAmplitude * 0.28f
                 val targetLevel = (
-                    (smoothedAmplitude - Design.VISUAL_NOISE_FLOOR) / (1f - Design.VISUAL_NOISE_FLOOR)
+                    (smoothedAmplitude - HOME_VISUAL_NOISE_FLOOR) / (1f - HOME_VISUAL_NOISE_FLOOR)
                 ).coerceIn(0f, 1f)
                 val coefficient = if (targetLevel > visualEnvelope) {
-                    Design.ENVELOPE_EXPANSION_COEFFICIENT
+                    HOME_ENVELOPE_EXPANSION_COEFFICIENT
                 } else {
-                    Design.ENVELOPE_CONTRACTION_COEFFICIENT
+                    HOME_ENVELOPE_CONTRACTION_COEFFICIENT
                 }
                 visualEnvelope = (
                     visualEnvelope + (targetLevel - visualEnvelope) * coefficient
                 ).coerceIn(0f, 1f)
-                delay(75.milliseconds)
+                delay(75L)
             }
         }
         visualEnvelope = 0f
@@ -607,7 +585,7 @@ private fun HomeVoiceHero(
     LaunchedEffect(isRecording, responsiveLevel) {
         if (!isRecording) {
             radiusTargetLevel = 0f
-        } else if (abs(responsiveLevel - radiusTargetLevel) >= Design.RADIUS_CHANGE_THRESHOLD) {
+        } else if (abs(responsiveLevel - radiusTargetLevel) >= HOME_RADIUS_CHANGE_THRESHOLD) {
             radiusTargetLevel = responsiveLevel
         }
     }
@@ -620,11 +598,11 @@ private fun HomeVoiceHero(
                 targetValue = radiusTargetLevel,
                 animationSpec = tween(
                     durationMillis = if (radiusTargetLevel > animatedRadiusLevel.value) {
-                        Design.AURA_EXPANSION_DURATION_MS
+                        HOME_AURA_EXPANSION_DURATION_MS
                     } else {
-                        Design.AURA_CONTRACTION_DURATION_MS
+                        HOME_AURA_CONTRACTION_DURATION_MS
                     },
-                    easing = Design.AURA_MOVEMENT_EASING,
+                    easing = HomeAuraMovementEasing,
                 ),
             )
         }
@@ -633,6 +611,14 @@ private fun HomeVoiceHero(
         targetValue = if (isRecording) 1f + responsiveLevel * 0.06f else 1f,
         animationSpec = tween(durationMillis = 90),
         label = "homeMicrophoneButtonScale",
+    )
+    val cancelledIdleTransition by animateFloatAsState(
+        targetValue = if (useSpeechRecordingAura && showCancelledIdleGlow && !isRecording) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = SPEECH_IDLE_GLOW_TRANSITION_MS,
+            easing = FastOutSlowInEasing,
+        ),
+        label = "speechCancelledIdleGlowTransition",
     )
     val ringMotion = rememberInfiniteTransition(label = "homeMicrophoneRingMotion")
     val recordingPulse by ringMotion.animateFloat(
@@ -676,12 +662,15 @@ private fun HomeVoiceHero(
             drawCircle(
                 brush = if (useSpeechRecordingAura) {
                     val auraRadius = size.minDimension / 2f
+                    val glowCore = lerp(MicrophoneGlowCore, RecordingRed, cancelledIdleTransition)
+                    val glowMid = lerp(MicrophoneGlowMid, InnerVoiceRing, cancelledIdleTransition)
+                    val glowEdge = lerp(MicrophoneGlowEdge, OuterVoiceRing, cancelledIdleTransition)
                     Brush.radialGradient(
-                        0.00f to MicrophoneGlowCore.copy(alpha = 0.94f),
-                        0.20f to MicrophoneGlowCore.copy(alpha = 0.88f),
-                        0.48f to MicrophoneGlowMid.copy(alpha = 0.72f),
-                        0.74f to MicrophoneGlowEdge.copy(alpha = 0.52f),
-                        0.90f to MicrophoneGlowEdge.copy(alpha = 0.22f),
+                        0.00f to glowCore.copy(alpha = 0.94f),
+                        0.20f to glowCore.copy(alpha = 0.88f),
+                        0.48f to glowMid.copy(alpha = 0.72f),
+                        0.74f to glowEdge.copy(alpha = 0.52f),
+                        0.90f to glowEdge.copy(alpha = 0.22f),
                         1.00f to Color.Transparent,
                         center = center,
                         radius = auraRadius,

@@ -20,6 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.bulosfrontend.ui.theme.*
 import java.text.DateFormat
 import java.util.Date
 
@@ -28,7 +29,7 @@ fun SettingsScreen(viewModel: MainViewModel, onLanguageClick: () -> Unit) {
     val content = viewModel.content
     val home = content.home
     val context = LocalContext.current
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    Surface(Modifier.fillMaxSize(), color = Color(0xFFFFFBF4)) {
         OverlappingHeaderLayout(
             // The content has 16.dp top padding, leaving a visible 24.dp card overlap.
             overlap = 40.dp,

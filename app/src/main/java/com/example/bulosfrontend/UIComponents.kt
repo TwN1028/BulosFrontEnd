@@ -23,6 +23,82 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.bulosfrontend.ui.theme.Aileron
 
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+
+val TranslationInputBorderColor = Color(0xFFE5DDD2).copy(alpha = 0.65f)
+val TranslationInputBorderWidth = 0.5.dp
+
+@Composable
+fun TranslationInputCard(
+    label: String,
+    value: String,
+    placeholder: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    editingEnabled: Boolean = true,
+    footer: @Composable (() -> Unit)? = null,
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 106.dp)
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(16.dp),
+                clip = false,
+                ambientColor = Color.Black.copy(alpha = 0.08f),
+                spotColor = Color.Black.copy(alpha = 0.08f),
+            ),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(TranslationInputBorderWidth, TranslationInputBorderColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) {
+            Text(
+                text = label,
+                color = MaterialTheme.colorScheme.secondary,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(12.dp))
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                enabled = editingEnabled,
+                modifier = Modifier.fillMaxWidth().height(252.dp),
+                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontFamily = Aileron,
+                ),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    imeAction = ImeAction.Default,
+                ),
+                decorationBox = { innerTextField ->
+                    Box(Modifier.fillMaxSize()) {
+                        if (value.isEmpty()) {
+                            Text(
+                                text = placeholder,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodyLarge.copy(fontFamily = Aileron),
+                            )
+                        }
+                        innerTextField()
+                    }
+                },
+            )
+            if (footer != null) {
+                Spacer(Modifier.height(8.dp))
+                footer()
+            }
+        }
+    }
+}
+
 @Composable
 fun ConnectivityStatusPill(isOnline: Boolean, isServerReady: Boolean = true, modifier: Modifier = Modifier) {
     val containerColor = when {
@@ -116,6 +192,8 @@ fun SharedTopAppBar(
     isOnline: Boolean? = null,
     isServerReady: Boolean = true,
     trailingContent: @Composable RowScope.() -> Unit = {},
+    selectionMode: Boolean = false,
+    selectionContent: @Composable RowScope.() -> Unit = {},
 ) = Column(Modifier.background(appHeaderGradientBrush())) {
     Row(
         modifier = Modifier
@@ -125,33 +203,53 @@ fun SharedTopAppBar(
             .height(48.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            painter = painterResource(iconRes ?: R.drawable.ic_launcher_foreground),
-            contentDescription = stringResource(logoDescriptionRes),
-            tint = Color.White,
-            modifier = if (iconRes != null) Modifier.size(48.dp).padding(12.dp) else Modifier.size(48.dp).padding(8.dp),
-        )
-        Spacer(Modifier.width(4.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, color = Color.White, style = MaterialTheme.typography.titleLarge)
-            if (subtitle != null) {
-                Text(
-                    text = subtitle,
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = 15.sp,
-                        lineHeight = 20.sp,
-                    ),
-                    fontWeight = FontWeight.Normal,
-                    maxLines = 1,
+        AnimatedContent(
+            targetState = selectionMode,
+            modifier = Modifier.fillMaxSize(),
+            transitionSpec = {
+                (fadeIn(tween(160)) togetherWith fadeOut(tween(120))).using(
+                    SizeTransform(clip = false, sizeAnimationSpec = { _, _ -> snap() }),
                 )
+            },
+            label = "sharedHeaderMode",
+        ) { selecting ->
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (selecting) {
+                    selectionContent()
+                } else {
+                    Icon(
+                        painter = painterResource(iconRes ?: R.drawable.ic_launcher_foreground),
+                        contentDescription = stringResource(logoDescriptionRes),
+                        tint = Color.White,
+                        modifier = if (iconRes != null) Modifier.size(48.dp).padding(12.dp) else Modifier.size(48.dp).padding(8.dp),
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(title, color = Color.White, style = MaterialTheme.typography.titleLarge)
+                        if (subtitle != null) {
+                            Text(
+                                text = subtitle,
+                                color = Color.White,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = 13.sp,
+                                    lineHeight = 20.sp,
+                                ),
+                                fontWeight = FontWeight.Normal,
+                                maxLines = 1,
+                            )
+                        }
+                    }
+                    if (isOnline != null) {
+                        ConnectivityStatusPill(isOnline, isServerReady)
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    trailingContent()
+                }
             }
         }
-        if (isOnline != null) {
-            ConnectivityStatusPill(isOnline, isServerReady)
-            Spacer(Modifier.width(8.dp))
-        }
-        trailingContent()
     }
     Spacer(Modifier.height(AppHeaderTailHeight))
 }

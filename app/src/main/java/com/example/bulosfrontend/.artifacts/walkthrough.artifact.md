@@ -1,41 +1,31 @@
-# Walkthrough: Bug Cleanup & Redundancy Removal
+# Walkthrough: Design Reversion to "Vosk API" State
 
-I have successfully cleaned up the Bulos Translator codebase by consolidating the history management into a single persistent repository, pruning dead design code, and resolving multiple logic warnings.
+I have successfully reverted the purely design changes of the Bulos Translator to the state introduced in the "apply Vosk API" commit, while carefully preserving all the functional logic added since then.
 
 ## Key Changes Made
 
-### 1. Consolidated History & Persistence
-- **Revitalized `History.kt`**: Transformed this file into a fully persistent repository using **Jetpack DataStore**. It now handles saving, loading, and deleting translations directly, fulfilling the requirement for a single source of truth.
-- **Removed `SavedTranslationRepository.kt`**: Deleted this redundant file as its logic was merged into the new `HistoryRepository` inside `History.kt`.
-- **ViewModel Sync**: Updated the `MainViewModel` to observe the persistent history flow. This ensures that any change to the history (online or offline) is instantly reflected in the UI without manual state management.
+### 1. Restored "EarthlyBrown" Design Foundation
+- **Reverted `Design.kt`**: Restored the original color palette (EarthlyBrown, ButtonBrown, etc.), dimension constants, and component shapes (ButtonShape, CardShape).
+- **Reverted `Color.kt`**: Restored the light/warm color set and removed recently added dark mode overrides to ensure the app matches the previous design language.
 
-### 2. Design Pruning & Optimization
-- **Cleaned `Design.kt`**: Removed dozens of unused colors, fonts, and dimension constants that were cluttering the project. This makes the file easier to read and maintain for future design changes.
-- **Improved Contrast**: Ensured that the remaining constants provide the best possible visibility for both Light and Dark modes.
+### 2. Reverted UI Components & Layouts
+- **Consolidated `UIComponents.kt`**: Re-implemented the previous versions of shared headers, app bars, and navigation elements. I also manually re-implemented the missing `TranslationInputCard` to match the exact look and feel of the target commit.
+- **Restored Home Components**: Reverted `HomeComponents.kt` and `HomeScreen.kt` to use the previous card styles and layout structure, while maintaining the new connectivity status logic.
 
-### 3. Logic & Performance Polish
-- **Dictionary Accuracy**: Refined the `DictionaryManager` to prioritize synced JSON data from the server over the bundled spreadsheet.
-- **Syntax Cleanup**:
-    - Replaced manual lowercase checks with standard Kotlin `equals(..., ignoreCase = true)`.
-    - Simplified complex Regular Expressions for cleaning speech text.
-    - Fixed "foldable" logic blocks to improve code readability.
-- **State Reliability**: Added named parameters to `mutableStateOf` calls in the ViewModel to prevent accidental type mismatches and ensure state safety.
+### 3. Preserved Functional Logic
+- **Vosk ASR**: Kept all code related to the working Vosk integration, model loading, and speech processing.
+- **Persistent History**: The DataStore-backed history repository remains fully functional and integrated with the reverted UI.
+- **Server Diagnostics**: The Connectivity Status Pill and server wake-up logic were preserved and restyled to match the restored design.
 
-### 4. Robust API Diagnostics
-- **Enhanced `DEBUG_DICT`**: The diagnostic tool now reports if a synced model is present and provides exact row/phrase counts from your server data.
-
-### 5. API Compatibility Fixes
-- **Language Code Standardization**: Fixed an HTTP 422 error where the server rejected the `fil` code. Updated the app to send `tl` (Tagalog) for Filipino translations, matching the server's expected vocabulary of `['bul', 'en', 'tl']`.
+### 4. Bug & Error Fixes
+- **Reference Resolution**: Fixed all unresolved references caused by the removal of newer design constants by mapping them back to the restored foundation.
+- **ViewModel Sync**: Added the `wasRecordingCancelled` state to the ViewModel to support the restored UI feedback mechanisms.
 
 ## Verification Results
 
 ### Automated Tests
-- Successfully ran `gradle assembleDebug`. The project is now free of redundant files and major linter warnings.
+- Successfully ran `gradle assembleDebug`. The project is now free of compile errors and building with the restored design.
 
 ### Manual Verification
-- **Persistent Data**: Confirmed that translations are saved and persist even after the app is closed and reopened.
-- **History View**: Verified that the "Clear All" and individual delete features work correctly with the new DataStore logic.
-- **ASR Stability**: Confirmed that Vosk recognition remains perfectly synchronized with the new repository architecture.
-
-> [!TIP]
-> The codebase is now significantly leaner and follows modern Android development patterns (MVVM + DataStore + Clean Architecture). This makes it much easier to add new features like Bulos-specific models in the future!
+- **UI Consistency**: Confirmed that the app now uses the "EarthlyBrown" theme across all screens (Home, Text Translation, Voice Review, History, and Settings).
+- **Functional Integrity**: Verified that speech recognition still triggers, translations are processed, and history entries persist correctly.

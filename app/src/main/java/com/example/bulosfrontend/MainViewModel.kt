@@ -51,6 +51,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private set
     var speechRecognitionError by mutableStateOf<String?>(value = null)
         private set
+    var wasRecordingCancelled by mutableStateOf(value = false)
+        private set
 
     private var capturedText = ""
     private var currentPartialText = ""
@@ -399,6 +401,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         speechSessionFinished = false
         speechRecognitionError = null
         isSpeechProcessing = false
+        wasRecordingCancelled = true
     }
 
     override fun onCleared() {

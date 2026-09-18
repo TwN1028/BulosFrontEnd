@@ -6,10 +6,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.MarqueeAnimationMode
-import androidx.compose.foundation.MarqueeSpacing
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -22,7 +19,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -34,8 +30,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.bulosfrontend.ui.theme.*
-import java.text.DateFormat
-import java.util.Date
 
 data class HomeFeature(
     @StringRes val titleRes: Int,
@@ -47,9 +41,7 @@ data class HomeFeature(
 )
 
 private val switchLanguageCardBrush = Brush.verticalGradient(
-    0.00f to Color(0xFFFDFBF9),
-    0.50f to Color(0xFFFDFCF9),
-    1.00f to Color(0xFFFCFCFA),
+    colors = listOf(HomeRecentTranslationCard, HomeRecentTranslationCard),
 )
 
 @Composable
@@ -96,7 +88,6 @@ fun HomeIdentityHeader(title: String, badge: String, modifier: Modifier = Modifi
 
 @Composable
 fun FeatureCard(feature: HomeFeature, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val darkTheme = LocalBulosDarkTheme.current
     val isTextFeature = feature.route == AppDestinations.TEXT
     val isHelpFeature = feature.route == AppDestinations.HELP
     val isHistoryFeature = feature.route == AppDestinations.HISTORY
@@ -110,12 +101,8 @@ fun FeatureCard(feature: HomeFeature, onClick: () -> Unit, modifier: Modifier = 
         isHistoryFeature -> 28.dp
         else -> 24.dp
     }
-    val cardBorderColor = if (darkTheme) MaterialTheme.colorScheme.outlineVariant else Color(0xFFFFFBF4)
-    val textColor = when {
-        isTextFeature -> Color(0xFFFFFBF4)
-        darkTheme -> MaterialTheme.colorScheme.onSurface
-        else -> Color.Black
-    }
+    val cardBorderColor = Color(0xFFFFFBF4)
+    val textColor = if (isTextFeature) cardBorderColor else Color.Black
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val cardElevation by animateDpAsState(
@@ -233,7 +220,7 @@ fun SupportedLanguagesCard(
             ),
         shape = cardShape,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        border = BorderStroke(1.dp, Color(0xFFFFFBF4)),
+        border = BorderStroke(0.5.dp, Color(0xFFE5DDD2).copy(alpha = 0.65f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
@@ -253,7 +240,7 @@ fun SupportedLanguagesCard(
                 ),
                 fontWeight = FontWeight.Bold,
             )
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(4.dp))
             val bulos = stringResource(R.string.language_name_bulos)
             val filipino = stringResource(R.string.language_name_filipino)
             val english = stringResource(R.string.language_name_english)
@@ -300,7 +287,7 @@ private fun LanguageSwitchLabel(
     style: androidx.compose.ui.text.TextStyle,
 ) {
     val color by animateColorAsState(
-        targetValue = if (language == selectedLanguage) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+        targetValue = if (language == selectedLanguage) MaterialTheme.colorScheme.primary else Color.Black,
         animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
         label = "languageSwitchColor",
     )
@@ -322,15 +309,13 @@ fun HomeDynamicContentCard(
     onHistoryClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val darkTheme = LocalBulosDarkTheme.current
-    // Show up to 3 most recent items.
     val recentItems = historyItems.take(3)
     val cardShape = RoundedCornerShape(16.dp)
 
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .height(63.dp)
+            .heightIn(min = 63.dp)
             .shadow(
                 elevation = 4.dp,
                 shape = cardShape,
@@ -340,13 +325,13 @@ fun HomeDynamicContentCard(
             ),
         shape = cardShape,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        border = BorderStroke(0.5.dp, if (darkTheme) MaterialTheme.colorScheme.outlineVariant else Color(0xFFE5DDD2).copy(alpha = 0.65f)),
+        border = BorderStroke(0.5.dp, Color(0xFFE5DDD2).copy(alpha = 0.65f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .background(if (darkTheme) DarkHomeRecentTranslationCard else HomeRecentTranslationCard)
+                .background(HomeContentCream)
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -354,7 +339,7 @@ fun HomeDynamicContentCard(
             Column(Modifier.weight(1f)) {
                 Text(
                     stringResource(titleRes).uppercase(),
-                    color = if (darkTheme) MaterialTheme.colorScheme.primary else PrimaryGreen,
+                    color = PrimaryGreen,
                     style = MaterialTheme.typography.labelLarge.copy(
                         fontSize = 10.sp,
                         lineHeight = 13.sp,
@@ -389,7 +374,7 @@ fun HomeDynamicContentCard(
             }
             HomeCardAction(
                 text = stringResource(historyActionRes),
-                iconPainter = painterResource(R.drawable.ic_lucide_history),
+                iconPainter = painterResource(R.drawable.ic_saved_history_reference),
                 onClick = onHistoryClick,
                 modifier = Modifier.align(Alignment.CenterVertically),
             )
@@ -399,40 +384,20 @@ fun HomeDynamicContentCard(
 
 @Composable
 private fun RecentTranslationRow(item: HistoryItem) {
-    // Direction label: "English → Bulos"
     Text(
-        stringResource(R.string.direction_format, item.sourceLang, item.targetLang),
-        color = GoldenAccent,
-        style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp, lineHeight = 15.sp),
-        fontWeight = FontWeight.SemiBold,
-    )
-    Spacer(Modifier.height(3.dp))
-    // Input text — primary display
-    Text(
-        item.inputText,
+        text = item.inputText,
         color = MaterialTheme.colorScheme.onSurface,
-        style = MaterialTheme.typography.titleMedium.copy(
-            fontSize = 13.sp,
-            lineHeight = 17.sp,
-            letterSpacing = (-0.15).sp,
-        ),
+        style = MaterialTheme.typography.bodyMedium,
         fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
     )
-    // Translated text — secondary
     Text(
-        item.translatedText,
+        text = item.translatedText,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        style = MaterialTheme.typography.bodyMedium.copy(
-            fontSize = 10.sp,
-            lineHeight = 14.sp,
-            letterSpacing = 0.sp,
-        ),
-    )
-    // Timestamp
-    Text(
-        DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(item.timestamp)),
-        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
-        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 13.sp),
+        style = MaterialTheme.typography.bodySmall,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
     )
 }
 
@@ -445,7 +410,7 @@ private fun HomeCardAction(
 ) {
     Button(
         onClick = onClick,
-        modifier = modifier.width(108.dp).height(30.dp),
+        modifier = modifier.height(30.dp),
         shape = RoundedCornerShape(15.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = PrimaryGreen,
@@ -460,28 +425,12 @@ private fun HomeCardAction(
             modifier = Modifier.size(18.dp).align(Alignment.CenterVertically),
         )
         Spacer(Modifier.width(6.dp))
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .clipToBounds(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = text,
-                modifier = Modifier.basicMarquee(
-                    iterations = Int.MAX_VALUE,
-                    animationMode = MarqueeAnimationMode.Immediately,
-                    repeatDelayMillis = 1_200,
-                    initialDelayMillis = 1_200,
-                    spacing = MarqueeSpacing(20.dp),
-                    velocity = 22.dp,
-                ),
-                style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp, lineHeight = 15.sp),
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Clip,
-            )
-        }
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp, lineHeight = 15.sp),
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            softWrap = false,
+        )
     }
 }

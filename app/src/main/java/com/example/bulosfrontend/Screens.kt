@@ -4,14 +4,13 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.os.Build
-import androidx.compose.animation.Crossfade
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -24,181 +23,145 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.os.ConfigurationCompat
 import com.example.bulosfrontend.ui.theme.*
+import java.util.Locale
 
 @Composable
-fun TranslateTextScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBack: () -> Unit) {
+fun TranslateTextScreen(
+    viewModel: MainViewModel,
+    onTranslate: () -> Unit,
+    onBack: () -> Unit,
+) {
     var text by remember { mutableStateOf("") }
     val content = viewModel.content
     val labels = content.textTranslation
     val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val currentLocale = remember(configuration) {
+        ConfigurationCompat.getLocales(configuration)[0] ?: Locale.ROOT
+    }
 
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(Modifier.fillMaxSize()) {
-            FeaturePatternHeader(
-                title = stringResource(content.translateHeaderRes),
-                subtitle = stringResource(content.home.textSubtitleRes),
-                onBack = onBack,
-                iconRes = R.drawable.ic_lucide_languages,
-                headerBottomExtension = AppHeaderBottomExtension,
-                isOnline = viewModel.isOnline,
-                isServerReady = viewModel.isServerReady
-            )
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .offset(y = (-40).dp)
-                    .verticalScroll(rememberScrollState())
-                    .imePadding()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-            ) {
-                TranslationLanguageBar(
-                    swapLanguagesDescription = stringResource(content.speechResult.swapLanguagesDescriptionRes),
-                    modifier = Modifier
-                        .offset(y = (-8).dp)
-                        .height(50.dp),
-                    useHomeCardStyle = true,
+    Surface(Modifier.fillMaxSize(), color = Color(0xFFFFFBF4)) {
+        Box(Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize()) {
+                FeaturePatternHeader(
+                    title = stringResource(content.translateHeaderRes),
+                    subtitle = stringResource(content.home.textSubtitleRes),
+                    onBack = onBack,
+                    iconRes = R.drawable.ic_lucide_languages,
+                    headerBottomExtension = AppHeaderBottomExtension,
+                    isOnline = viewModel.isOnline,
+                    isServerReady = viewModel.isServerReady
                 )
-                Spacer(Modifier.height(18.dp))
-                Card(
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = TranslationCardMinHeight)
-                        .shadow(
-                            elevation = 4.dp,
-                            shape = RoundedCornerShape(16.dp),
-                            clip = false,
-                            ambientColor = Color.Black.copy(alpha = 0.08f),
-                            spotColor = Color.Black.copy(alpha = 0.08f),
-                        ),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = androidx.compose.foundation.BorderStroke(
-                        0.5.dp,
-                        Color(0xFFE5DDD2).copy(alpha = 0.65f),
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                        .weight(1f)
+                        .offset(y = (-40).dp)
+                        .verticalScroll(rememberScrollState())
+                        .imePadding()
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
                 ) {
-                    Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) {
-                        Text(
-                            stringResource(TranslationState.sourceLanguage.displayNameRes).uppercase(),
-                            color = MaterialTheme.colorScheme.secondary,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        BasicTextField(
-                            value = text,
-                            onValueChange = { if (it.length <= 100) text = it },
-                            modifier = Modifier.fillMaxWidth().height(252.dp),
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontFamily = Aileron,
-                            ),
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Text,
-                                imeAction = ImeAction.Default,
-                            ),
-                            decorationBox = { innerTextField ->
-                                Box(Modifier.fillMaxSize()) {
-                                    if (text.isEmpty()) {
-                                        Text(
-                                            stringResource(labels.inputPlaceholderRes, stringResource(TranslationState.sourceLanguage.displayNameRes)),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            style = MaterialTheme.typography.bodyLarge.copy(fontFamily = Aileron),
-                                        )
-                                    }
-                                    innerTextField()
-                                }
-                            },
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                stringResource(content.characterCountRes, text.length, 100),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.labelSmall,
-                            )
-                            TextButton(
-                                onClick = {
-                                    text = ""
-                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                                        clipboard.clearPrimaryClip()
-                                    } else {
-                                        @Suppress("DEPRECATION")
-                                        clipboard.setPrimaryClip(ClipData.newPlainText("", ""))
-                                    }
-                                },
-                                modifier = Modifier.height(28.dp),
-                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                    TranslationLanguageBar(
+                        swapLanguagesDescription = stringResource(content.speechResult.swapLanguagesDescriptionRes),
+                        modifier = Modifier
+                            .offset(y = (-8).dp)
+                            .height(50.dp),
+                        useHomeCardStyle = true,
+                    )
+                    Spacer(Modifier.height(18.dp))
+                    TranslationInputCard(
+                        label = stringResource(TranslationState.sourceLanguage.displayNameRes).uppercase(currentLocale),
+                        value = text,
+                        placeholder = stringResource(labels.inputPlaceholderRes, stringResource(TranslationState.sourceLanguage.displayNameRes)),
+                        onValueChange = { if (it.length <= 100) text = it },
+                        footer = {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
-                                    text = stringResource(R.string.clear_all),
+                                    stringResource(content.characterCountRes, text.length, 100),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.SemiBold,
                                 )
+                                TextButton(
+                                    onClick = {
+                                        text = ""
+                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                            clipboard.clearPrimaryClip()
+                                        } else {
+                                            @Suppress("DEPRECATION")
+                                            clipboard.setPrimaryClip(ClipData.newPlainText("", ""))
+                                        }
+                                    },
+                                    modifier = Modifier.height(28.dp),
+                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.clear_all),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
+                                }
                             }
+                        },
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Button(
+                        onClick = {
+                            viewModel.translateText(text, onComplete = onTranslate)
+                        },
+                        enabled = text.isNotBlank() && !viewModel.isTranslating,
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .widthIn(max = 480.dp)
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = ForestGreen,
+                            contentColor = WarmWhite,
+                            disabledContainerColor = Sand.copy(alpha = 0.50f),
+                            disabledContentColor = MutedText,
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(disabledElevation = 0.dp),
+                    ) {
+                        if (viewModel.isTranslating) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = WarmWhite)
+                                Spacer(Modifier.width(12.dp))
+                                Text(viewModel.translationStatus, style = MaterialTheme.typography.labelLarge)
+                            }
+                        } else {
+                            Text(
+                                stringResource(labels.translateToRes, stringResource(TranslationState.targetLanguage.displayNameRes)),
+                                fontWeight = FontWeight.Bold,
+                            )
                         }
                     }
-                }
-                Spacer(Modifier.height(16.dp))
-                Button(
-                    onClick = {
-                        viewModel.translateText(text, onComplete = onTranslate)
-                    },
-                    enabled = text.isNotBlank() && !viewModel.isTranslating,
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .widthIn(max = 480.dp)
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = ForestGreen,
-                        contentColor = WarmWhite,
-                        disabledContainerColor = Sand.copy(alpha = 0.50f),
-                        disabledContentColor = MutedText,
-                    ),
-                    elevation = ButtonDefaults.buttonElevation(disabledElevation = 0.dp),
-                ) {
-                    if (viewModel.isTranslating) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = WarmWhite)
-                            Spacer(Modifier.width(12.dp))
-                            Text(viewModel.translationStatus, style = MaterialTheme.typography.labelLarge)
-                        }
-                    } else {
+                    TextButton(
+                        onClick = onBack,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .height(48.dp),
+                    ) {
                         Text(
-                            stringResource(labels.translateToRes, stringResource(TranslationState.targetLanguage.displayNameRes)),
-                            fontWeight = FontWeight.Bold,
+                            stringResource(content.goBackRes),
+                            style = MaterialTheme.typography.titleMedium,
                         )
                     }
+                    Spacer(Modifier.height(12.dp))
                 }
-                TextButton(
-                    onClick = onBack,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .height(48.dp),
-                ) {
-                    Text(
-                        stringResource(content.goBackRes),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                }
-                Spacer(Modifier.height(12.dp))
             }
         }
     }
@@ -208,18 +171,24 @@ fun TranslateTextScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBac
 fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
     val content = viewModel.content
     val historyItems = viewModel.historyItems
-    var selectedTimestamps by remember { mutableStateOf(value = emptySet<Long>()) }
-    var selectionMode by remember { mutableStateOf(value = false) }
-    var showHistoryMenu by remember { mutableStateOf(value = false) }
+    var selectedTimestamps by remember { mutableStateOf(emptySet<Long>()) }
+    var selectionMode by remember { mutableStateOf(false) }
+    var showHistoryMenu by remember { mutableStateOf(false) }
+    val allItemsSelected = historyItems.isNotEmpty() && selectedTimestamps.size == historyItems.size
 
     LaunchedEffect(historyItems.toList()) {
         selectedTimestamps = selectedTimestamps.intersect(historyItems.mapTo(mutableSetOf()) { it.timestamp })
         if (historyItems.isEmpty()) selectionMode = false
     }
 
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    BackHandler(enabled = selectionMode) {
+        selectedTimestamps = emptySet()
+        selectionMode = false
+    }
+
+    Surface(Modifier.fillMaxSize(), color = Color(0xFFFFFBF4)) {
         OverlappingHeaderLayout(
-            overlap = 31.dp,
+            overlap = 40.dp,
             modifier = Modifier.fillMaxSize(),
             header = {
             SharedTopAppBar(
@@ -230,81 +199,82 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                 isOnline = viewModel.isOnline,
                 isServerReady = viewModel.isServerReady,
                 trailingContent = {
-                    Crossfade(targetState = selectionMode, label = "historyHeaderActions") { selecting ->
-                        if (selecting) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                TextButton(
-                                    onClick = {
-                                        selectedTimestamps = historyItems.mapTo(mutableSetOf()) { it.timestamp }
-                                    },
-                                ) {
-                                    Text(
-                                        stringResource(R.string.select_all),
-                                        color = WarmWhite,
-                                        style = MaterialTheme.typography.labelMedium,
-                                    )
-                                }
-                                IconButton(
-                                    onClick = {
-                                        viewModel.deleteSavedTranslations(selectedTimestamps)
-                                        selectedTimestamps = emptySet()
-                                        selectionMode = false
-                                    },
-                                    enabled = selectedTimestamps.isNotEmpty(),
-                                ) {
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        contentDescription = stringResource(R.string.delete_selected),
-                                        tint = WarmWhite,
-                                    )
-                                }
-                                IconButton(
-                                    onClick = {
-                                        selectedTimestamps = emptySet()
-                                        selectionMode = false
-                                    },
-                                ) {
-                                    Icon(
-                                        Icons.Default.Close,
-                                        contentDescription = stringResource(R.string.cancel_selection),
-                                        tint = WarmWhite,
-                                    )
-                                }
-                            }
-                        } else {
-                            Box {
-                                IconButton(onClick = { showHistoryMenu = true }) {
-                                    Icon(
-                                        Icons.Default.MoreVert,
-                                        contentDescription = stringResource(R.string.saved_history_options),
-                                        tint = WarmWhite,
-                                    )
-                                }
-                                DropdownMenu(
-                                    expanded = showHistoryMenu,
-                                    onDismissRequest = { showHistoryMenu = false },
-                                ) {
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.clear_all)) },
-                                        onClick = {
-                                            showHistoryMenu = false
-                                            selectedTimestamps = emptySet()
-                                            viewModel.clearSavedTranslations()
-                                        },
-                                        enabled = historyItems.isNotEmpty(),
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.select_multiple)) },
-                                        onClick = {
-                                            showHistoryMenu = false
-                                            selectionMode = true
-                                            selectedTimestamps = emptySet()
-                                        },
-                                        enabled = historyItems.isNotEmpty(),
-                                    )
-                                }
-                            }
+                    Box {
+                        IconButton(onClick = { showHistoryMenu = true }) {
+                            Icon(
+                                Icons.Default.MoreVert,
+                                contentDescription = stringResource(R.string.saved_history_options),
+                                tint = WarmWhite,
+                            )
                         }
+                        DropdownMenu(
+                            expanded = showHistoryMenu,
+                            onDismissRequest = { showHistoryMenu = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.clear_all)) },
+                                onClick = {
+                                    showHistoryMenu = false
+                                    selectedTimestamps = emptySet()
+                                    viewModel.clearSavedTranslations()
+                                },
+                                enabled = historyItems.isNotEmpty(),
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.select_multiple)) },
+                                onClick = {
+                                    showHistoryMenu = false
+                                    selectionMode = true
+                                    selectedTimestamps = emptySet()
+                                },
+                                enabled = historyItems.isNotEmpty(),
+                            )
+                        }
+                    }
+                },
+                selectionMode = selectionMode,
+                selectionContent = {
+                    IconButton(
+                        onClick = {
+                            selectedTimestamps = emptySet()
+                            selectionMode = false
+                        },
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = stringResource(R.string.cancel_selection),
+                            tint = WarmWhite,
+                        )
+                    }
+                    Spacer(Modifier.weight(1f))
+                    TextButton(
+                        onClick = {
+                            selectedTimestamps = if (allItemsSelected) {
+                                emptySet()
+                            } else {
+                                historyItems.mapTo(mutableSetOf()) { it.timestamp }
+                            }
+                        },
+                    ) {
+                        Text(
+                            stringResource(if (allItemsSelected) R.string.deselect_all else R.string.select_all),
+                            color = WarmWhite,
+                            style = MaterialTheme.typography.labelMedium,
+                        )
+                    }
+                    IconButton(
+                        onClick = {
+                            viewModel.deleteSavedTranslations(selectedTimestamps)
+                            selectedTimestamps = emptySet()
+                            selectionMode = false
+                        },
+                        enabled = selectedTimestamps.isNotEmpty(),
+                    ) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = stringResource(R.string.delete_selected),
+                            tint = WarmWhite,
+                        )
                     }
                 },
             )

@@ -1,52 +1,66 @@
-# Implementation Plan: Bug Cleanup & Redundancy Removal (Revised)
+# Implementation Plan: Revert Design to "Vosk API" State while Preserving Functionality
 
-This plan streamlines the codebase by consolidating history management into a single persistent repository based in `History.kt`, pruning dead UI constants, and resolving linter warnings.
-
-## Proposed Changes
-
-### 1. Consolidate History into Persistent `History.kt`
-
-#### [MODIFY] [History.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/History.kt)
-- Integrate the persistence logic currently in `SavedTranslationRepository.kt` into this file.
-- Use **Jetpack DataStore** to save and load `HistoryItem` objects.
-- Expose a `Flow<List<HistoryItem>>` from a `HistoryRepository` class or the `HistoryProvider` object.
-
-#### [DELETE] [SavedTranslationRepository.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/SavedTranslationRepository.kt)
-- Remove this file as its functionality has been merged into `History.kt`.
-
-#### [MODIFY] [MainViewModel.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/MainViewModel.kt)
-- Update to use the updated `History.kt` logic.
-- Remove the dependency on `SavedTranslationRepository`.
-
-#### [MODIFY] [Screens.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/Screens.kt) and [SpeechResultScreens.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/SpeechResultScreens.kt)
-- Ensure UI components correctly observe the new persistent history flow.
-
-### 2. Prune Dead Code & Polish Logic
-
-#### [MODIFY] [Design.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/Design.kt)
-- Delete all unused colors, typography, dimensions, and layout helpers identified by the IDE analysis.
-
-#### [MODIFY] [DictionaryManager.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/DictionaryManager.kt)
-- Simplify Regex for control characters.
-- Replace manual lowercase comparisons with `equals(..., ignoreCase = true)`.
-- Fix foldable if-then logic for JSON loading.
-
-#### [MODIFY] [MainViewModel.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/MainViewModel.kt)
-- Clean up unused local variables and imports.
-- Add named parameters to boolean `mutableStateOf` calls for clarity.
+The goal is to restore the "EarthlyBrown" design introduced in the "apply Vosk API" commit (specifically identified as `9dedb13`/`da86261`) while retaining all the functional improvements made since then, including working speech processing, persistent history, and server diagnostics.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Consolidation**: By moving the DataStore logic into `History.kt`, we fulfill the requirement to make `History.kt` the primary persistent repository while keeping the codebase organized.
+> **Design vs. Functionality**: I am treating the "Green" theme and new card layouts as "purely design changes" to be reverted. New functional elements like the **ConnectivityStatusPill** will be retained but styled to match the older "EarthlyBrown" palette.
+
+> [!WARNING]
+> **Component Synchronization**: Restoring the old `Design.kt` constants may require updating some functional code that was "cleaned up" to remove those constants. I will ensure all references are correctly mapped.
+
+## Proposed Changes
+
+### 1. Restore Design Foundation
+
+#### [MODIFY] [Design.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/Design.kt)
+- Restore the `EarthlyBrown`, `ButtonBrown`, `LightForestGreen`, etc., color palette.
+- Restore the `ButtonShape`, `CardShape`, and `DashboardShape` definitions.
+- Restore the extensive typography and dimension constants.
+- **Retain**: Keep the `LanguageModelMap` and amplitude normalization logic needed for Vosk.
+
+#### [MODIFY] [Color.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/ui/theme/Color.kt)
+- Revert to the color set present in the Vosk API commit, removing the recently added dark mode overrides and updated green palette.
+
+### 2. Revert UI Layouts to Previous State
+
+#### [MODIFY] [HomeScreen.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/HomeScreen.kt)
+- Revert the `HomeScreenContent` to use the `HomeFeature` list and `LazyColumn` layout from `9dedb13`.
+- Revert the `HomeVoiceHero` and `HomeFabShortcut` to their previous styles.
+- **Preserve**: Keep the `ConnectivityStatusPill` and its integration with the ViewModel's `isOnline` state.
+
+#### [MODIFY] [Screens.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/Screens.kt) and [SpeechResultScreens.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/SpeechResultScreens.kt)
+- Restore the `FeaturePatternHeader` and `TranslationInputCard` styles.
+- Revert the `HistoryScreen` and `ResultScreen` layouts to their previous versions.
+- **Preserve**: Ensure the persistent `HistoryProvider` flow remains connected to the UI.
+
+#### [MODIFY] [UIComponents.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/UIComponents.kt)
+- Revert basic components (Buttons, Cards, Headers) to the "EarthlyBrown" style.
+
+#### [MODIFY] [AppBottomNavigation.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/AppBottomNavigation.kt)
+- Revert the navigation bar styling and icons to the previous version.
+
+#### [MODIFY] [res/values/themes.xml](file:///D:/Android_Studio_Projects/app/src/main/res/values/themes.xml) and [res/values/strings.xml](file:///D:/Android_Studio_Projects/app/src/main/res/values/strings.xml)
+- Revert theme attributes and string labels to match the previous design state.
+
+### 3. Maintain Functional Logic
+
+#### [KEEP] [MainViewModel.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/MainViewModel.kt)
+- All Vosk manager initialization, recording logic, and server status monitoring will be preserved.
+- Any references to deleted design constants will be updated to the restored constants.
+
+#### [KEEP] [History.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/History.kt)
+- The DataStore-backed persistent repository will remain unchanged.
 
 ## Verification Plan
 
 ### Automated Tests
-- Run `gradle assembleDebug` to ensure no compile-time errors after refactoring.
-- Re-run `analyze_file` on modified files to verify all warnings are resolved.
+- `gradle assembleDebug`: Ensure the project builds without errors after reverting design constants.
 
 ### Manual Verification
-- **History View**: Open the History screen and verify all previously saved translations are still visible.
-- **Save Feature**: Translate a sentence and verify it still saves correctly and appears in the list.
-- **ASR/Vosk**: Verify that speech recognition still functions correctly.
+- **UI Audit**: Verify that the app now uses the "EarthlyBrown" color scheme and the previous card layouts.
+- **Functionality Check**:
+    - Verify that speech recognition (Vosk) still starts and processes audio.
+    - Verify that history entries are still persistent.
+    - Verify that the Connectivity Status Pill still reflects the server state.

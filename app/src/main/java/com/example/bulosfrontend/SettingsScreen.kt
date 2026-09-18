@@ -1,5 +1,6 @@
 package com.example.bulosfrontend
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
@@ -13,25 +14,40 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.text.DateFormat
+import java.util.Date
 
 @Composable
 fun SettingsScreen(viewModel: MainViewModel, onLanguageClick: () -> Unit) {
     val content = viewModel.content
     val home = content.home
-    Scaffold(
-        topBar = {
+    val context = LocalContext.current
+    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        OverlappingHeaderLayout(
+            overlap = 31.dp,
+            modifier = Modifier.fillMaxSize(),
+            header = {
             SharedTopAppBar(
                 stringResource(home.settingsTitleRes),
                 home.appLogoDescriptionRes,
                 R.drawable.ic_lucide_settings,
+                subtitle = stringResource(home.settingsSubtitleRes),
+                isOnline = viewModel.isOnline,
+                isServerReady = viewModel.isServerReady
             )
-        },
-    ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
+            },
+        ) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+        ) {
             Card(
                 onClick = onLanguageClick,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 88.dp),
@@ -126,6 +142,72 @@ fun SettingsScreen(viewModel: MainViewModel, onLanguageClick: () -> Unit) {
                     )
                 }
             }
+            Spacer(Modifier.height(24.dp))
+            Text(
+                text = "DATA & OFFLINE",
+                modifier = Modifier.padding(horizontal = 4.dp),
+                color = MaterialTheme.colorScheme.secondary,
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontSize = 10.sp,
+                    letterSpacing = 1.35.sp,
+                ),
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(10.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth().heightIn(min = 88.dp),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            ) {
+                Column(Modifier.padding(18.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                text = "Offline Model",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Spacer(Modifier.height(3.dp))
+                            val lastSyncStr = if (viewModel.lastSyncTime == 0L) {
+                                "Never synced"
+                            } else {
+                                "Last synced: ${DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(viewModel.lastSyncTime))}"
+                            }
+                            Text(
+                                text = lastSyncStr,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.secondary,
+                            )
+                        }
+                        Button(
+                            onClick = {
+                                viewModel.syncModel { success ->
+                                    Toast.makeText(
+                                        context,
+                                        if (success) "Sync successful!" else "Sync failed. Try again.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            },
+                            enabled = viewModel.isOnline && !viewModel.isSyncing,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            if (viewModel.isSyncing) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
+                            } else {
+                                Text("Sync Now", style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                    }
+                }
+            }
+        }
         }
     }
 }

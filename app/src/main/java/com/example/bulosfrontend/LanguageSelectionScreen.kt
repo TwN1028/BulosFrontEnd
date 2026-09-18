@@ -199,17 +199,13 @@ fun LanguageSelectionScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clipToBounds(),
+                        .clipToBounds()
+                        .background(appHeaderGradientBrush()),
                 ) {
-                    GeometricGreenBackground(
-                        modifier = Modifier.matchParentSize(),
-                        cellSize = 52.dp,
-                        patternAlpha = 0.18f,
-                    )
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .statusBarsPadding()
+                            .safeHeaderInsets()
                             .padding(start = 24.dp, top = 40.dp, end = 24.dp, bottom = 20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
@@ -403,7 +399,9 @@ private fun ImmediateLanguageSelectionScreen(
 ) {
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing),
             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,

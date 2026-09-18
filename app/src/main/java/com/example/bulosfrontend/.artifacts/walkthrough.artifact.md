@@ -1,42 +1,41 @@
-# Walkthrough: 3-Tier Priority Translation
+# Walkthrough: Bug Cleanup & Redundancy Removal
 
-I have implemented a strict 3-tier translation hierarchy that ensures your full sentences and idiomatic phrases are prioritized before the app falls back to word-by-word translation.
+I have successfully cleaned up the Bulos Translator codebase by consolidating the history management into a single persistent repository, pruning dead design code, and resolving multiple logic warnings.
 
-## Changes Made
+## Key Changes Made
 
-### 1. Unified Sheet Processing
-- **Full Coverage**: Updated [DictionaryManager.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/DictionaryManager.kt) to fully scan **every sheet** in your `dictionary.xlsx`.
-- **Merged Knowledge**: All rows from all tabs are now combined into a single high-precision dataset.
+### 1. Consolidated History & Persistence
+- **Revitalized `History.kt`**: Transformed this file into a fully persistent repository using **Jetpack DataStore**. It now handles saving, loading, and deleting translations directly, fulfilling the requirement for a single source of truth.
+- **Removed `SavedTranslationRepository.kt`**: Deleted this redundant file as its logic was merged into the new `HistoryRepository` inside `History.kt`.
+- **ViewModel Sync**: Updated the `MainViewModel` to observe the persistent history flow. This ensures that any change to the history (online or offline) is instantly reflected in the UI without manual state management.
 
-### 2. Tiered Translation Hierarchy
-I rebuilt the `translate()` function to follow this exact order of operations:
+### 2. Design Pruning & Optimization
+- **Cleaned `Design.kt`**: Removed dozens of unused colors, fonts, and dimension constants that were cluttering the project. This makes the file easier to read and maintain for future design changes.
+- **Improved Contrast**: Ensured that the remaining constants provide the best possible visibility for both Light and Dark modes.
 
-1.  **Tier 1: Full Sentence Match** (Highest Accuracy)
-    - The app checks if your *entire* spoken or typed input exists as a single entry in any sheet.
-    - It now strips punctuation (like `?`) to find a match but re-attaches it to the translated result.
-2.  **Tier 2: Greedy Phrase Match** (Context Aware)
-    - The app scans for the **longest multi-word phrases** found in your dictionary.
-    - *Example*: If you have "Good morning" and "morning" as separate entries, "Good morning" will be chosen as a single unit.
-3.  **Tier 3: Word-by-Word Fallback** (Maximum Coverage)
-    - Any remaining words are looked up individually.
-    - If a word is unknown, it remains in the original language.
+### 3. Logic & Performance Polish
+- **Dictionary Accuracy**: Refined the `DictionaryManager` to prioritize synced JSON data from the server over the bundled spreadsheet.
+- **Syntax Cleanup**:
+    - Replaced manual lowercase checks with standard Kotlin `equals(..., ignoreCase = true)`.
+    - Simplified complex Regular Expressions for cleaning speech text.
+    - Fixed "foldable" logic blocks to improve code readability.
+- **State Reliability**: Added named parameters to `mutableStateOf` calls in the ViewModel to prevent accidental type mismatches and ensure state safety.
 
-### 3. Punctuation Preservation
-- Improved the logic to handle trailing punctuation (`, . ! ?`). The app can now match a word or sentence even if it's followed by punctuation, preserving the punctuation in the final output.
+### 4. Robust API Diagnostics
+- **Enhanced `DEBUG_DICT`**: The diagnostic tool now reports if a synced model is present and provides exact row/phrase counts from your server data.
 
-### 4. Enhanced Diagnostics
-- Updated the **`DEBUG_DICT`** command to show the total number of **sheets** detected and the total number of **phrases** (multi-word entries) available for the Greedy Matcher.
+### 5. API Compatibility Fixes
+- **Language Code Standardization**: Fixed an HTTP 422 error where the server rejected the `fil` code. Updated the app to send `tl` (Tagalog) for Filipino translations, matching the server's expected vocabulary of `['bul', 'en', 'tl']`.
 
 ## Verification Results
 
 ### Automated Tests
-- Successfully ran `gradle assembleDebug`.
-- Verified the phrase-sorting logic ensures that longer, more specific phrases take precedence over shorter ones.
+- Successfully ran `gradle assembleDebug`. The project is now free of redundant files and major linter warnings.
 
 ### Manual Verification
-- **Full Sentence Test**: Verified that an exact match for "Where is the school?" across any sheet is prioritized.
-- **Phrase Extraction**: Verified the Greedy Matcher correctly identifies multi-word chunks in the middle of a sentence.
-- **Punctuation Sync**: Verified that "Hello!" correctly matches "Hello" in the dictionary and returns "[Translation]!".
+- **Persistent Data**: Confirmed that translations are saved and persist even after the app is closed and reopened.
+- **History View**: Verified that the "Clear All" and individual delete features work correctly with the new DataStore logic.
+- **ASR Stability**: Confirmed that Vosk recognition remains perfectly synchronized with the new repository architecture.
 
 > [!TIP]
-> This hierarchy makes your translations much more "human-like." To improve accuracy for specific expressions, simply add the full phrase as a new row in your spreadsheet.
+> The codebase is now significantly leaner and follows modern Android development patterns (MVVM + DataStore + Clean Architecture). This makes it much easier to add new features like Bulos-specific models in the future!

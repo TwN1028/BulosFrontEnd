@@ -13,5 +13,6 @@ object TranslationState {
     var targetLanguage by mutableStateOf(UiLanguage.BULOS)
     var textToTranslate by mutableStateOf("")
     var translatedText by mutableStateOf("")
+    var translationSource by mutableStateOf("") // "Online" or "Offline"
     var recordedAudioPath by mutableStateOf<String?>(null)
 }

@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 
@@ -55,11 +56,14 @@ fun DictionaryScreen(viewModel: MainViewModel) {
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             SharedTopAppBar(
                 title = stringResource(home.dictionaryTitleRes),
                 logoDescriptionRes = home.appLogoDescriptionRes,
                 iconRes = R.drawable.ic_dictionary_book,
+                isOnline = viewModel.isOnline,
+                isServerReady = viewModel.isServerReady
             )
         },
     ) { padding ->

@@ -1,16 +1,12 @@
-# Tasks: Restore Modern UI & Preserve Logic
+# Tasks: Bug Cleanup & Redundancy Removal
 
-- `[ ]` Restore UI files from `b0d1099` (Modern UI commit)
-    - `[ ]` `Design.kt`
-    - `[ ]` `HomeScreen.kt`
-    - `[ ]` `SpeechResultScreens.kt`
-    - `[ ]` `Screens.kt`
-    - `[ ]` `MainActivity.kt`
-    - `[ ]` `ui/theme/` (Color, Type, Theme)
-    - `[ ]` Other support UI files
-- `[ ]` Re-add `LanguageModelMap` to `Design.kt`
-- `[ ]` Integrate Spreadsheet logic into `TranslateTextScreen` (in `Screens.kt`)
-- `[ ]` Integrate Vosk ASR logic into `TranslateVoiceScreen` (in `SpeechResultScreens.kt`)
-- `[ ]` Sync `MainViewModel.kt` with restored UI structures
-- `[ ]` Clean up redundant files (`TextTranslationScreen.kt`, `HistoryScreen.kt`)
-- `[ ]` Final Verification & Build
+- `[x]` Consolidate History into Persistent `History.kt`
+    - `[x]` Merge DataStore logic into `History.kt`
+    - `[x]` Delete `SavedTranslationRepository.kt`
+    - `[x]` Update `MainViewModel.kt` to use new `History` logic
+    - `[x]` Update UI callers in `Screens.kt` and `SpeechResultScreens.kt`
+- `[x]` Prune dead UI constants in `Design.kt`
+- `[x]` Resolve linter warnings in `DictionaryManager.kt`
+- `[x]` Refactor `MainViewModel` states and clean up imports
+- `[x]` Verification & Build
+- `[x]` Standardize language codes for API compatibility (fil -> tl)

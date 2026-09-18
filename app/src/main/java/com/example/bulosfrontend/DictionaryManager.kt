@@ -4,6 +4,10 @@ import android.content.Context
 import org.apache.poi.ss.usermodel.WorkbookFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import java.io.File
+import java.io.FileReader
 
 class DictionaryManager(private val context: Context) {
     // Standardized storage: Each row is a map from language enum to its translation
@@ -15,17 +19,51 @@ class DictionaryManager(private val context: Context) {
     private var sheetCount = 0
     var isLoaded = false
         private set
+    
+    var modelType = "Default (Bundled)"
+        private set
 
     // Normalizes strings: removes non-breaking spaces, hidden characters, and trims
     private fun clean(input: String?): String {
         if (input == null) return ""
         return input.replace("\u00A0", " ") // Replace non-breaking spaces
-                    .replace(Regex("[\\p{C}]"), "") // Remove hidden control characters
+                    .replace(Regex("\\p{C}"), "") // Remove hidden control characters
                     .trim()
     }
 
-    suspend fun load() = withContext(Dispatchers.IO) {
-        if (isLoaded) return@withContext
+    suspend fun load(forceReload: Boolean = false) = withContext(Dispatchers.IO) {
+        if (isLoaded && !forceReload) return@withContext
+        isLoaded = false
+        dictionaryData.clear()
+        
+        // 1. Try loading from Saved JSON (Highest Priority)
+        val customFile = File(context.filesDir, "custom_dictionary.json")
+        if (customFile.exists()) {
+            try {
+                FileReader(customFile).use { reader ->
+                    val type = object : TypeToken<List<Map<String, String>>>() {}.type
+                    val rawData: List<Map<String, String>> = Gson().fromJson(reader, type)
+                    
+                    rawData.forEach { row ->
+                        val entry = mutableMapOf<UiLanguage, String>()
+                        row.forEach { (langKey, value) ->
+                            UiLanguage.entries.find { it.name.equals(langKey, ignoreCase = true) }?.let { lang ->
+                                entry[lang] = clean(value)
+                            }
+                        }
+                        if (entry.isNotEmpty()) dictionaryData.add(entry)
+                    }
+                    modelType = "Synced (Render)"
+                    preparePhrasesCache()
+                    isLoaded = true
+                    return@withContext
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        // 2. Fallback to Bundled XLSX
         try {
             val assetManager = context.assets
             assetManager.open("dictionary.xlsx").use { inputStream ->
@@ -36,7 +74,7 @@ class DictionaryManager(private val context: Context) {
                     for (s in 0 until workbook.numberOfSheets) {
                         val sheet = workbook.getSheetAt(s)
                         
-                        // 1. Identify the header row and its column mapping for THIS sheet
+                        // Identify the header row and its column mapping for THIS sheet
                         var bestHeaderRowIndex = -1
                         var maxMatches = 0
                         val sheetMapping = mutableMapOf<Int, UiLanguage>()
@@ -51,15 +89,15 @@ class DictionaryManager(private val context: Context) {
                                 val cellValue = clean(row.getCell(j)?.toString()?.lowercase())
                                 if (headerKeywords.any { cellValue.contains(it) }) {
                                     when {
-                                        cellValue.contains("english") || cellValue == "en" || cellValue == "eng" || cellValue == "ingles" -> {
+                                        cellValue.contains("english") || (cellValue == "en") || (cellValue == "eng") || (cellValue == "ingles") -> {
                                             currentMapping[j] = UiLanguage.ENGLISH
                                             matches++
                                         }
-                                        cellValue.contains("filipino") || cellValue.contains("tagalog") || cellValue == "fil" || cellValue == "tag" -> {
+                                        cellValue.contains("filipino") || cellValue.contains("tagalog") || (cellValue == "fil") || (cellValue == "tag") -> {
                                             currentMapping[j] = UiLanguage.FILIPINO
                                             matches++
                                         }
-                                        cellValue.contains("bulos") || cellValue == "bul" -> {
+                                        cellValue.contains("bulos") || (cellValue == "bul") -> {
                                             currentMapping[j] = UiLanguage.BULOS
                                             matches++
                                         }
@@ -75,7 +113,7 @@ class DictionaryManager(private val context: Context) {
                             }
                         }
 
-                        // 2. Load Data using the sheet-specific mapping
+                        // Load Data using the sheet-specific mapping
                         if (sheetMapping.isNotEmpty()) {
                             val startDataRow = if (bestHeaderRowIndex != -1) bestHeaderRowIndex + 1 else 0
                             for (i in startDataRow..sheet.lastRowNum) {
@@ -111,9 +149,10 @@ class DictionaryManager(private val context: Context) {
         }
         
         // Sort by word count descending to ensure greedy matching (longest phrases first)
-        phrasesCache.addAll(allPhrases.sortedByDescending { row ->
+        val sorted = allPhrases.sortedByDescending { row ->
             row.values.maxOfOrNull { it.split(Regex("\\s+")).size } ?: 0
-        })
+        }
+        phrasesCache.addAll(sorted)
     }
 
     private fun findExactMatch(text: String, sourceLang: UiLanguage, targetLang: UiLanguage): String? {
@@ -130,7 +169,7 @@ class DictionaryManager(private val context: Context) {
         
         // Diagnostic
         if (rawInput.uppercase() == "DEBUG_DICT") {
-            return "Status: LOADED, Sheets: $sheetCount, Rows: ${dictionaryData.size}, Phrases: ${phrasesCache.size}"
+            return "Status: LOADED, Model: $modelType, Rows: ${dictionaryData.size}, Phrases: ${phrasesCache.size}, Synced: ${File(context.filesDir, "custom_dictionary.json").exists()}"
         }
 
         if (!isLoaded) return "Dictionary loading..."

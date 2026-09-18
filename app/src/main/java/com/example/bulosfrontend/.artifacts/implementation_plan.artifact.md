@@ -1,63 +1,52 @@
-# Implementation Plan: Revert to Modern UI with Functional Vosk/Dictionary Preservation
+# Implementation Plan: Bug Cleanup & Redundancy Removal (Revised)
 
-This plan restores the app's visual and structural design to the "modern ui" commit (`b0d1099`) while surgically preserving the Vosk ASR and spreadsheet-based translation logic.
+This plan streamlines the codebase by consolidating history management into a single persistent repository based in `History.kt`, pruning dead UI constants, and resolving linter warnings.
+
+## Proposed Changes
+
+### 1. Consolidate History into Persistent `History.kt`
+
+#### [MODIFY] [History.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/History.kt)
+- Integrate the persistence logic currently in `SavedTranslationRepository.kt` into this file.
+- Use **Jetpack DataStore** to save and load `HistoryItem` objects.
+- Expose a `Flow<List<HistoryItem>>` from a `HistoryRepository` class or the `HistoryProvider` object.
+
+#### [DELETE] [SavedTranslationRepository.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/SavedTranslationRepository.kt)
+- Remove this file as its functionality has been merged into `History.kt`.
+
+#### [MODIFY] [MainViewModel.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/MainViewModel.kt)
+- Update to use the updated `History.kt` logic.
+- Remove the dependency on `SavedTranslationRepository`.
+
+#### [MODIFY] [Screens.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/Screens.kt) and [SpeechResultScreens.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/SpeechResultScreens.kt)
+- Ensure UI components correctly observe the new persistent history flow.
+
+### 2. Prune Dead Code & Polish Logic
+
+#### [MODIFY] [Design.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/Design.kt)
+- Delete all unused colors, typography, dimensions, and layout helpers identified by the IDE analysis.
+
+#### [MODIFY] [DictionaryManager.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/DictionaryManager.kt)
+- Simplify Regex for control characters.
+- Replace manual lowercase comparisons with `equals(..., ignoreCase = true)`.
+- Fix foldable if-then logic for JSON loading.
+
+#### [MODIFY] [MainViewModel.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/MainViewModel.kt)
+- Clean up unused local variables and imports.
+- Add named parameters to boolean `mutableStateOf` calls for clarity.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Structural Revert**: I am restoring the original file organization from the "modern ui" commit. This means screens currently in separate files (like `TextTranslationScreen.kt` and `HistoryScreen.kt`) will be moved back into `Screens.kt` if that's where they were in the modern UI.
->
-> **Design Revert**: The "Absolute Design Centralization" I implemented recently will be reverted in favor of the original `Design.kt` constants from the modern UI branch.
-
-## Proposed Changes
-
-### 1. Restore UI/Design Files
-- I will use `git checkout b0d1099` to restore the following files to their "modern ui" state:
-    - `Design.kt`
-    - `HomeScreen.kt`
-    - `SpeechResultScreens.kt`
-    - `LanguageSelectionScreen.kt`
-    - `PreservationIntroScreen.kt`
-    - `SettingsScreen.kt`
-    - `DictionaryScreen.kt`
-    - `SplashScreen.kt`
-    - `MainActivity.kt`
-    - `ui/theme/` (Color, Type, Theme)
-    - `HomeComponents.kt`
-    - `AppBottomNavigation.kt`
-    - `UIComponents.kt`
-    - `Screens.kt`
-
-### 2. Re-Integrate Functional Logic
-Once the UI is restored to the "modern ui" look, I will re-add the logic:
-
-#### [MODIFY] [Design.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/Design.kt)
-- Re-add `LanguageModelMap` for Vosk.
-
-#### [MODIFY] [Screens.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/Screens.kt)
-- Update `TranslateTextScreen` to call `viewModel.translateText(text)` using the spreadsheet logic.
-- Ensure `LanguageSelector` works with the current `UiLanguage` enums (which I'm keeping for functional accuracy).
-
-#### [MODIFY] [SpeechResultScreens.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/SpeechResultScreens.kt)
-- Re-inject the `LaunchedEffect` and `VoiceMicrophone` callbacks that drive the Vosk ASR.
-- Re-inject the "Recognized Text" live feedback logic.
-
-#### [MODIFY] [MainViewModel.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/MainViewModel.kt)
-- Keep the `DictionaryManager` and `VoskManager` initialization.
-- Ensure all logic remains intact.
-
-### 3. Cleanup
-- Delete redundant files that didn't exist in `b0d1099`:
-    - `TextTranslationScreen.kt`
-    - `HistoryScreen.kt`
+> **Consolidation**: By moving the DataStore logic into `History.kt`, we fulfill the requirement to make `History.kt` the primary persistent repository while keeping the codebase organized.
 
 ## Verification Plan
 
 ### Automated Tests
-- Run `gradle build` to ensure the restored UI compiles with the current functional logic.
+- Run `gradle assembleDebug` to ensure no compile-time errors after refactoring.
+- Re-run `analyze_file` on modified files to verify all warnings are resolved.
 
 ### Manual Verification
-1.  **UI Check**: Verify the home screen and other screens match the "modern ui" design exactly.
-2.  **ASR Check**: Verify voice recording still shows real-time transcription.
-3.  **Dictionary Check**: Verify "Translate" still pulls from `dictionary.xlsx` using the 3-tier hierarchy.
-4.  **Diagnostic Check**: Verify `DEBUG_DICT` still works.
+- **History View**: Open the History screen and verify all previously saved translations are still visible.
+- **Save Feature**: Translate a sentence and verify it still saves correctly and appears in the list.
+- **ASR/Vosk**: Verify that speech recognition still functions correctly.

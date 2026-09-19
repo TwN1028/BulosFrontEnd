@@ -275,7 +275,7 @@ fun PreservationIntroScreen(
                                 .graphicsLayer { alpha = buttonAlpha },
                             shape = RoundedCornerShape(16.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = ForestGreen,
+                                containerColor = Color(0xFF4F7045),
                                 contentColor = WarmWhiteCard,
                             ),
                         ) {

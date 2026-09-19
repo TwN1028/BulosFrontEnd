@@ -11,21 +11,21 @@
     <path
         android:pathData="M12,3 C9.239,3 6.761,4.119 5,6"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="2"
+        android:strokeWidth="1.8"
         android:strokeLineCap="round"
         android:fillColor="@android:color/transparent"/>
     <!-- Clock circle: bottom + right + top-right, leaving gap at top-left for arrow -->
     <path
         android:pathData="M5,6 C3.119,7.761 2,9.757 2,12 C2,17.523 6.477,22 12,22 C17.523,22 22,17.523 22,12 C22,6.477 17.523,2 12,2 C10.399,2 8.889,2.391 7.562,3.079"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="2"
+        android:strokeWidth="1.8"
         android:strokeLineCap="round"
         android:fillColor="@android:color/transparent"/>
     <!-- CCW arrowhead: small L-shape at top-left of circle -->
     <path
         android:pathData="M3,3 L3,7 L7,7"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="2"
+        android:strokeWidth="1.8"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
         android:fillColor="@android:color/transparent"/>
@@ -33,7 +33,7 @@
     <path
         android:pathData="M12,7 L12,12 L15,15"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="2"
+        android:strokeWidth="1.8"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
         android:fillColor="@android:color/transparent"/>

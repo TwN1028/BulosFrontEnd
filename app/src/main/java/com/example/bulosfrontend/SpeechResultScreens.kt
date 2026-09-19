@@ -285,7 +285,7 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
                                 .fillMaxWidth()
                                 .height(56.dp),
                             shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = ForestGreen, contentColor = WarmWhite),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F7045), contentColor = WarmWhite),
                         ) {
                             Text(stringResource(labels.translateAgainRes), fontWeight = FontWeight.Bold)
                         }
@@ -608,7 +608,7 @@ private fun ResultSecondaryAction(
         modifier = modifier.height(52.dp),
         shape = RoundedCornerShape(18.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (emphasized) PrimaryGreen else Color(0xFFFFFEFA),
+            containerColor = if (emphasized) Color(0xFF4F7045) else Color(0xFFFFFEFA),
             contentColor = if (emphasized) Color(0xFFFFFBF4) else PrimaryGreen,
         ),
         border = if (emphasized) {

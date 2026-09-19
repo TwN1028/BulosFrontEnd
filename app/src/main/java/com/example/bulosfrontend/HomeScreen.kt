@@ -485,7 +485,7 @@ fun HomeRecordingScreen(
                     modifier = Modifier.weight(1f).height(52.dp),
                     shape = RoundedCornerShape(18.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = PrimaryGreen,
+                        containerColor = Color(0xFF4F7045),
                         contentColor = Color(0xFFFFFBF4),
                     ),
                 ) {

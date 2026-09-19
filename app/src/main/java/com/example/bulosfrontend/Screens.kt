@@ -136,7 +136,7 @@ fun TranslateTextScreen(
                         .height(56.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = ForestGreen,
+                        containerColor = Color(0xFF4F7045),
                         contentColor = WarmWhite,
                         disabledContainerColor = Sand.copy(alpha = 0.50f),
                         disabledContentColor = MutedText,

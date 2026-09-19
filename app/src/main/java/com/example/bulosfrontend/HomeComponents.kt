@@ -381,7 +381,7 @@ private fun HomeCardAction(
         modifier = modifier.height(30.dp),
         shape = RoundedCornerShape(15.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = PrimaryGreen,
+            containerColor = Color(0xFF4F7045),
             contentColor = WarmWhiteCard,
         ),
         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),

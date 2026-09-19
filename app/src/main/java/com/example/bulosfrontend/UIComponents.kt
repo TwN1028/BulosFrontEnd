@@ -138,7 +138,7 @@ fun PoppingIconButton(onClick: () -> Unit, icon: ImageVector, contentDescription
         modifier = modifier.size(48.dp).scale(scale),
         shape = RoundedCornerShape(12.dp),
         contentPadding = PaddingValues(0.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)),
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F7045)),
     ) {
         Icon(icon, contentDescription, Modifier.size(24.dp))
     }

@@ -75,6 +75,26 @@ class TranslationIntegrationTest {
     }
 
     @Test
+    fun identicalLanguagePairIsRejectedBeforeApiSubmission() = runBlocking {
+        val api = RecordingApi(
+            TranslationResponse(
+                originalText = "Hello",
+                translatedText = "Hello",
+                sourceLanguage = "en",
+                targetLanguage = "en",
+                confidence = 1.0,
+                intermediateLanguage = null,
+                translationMethod = "identity",
+            ),
+        )
+
+        val result = NetworkTranslationRepository(api).translate("English", "English", "Hello")
+
+        assertTrue(result is TranslationResult.Failure)
+        assertEquals(null, api.lastRequest)
+    }
+
+    @Test
     fun generatedInstallationIdIsValidPersistedAndSentOnEveryRequest() {
         val store = MemoryInstallationIdStore()
         val provider = InstallationIdProvider(store)

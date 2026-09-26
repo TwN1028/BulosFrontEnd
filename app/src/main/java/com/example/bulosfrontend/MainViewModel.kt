@@ -37,6 +37,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private set
     var isThemePreferenceLoaded by mutableStateOf(false)
         private set
+    var selectedFontSize by mutableStateOf(AppFontSize.MEDIUM)
+        private set
+    var isFontSizePreferenceLoaded by mutableStateOf(false)
+        private set
     val uiLanguage: UiLanguage get() = selectedUiLanguage ?: UiLanguage.ENGLISH
     val content: DialogueContent get() = DialogueProvider.getDialogue(uiLanguage)
 
@@ -75,6 +79,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
         viewModelScope.launch {
+            languagePreferences.selectedFontSize.collect { fontSize ->
+                selectedFontSize = fontSize
+                isFontSizePreferenceLoaded = true
+            }
+        }
+        viewModelScope.launch {
             savedTranslationRepository.entries.collect { entries ->
                 HistoryProvider.history.clear()
                 HistoryProvider.history.addAll(entries)
@@ -87,15 +97,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { languagePreferences.saveLanguage(language) }
     }
 
+    fun selectHomeUiLanguage(language: UiLanguage) {
+        selectUiLanguage(language)
+        TranslationState.synchronizeSourceWithUiLanguage(language)
+    }
+
     fun selectAppTheme(theme: AppTheme) {
         selectedAppTheme = theme
         viewModelScope.launch { languagePreferences.saveTheme(theme) }
+    }
+
+    fun selectFontSize(fontSize: AppFontSize) {
+        selectedFontSize = fontSize
+        viewModelScope.launch { languagePreferences.saveFontSize(fontSize) }
     }
 
     fun translateText(text: String) {
         if (textTranslationState is TextTranslationUiState.Loading || text.isBlank()) return
         val sourceLanguage = TranslationState.sourceLanguage
         val targetLanguage = TranslationState.targetLanguage
+        if (!TranslationLanguageRules.isValidPair(sourceLanguage, targetLanguage)) {
+            val message = "Source and target languages must be different."
+            textTranslationState = TextTranslationUiState.Error(message)
+            viewModelScope.launch {
+                textTranslationEventsChannel.send(TextTranslationEvent.ShowError(message))
+            }
+            return
+        }
         TranslationState.textToTranslate = text
         TranslationState.translatedText = ""
         textTranslationState = TextTranslationUiState.Loading
@@ -108,8 +136,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 )
             ) {
                 is TranslationResult.Success -> {
-                    TranslationState.sourceLanguage = sourceLanguage
-                    TranslationState.targetLanguage = targetLanguage
                     TranslationState.textToTranslate = result.response.originalText
                     TranslationState.translatedText = result.response.translatedText
                     textTranslationState = TextTranslationUiState.Success(result.response)
@@ -124,6 +150,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun translateVoiceText(text: String) {
+        if (!TranslationState.hasValidLanguagePair()) return
         TranslationState.textToTranslate = text
         // Placeholder for the existing translation integration. No speech text is fabricated.
         TranslationState.translatedText = text

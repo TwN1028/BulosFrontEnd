@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
@@ -75,6 +76,7 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
@@ -106,7 +108,7 @@ fun HomeScreen(
         HomeScreenContent(
             content = DialogueProvider.getDialogue(language),
             selectedLanguage = viewModel.uiLanguage,
-            onLanguageSelected = viewModel::selectUiLanguage,
+            onLanguageSelected = viewModel::selectHomeUiLanguage,
             onNavigate = onNavigate,
             listState = listState,
             dictionaryFabProgress = dictionaryFabProgress,
@@ -170,6 +172,7 @@ private fun HomeScreenContent(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 101.dp),
+                useReferenceHomeGlow = true,
             )
         }
         Box(
@@ -499,6 +502,11 @@ fun HomeRecordingScreen(
 }
 
 private val CreamAura = Color(0xFFFFF3DA)
+private val HomeReferenceGlowCore = Color(0xFFE8E1C7)
+private val HomeReferenceGlowWarm = Color(0xFFE8E1C7)
+private val HomeReferenceGlowMiddle = Color(0xFFE8E1C7)
+private val HomeReferenceGlowSage = Color(0xFFC7D0AA)
+private val HomeReferenceGlowOuter = Color(0xFF879B70)
 private val MicrophoneGlowCore = Color(0xFFFFF3B0)
 private val MicrophoneGlowMid = Color(0xFFDFE7A8)
 private val MicrophoneGlowEdge = Color(0xFFDCE9D2)
@@ -532,11 +540,15 @@ private fun HomeVoiceHero(
     isStopped: Boolean = false,
     amplitudeProvider: () -> Int = { 0 },
     showPrompt: Boolean = true,
+    useReferenceHomeGlow: Boolean = false,
     useSpeechRecordingAura: Boolean = false,
     showCancelledIdleGlow: Boolean = false,
     speechAuraDiameter: Dp = 280.dp,
     speechAuraMaxDiameter: Dp = 280.dp,
 ) {
+    val homeReferenceAuraDiameter = (
+        LocalConfiguration.current.screenWidthDp.dp * 0.90f
+    ).coerceIn(300.dp, 380.dp)
     var visualEnvelope by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(isRecording) {
         visualEnvelope = 0f
@@ -631,17 +643,75 @@ private fun HomeVoiceHero(
     )
 
     Box(modifier = modifier.size(254.dp), contentAlignment = Alignment.Center) {
+        val showReferenceHomeGlow = useReferenceHomeGlow &&
+            !isRecording &&
+            !isStopped &&
+            !showCancelledIdleGlow
         val activePulse = if (useSpeechRecordingAura && isRecording) recordingPulse else 0f
         val auraExpansion = animatedRadiusLevel.value * 38f + activePulse * 28f
-        val auraDiameter = if (useSpeechRecordingAura) speechAuraDiameter else 280.dp
+        val auraDiameter = when {
+            showReferenceHomeGlow -> homeReferenceAuraDiameter
+            useSpeechRecordingAura -> speechAuraDiameter
+            else -> 280.dp
+        }
         val animatedAuraDiameter = if (useSpeechRecordingAura) {
             minOf(auraDiameter + auraExpansion.dp, speechAuraMaxDiameter)
         } else {
             auraDiameter + auraExpansion.dp
         }
-        Canvas(Modifier.size(animatedAuraDiameter)) {
-            drawCircle(
-                brush = if (useSpeechRecordingAura) {
+        Canvas(
+            if (showReferenceHomeGlow) {
+                Modifier.requiredSize(animatedAuraDiameter)
+            } else {
+                Modifier.size(animatedAuraDiameter)
+            },
+        ) {
+            if (showReferenceHomeGlow) {
+                val auraRadius = size.minDimension / 2f
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        0.00f to HomeReferenceGlowSage.copy(alpha = 0.18f),
+                        0.50f to HomeReferenceGlowSage.copy(alpha = 0.12f),
+                        0.78f to HomeReferenceGlowOuter.copy(alpha = 0.06f),
+                        0.94f to HomeReferenceGlowOuter.copy(alpha = 0.02f),
+                        1.00f to Color.Transparent,
+                        center = center,
+                        radius = auraRadius,
+                    ),
+                    radius = auraRadius,
+                    center = center,
+                )
+                val creamBloomRadius = auraRadius * 0.82f
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        0.00f to HomeReferenceGlowWarm.copy(alpha = 0.66f),
+                        0.28f to HomeReferenceGlowWarm.copy(alpha = 0.58f),
+                        0.58f to HomeReferenceGlowMiddle.copy(alpha = 0.32f),
+                        0.82f to HomeReferenceGlowMiddle.copy(alpha = 0.12f),
+                        1.00f to Color.Transparent,
+                        center = center,
+                        radius = creamBloomRadius,
+                    ),
+                    radius = creamBloomRadius,
+                    center = center,
+                )
+                val brightCoreRadius = auraRadius * 0.60f
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        0.00f to HomeReferenceGlowCore.copy(alpha = 0.98f),
+                        0.34f to HomeReferenceGlowCore.copy(alpha = 0.90f),
+                        0.65f to HomeReferenceGlowWarm.copy(alpha = 0.52f),
+                        0.86f to HomeReferenceGlowWarm.copy(alpha = 0.15f),
+                        1.00f to Color.Transparent,
+                        center = center,
+                        radius = brightCoreRadius,
+                    ),
+                    radius = brightCoreRadius,
+                    center = center,
+                )
+            } else {
+                drawCircle(
+                    brush = if (useSpeechRecordingAura) {
                     val auraRadius = size.minDimension / 2f
                     val glowCore = lerp(MicrophoneGlowCore, RecordingRed, cancelledIdleTransition)
                     val glowMid = lerp(MicrophoneGlowMid, InnerVoiceRing, cancelledIdleTransition)
@@ -656,21 +726,22 @@ private fun HomeVoiceHero(
                         center = center,
                         radius = auraRadius,
                     )
-                } else {
-                    Brush.radialGradient(
-                        0.00f to CreamAura.copy(alpha = 0.80f),
-                        0.45f to CreamAura.copy(alpha = 0.56f),
-                        0.75f to CreamAura.copy(alpha = 0.30f),
-                        1.00f to Color.Transparent,
-                        center = center,
-                        radius = 140.dp.toPx(),
-                    )
-                },
-                radius = size.minDimension / 2f,
-                center = center,
-            )
+                    } else {
+                        Brush.radialGradient(
+                            0.00f to CreamAura.copy(alpha = 0.80f),
+                            0.45f to CreamAura.copy(alpha = 0.56f),
+                            0.75f to CreamAura.copy(alpha = 0.30f),
+                            1.00f to Color.Transparent,
+                            center = center,
+                            radius = 140.dp.toPx(),
+                        )
+                    },
+                    radius = size.minDimension / 2f,
+                    center = center,
+                )
+            }
         }
-        Canvas(Modifier.fillMaxSize()) {
+        if (!showReferenceHomeGlow) Canvas(Modifier.fillMaxSize()) {
             val center = Offset(size.width / 2f, size.height / 2f)
             val outerRingRadius = 127.dp.toPx()
             val middleRingRadius = 96.dp.toPx()

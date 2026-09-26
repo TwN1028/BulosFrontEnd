@@ -6,6 +6,7 @@ import android.content.Context
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.*
@@ -64,7 +65,7 @@ fun TranslateTextScreen(
         Column(Modifier.fillMaxSize()) {
             FeaturePatternHeader(
                 title = stringResource(content.translateHeaderRes),
-                subtitle = stringResource(content.home.textSubtitleRes),
+                subtitle = stringResource(labels.subtitleRes),
                 onBack = onBack,
                 iconRes = R.drawable.ic_lucide_languages,
                 headerBottomExtension = AppHeaderBottomExtension,
@@ -79,12 +80,33 @@ fun TranslateTextScreen(
             ) {
                 TranslationLanguageBar(
                     swapLanguagesDescription = stringResource(content.speechResult.swapLanguagesDescriptionRes),
-                    modifier = Modifier
-                        .offset(y = (-8).dp)
-                        .height(50.dp),
+                    modifier = Modifier.offset(y = (-8).dp).height(50.dp),
                     useHomeCardStyle = true,
                 )
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier
+                        .offset(y = (-4).dp)
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(labels.translateFromRes),
+                        modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelSmall,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(Modifier.width(60.dp))
+                    Text(
+                        text = stringResource(labels.translateToLabelRes),
+                        modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelSmall,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                Spacer(Modifier.height(21.dp))
                 TranslationInputCard(
                     label = TranslationState.sourceLanguage.uppercase(currentLocale),
                     value = text,

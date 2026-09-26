@@ -2,13 +2,16 @@ package com.example.bulosfrontend
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -40,7 +43,9 @@ fun SettingsScreen(viewModel: MainViewModel, onLanguageClick: () -> Unit) {
         Column(
             Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp)
+                .navigationBarsPadding(),
         ) {
             Card(
                 onClick = onLanguageClick,
@@ -136,7 +141,87 @@ fun SettingsScreen(viewModel: MainViewModel, onLanguageClick: () -> Unit) {
                     )
                 }
             }
+            Spacer(Modifier.height(24.dp))
+            Text(
+                text = stringResource(home.fontSizeRes).uppercase(),
+                modifier = Modifier.padding(horizontal = 4.dp),
+                color = MaterialTheme.colorScheme.secondary,
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontSize = 10.sp,
+                    letterSpacing = 1.35.sp,
+                ),
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(10.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth().heightIn(min = 104.dp),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            ) {
+                Column(Modifier.fillMaxWidth().padding(18.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            modifier = Modifier.size(36.dp),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.primary,
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.FormatSize,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(19.dp),
+                                )
+                            }
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            text = stringResource(home.fontSizeRes),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                    Spacer(Modifier.height(14.dp))
+                    FontSizeSelector(
+                        selectedFontSize = viewModel.selectedFontSize,
+                        smallLabel = stringResource(home.smallFontRes),
+                        mediumLabel = stringResource(home.mediumFontRes),
+                        largeLabel = stringResource(home.largeFontRes),
+                        onFontSizeSelected = viewModel::selectFontSize,
+                    )
+                }
+            }
         }
+        }
+    }
+}
+
+@Composable
+private fun FontSizeSelector(
+    selectedFontSize: AppFontSize,
+    smallLabel: String,
+    mediumLabel: String,
+    largeLabel: String,
+    onFontSizeSelected: (AppFontSize) -> Unit,
+) {
+    val options = listOf(
+        AppFontSize.SMALL to smallLabel,
+        AppFontSize.MEDIUM to mediumLabel,
+        AppFontSize.LARGE to largeLabel,
+    )
+    Row(
+        modifier = Modifier.fillMaxWidth().height(40.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        options.forEach { (fontSize, label) ->
+            ThemeOption(
+                label = label,
+                selected = selectedFontSize == fontSize,
+                onClick = { onFontSizeSelected(fontSize) },
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 }

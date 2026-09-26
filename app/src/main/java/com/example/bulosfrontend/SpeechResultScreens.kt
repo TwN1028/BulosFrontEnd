@@ -435,7 +435,8 @@ fun TranslationLanguageBar(
         ) {
             CompactLanguageMenu(
                 selected = TranslationState.sourceLanguage,
-                onSelected = { TranslationState.sourceLanguage = it },
+                unavailableLanguage = TranslationState.targetLanguage,
+                onSelected = TranslationState::selectSourceLanguage,
                 modifier = Modifier.weight(1f),
             )
             Row(
@@ -445,11 +446,7 @@ fun TranslationLanguageBar(
             ) {
                 VerticalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 IconButton(
-                    onClick = {
-                        val source = TranslationState.sourceLanguage
-                        TranslationState.sourceLanguage = TranslationState.targetLanguage
-                        TranslationState.targetLanguage = source
-                    },
+                    onClick = TranslationState::swapLanguages,
                     modifier = Modifier.weight(1f),
                 ) {
                     Icon(Icons.Default.SwapHoriz, swapLanguagesDescription, tint = MaterialTheme.colorScheme.secondary)
@@ -458,7 +455,8 @@ fun TranslationLanguageBar(
             }
             CompactLanguageMenu(
                 selected = TranslationState.targetLanguage,
-                onSelected = { TranslationState.targetLanguage = it },
+                unavailableLanguage = TranslationState.sourceLanguage,
+                onSelected = TranslationState::selectTargetLanguage,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -466,7 +464,12 @@ fun TranslationLanguageBar(
 }
 
 @Composable
-private fun CompactLanguageMenu(selected: String, onSelected: (String) -> Unit, modifier: Modifier = Modifier) {
+private fun CompactLanguageMenu(
+    selected: String,
+    unavailableLanguage: String,
+    onSelected: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     var expanded by remember { mutableStateOf(false) }
     val languages = listOf(
         stringResource(R.string.lang_label_eng),
@@ -475,18 +478,26 @@ private fun CompactLanguageMenu(selected: String, onSelected: (String) -> Unit, 
     )
     Box(modifier) {
         TextButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
-            Text(selected, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                selected,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            languages.forEach { language ->
-                DropdownMenuItem(
-                    text = { Text(language) },
-                    onClick = {
-                        onSelected(language)
-                        expanded = false
-                    },
-                )
-            }
+            languages
+                .filterNot { it.equals(unavailableLanguage, ignoreCase = true) }
+                .forEach { language ->
+                    DropdownMenuItem(
+                        text = { Text(language) },
+                        onClick = {
+                            onSelected(language)
+                            expanded = false
+                        },
+                    )
+                }
         }
     }
 }

@@ -6,6 +6,7 @@ import android.content.Context
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.*
@@ -47,122 +48,143 @@ fun TranslateTextScreen(
     val currentLocale = remember(configuration) {
         ConfigurationCompat.getLocales(configuration)[0] ?: Locale.ROOT
     }
+    val isTranslationLoading = viewModel.textTranslationState is TextTranslationUiState.Loading
+
+    LaunchedEffect(viewModel) {
+        viewModel.textTranslationEvents.collect { event ->
+            when (event) {
+                TextTranslationEvent.NavigateToResult -> onTranslate()
+                is TextTranslationEvent.ShowError ->
+                    Toast.makeText(context, event.message, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     Surface(Modifier.fillMaxSize(), color = Color(0xFFFFFBF4)) {
         Box(Modifier.fillMaxSize()) {
-            Column(Modifier.fillMaxSize()) {
-                FeaturePatternHeader(
-                    title = stringResource(content.translateHeaderRes),
-                    subtitle = stringResource(content.home.textSubtitleRes),
-                    onBack = onBack,
-                    iconRes = R.drawable.ic_lucide_languages,
-                    headerBottomExtension = AppHeaderBottomExtension,
-                    isOnline = viewModel.isOnline,
-                    isServerReady = viewModel.isServerReady
+        Column(Modifier.fillMaxSize()) {
+            FeaturePatternHeader(
+                title = stringResource(content.translateHeaderRes),
+                subtitle = stringResource(labels.subtitleRes),
+                onBack = onBack,
+                iconRes = R.drawable.ic_lucide_languages,
+                headerBottomExtension = AppHeaderBottomExtension,
+            )
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .offset(y = (-40).dp)
+                    .verticalScroll(rememberScrollState())
+                    .imePadding()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+            ) {
+                TranslationLanguageBar(
+                    swapLanguagesDescription = stringResource(content.speechResult.swapLanguagesDescriptionRes),
+                    modifier = Modifier.offset(y = (-8).dp).height(50.dp),
+                    useHomeCardStyle = true,
                 )
-                Column(
+                Spacer(Modifier.height(4.dp))
+                Row(
                     modifier = Modifier
-                        .weight(1f)
-                        .offset(y = (-40).dp)
-                        .verticalScroll(rememberScrollState())
-                        .imePadding()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                        .offset(y = (-4).dp)
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TranslationLanguageBar(
-                        swapLanguagesDescription = stringResource(content.speechResult.swapLanguagesDescriptionRes),
-                        modifier = Modifier
-                            .offset(y = (-8).dp)
-                            .height(50.dp),
-                        useHomeCardStyle = true,
+                    Text(
+                        text = stringResource(labels.translateFromRes),
+                        modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelSmall,
+                        textAlign = TextAlign.Center,
                     )
-                    Spacer(Modifier.height(18.dp))
-                    TranslationInputCard(
-                        label = stringResource(TranslationState.sourceLanguage.displayNameRes).uppercase(currentLocale),
-                        value = text,
-                        placeholder = stringResource(labels.inputPlaceholderRes, stringResource(TranslationState.sourceLanguage.displayNameRes)),
-                        onValueChange = { if (it.length <= 100) text = it },
-                        footer = {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
+                    Spacer(Modifier.width(60.dp))
+                    Text(
+                        text = stringResource(labels.translateToLabelRes),
+                        modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelSmall,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                Spacer(Modifier.height(21.dp))
+                TranslationInputCard(
+                    label = TranslationState.sourceLanguage.uppercase(currentLocale),
+                    value = text,
+                    placeholder = stringResource(labels.inputPlaceholderRes, TranslationState.sourceLanguage),
+                    onValueChange = { if (it.length <= 100) text = it },
+                    footer = {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                stringResource(content.characterCountRes, text.length, 100),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                            TextButton(
+                                onClick = {
+                                    text = ""
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                        clipboard.clearPrimaryClip()
+                                    } else {
+                                        clipboard.setPrimaryClip(ClipData.newPlainText("", ""))
+                                    }
+                                },
+                                modifier = Modifier.height(28.dp),
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
                             ) {
                                 Text(
-                                    stringResource(content.characterCountRes, text.length, 100),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    text = stringResource(R.string.clear_all),
                                     style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.SemiBold,
                                 )
-                                TextButton(
-                                    onClick = {
-                                        text = ""
-                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                                            clipboard.clearPrimaryClip()
-                                        } else {
-                                            @Suppress("DEPRECATION")
-                                            clipboard.setPrimaryClip(ClipData.newPlainText("", ""))
-                                        }
-                                    },
-                                    modifier = Modifier.height(28.dp),
-                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.clear_all),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.SemiBold,
-                                    )
-                                }
                             }
-                        },
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    Button(
-                        onClick = {
-                            viewModel.translateText(text, onComplete = onTranslate)
-                        },
-                        enabled = text.isNotBlank() && !viewModel.isTranslating,
-                        modifier = Modifier
-                            .align(Alignment.CenterHorizontally)
-                            .widthIn(max = 480.dp)
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = ForestGreen,
-                            contentColor = WarmWhite,
-                            disabledContainerColor = Sand.copy(alpha = 0.50f),
-                            disabledContentColor = MutedText,
-                        ),
-                        elevation = ButtonDefaults.buttonElevation(disabledElevation = 0.dp),
-                    ) {
-                        if (viewModel.isTranslating) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = WarmWhite)
-                                Spacer(Modifier.width(12.dp))
-                                Text(viewModel.translationStatus, style = MaterialTheme.typography.labelLarge)
-                            }
-                        } else {
-                            Text(
-                                stringResource(labels.translateToRes, stringResource(TranslationState.targetLanguage.displayNameRes)),
-                                fontWeight = FontWeight.Bold,
-                            )
                         }
-                    }
-                    TextButton(
-                        onClick = onBack,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                            .height(48.dp),
-                    ) {
-                        Text(
-                            stringResource(content.goBackRes),
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                    }
-                    Spacer(Modifier.height(12.dp))
+                    },
+                )
+                Spacer(Modifier.height(16.dp))
+                Button(
+                    onClick = {
+                        viewModel.translateText(text)
+                    },
+                    enabled = text.isNotBlank() && !isTranslationLoading,
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .widthIn(max = 480.dp)
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF4F7045),
+                        contentColor = WarmWhite,
+                        disabledContainerColor = Sand.copy(alpha = 0.50f),
+                        disabledContentColor = MutedText,
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(disabledElevation = 0.dp),
+                ) {
+                    Text(
+                        stringResource(labels.translateToRes, TranslationState.targetLanguage),
+                        fontWeight = FontWeight.Bold,
+                    )
                 }
+                TextButton(
+                    onClick = onBack,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                        .height(48.dp),
+                ) {
+                    Text(
+                        stringResource(content.goBackRes),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
             }
+        }
         }
     }
 }
@@ -170,7 +192,7 @@ fun TranslateTextScreen(
 @Composable
 fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
     val content = viewModel.content
-    val historyItems = viewModel.historyItems
+    val historyItems = HistoryProvider.history
     var selectedTimestamps by remember { mutableStateOf(emptySet<Long>()) }
     var selectionMode by remember { mutableStateOf(false) }
     var showHistoryMenu by remember { mutableStateOf(false) }
@@ -188,6 +210,7 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
 
     Surface(Modifier.fillMaxSize(), color = Color(0xFFFFFBF4)) {
         OverlappingHeaderLayout(
+            // The list has 16.dp top padding, leaving a visible 24.dp card overlap.
             overlap = 40.dp,
             modifier = Modifier.fillMaxSize(),
             header = {
@@ -196,8 +219,6 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                 logoDescriptionRes = content.home.appLogoDescriptionRes,
                 iconRes = R.drawable.ic_saved_history_reference,
                 subtitle = stringResource(content.home.historySubtitleRes),
-                isOnline = viewModel.isOnline,
-                isServerReady = viewModel.isServerReady,
                 trailingContent = {
                     Box {
                         IconButton(onClick = { showHistoryMenu = true }) {

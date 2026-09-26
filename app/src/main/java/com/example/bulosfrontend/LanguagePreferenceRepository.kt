@@ -5,7 +5,6 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
-import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -19,8 +18,8 @@ private val Context.languageDataStore by preferencesDataStore(name = LANGUAGE_PR
 class LanguagePreferenceRepository(private val context: Context) {
     private val languageKey = stringPreferencesKey("selected_ui_language")
     private val themeKey = stringPreferencesKey("selected_app_theme")
+    private val fontSizeKey = stringPreferencesKey("selected_font_size")
     private val preservationIntroCompletedKey = booleanPreferencesKey("has_completed_preservation_intro")
-    private val lastSyncTimeKey = longPreferencesKey("last_sync_time")
 
     val selectedLanguage: Flow<UiLanguage?> = context.languageDataStore.data
         .catch { exception ->
@@ -40,11 +39,11 @@ class LanguagePreferenceRepository(private val context: Context) {
         }
         .map { preferences: Preferences -> AppTheme.fromStoredValue(preferences[themeKey]) }
 
-    val lastSyncTime: Flow<Long> = context.languageDataStore.data
+    val selectedFontSize: Flow<AppFontSize> = context.languageDataStore.data
         .catch { exception ->
             if (exception is IOException) emit(emptyPreferences()) else throw exception
         }
-        .map { preferences: Preferences -> preferences[lastSyncTimeKey] ?: 0L }
+        .map { preferences: Preferences -> AppFontSize.fromStoredValue(preferences[fontSizeKey]) }
 
     suspend fun saveLanguage(language: UiLanguage) {
         context.languageDataStore.edit { preferences ->
@@ -58,15 +57,15 @@ class LanguagePreferenceRepository(private val context: Context) {
         }
     }
 
-    suspend fun markPreservationIntroCompleted() {
+    suspend fun saveFontSize(fontSize: AppFontSize) {
         context.languageDataStore.edit { preferences ->
-            preferences[preservationIntroCompletedKey] = true
+            preferences[fontSizeKey] = fontSize.name
         }
     }
 
-    suspend fun saveLastSyncTime(timestamp: Long) {
+    suspend fun markPreservationIntroCompleted() {
         context.languageDataStore.edit { preferences ->
-            preferences[lastSyncTimeKey] = timestamp
+            preferences[preservationIntroCompletedKey] = true
         }
     }
 }

@@ -4,7 +4,10 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.graphics.Color
 
 private val DarkColorScheme = darkColorScheme(
@@ -56,10 +59,21 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun BulosFrontEndTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    fontScale: Float = 1f,
     content: @Composable () -> Unit,
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
-    CompositionLocalProvider(LocalBulosDarkTheme provides darkTheme) {
+    val systemDensity = LocalDensity.current
+    val scaledDensity = remember(systemDensity.density, systemDensity.fontScale, fontScale) {
+        Density(
+            density = systemDensity.density,
+            fontScale = systemDensity.fontScale * fontScale,
+        )
+    }
+    CompositionLocalProvider(
+        LocalBulosDarkTheme provides darkTheme,
+        LocalDensity provides scaledDensity,
+    ) {
         MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
     }
 }

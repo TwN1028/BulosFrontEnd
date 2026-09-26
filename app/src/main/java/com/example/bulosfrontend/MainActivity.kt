@@ -9,9 +9,15 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -27,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -50,7 +57,10 @@ class MainActivity : ComponentActivity() {
         )
         applyWhiteStatusBarContent()
         setContent {
-            BulosFrontEndTheme(darkTheme = viewModel.selectedAppTheme == AppTheme.DARK) {
+            BulosFrontEndTheme(
+                darkTheme = viewModel.selectedAppTheme == AppTheme.DARK,
+                fontScale = viewModel.selectedFontSize.scaleFactor,
+            ) {
                 SideEffect { applyWhiteStatusBarContent() }
                 var minimumSplashDurationElapsed by remember { mutableStateOf(false) }
                 val preferenceRepository = remember { LanguagePreferenceRepository(applicationContext) }
@@ -65,6 +75,7 @@ class MainActivity : ComponentActivity() {
                 if (
                     !viewModel.isLanguagePreferenceLoaded ||
                     !viewModel.isThemePreferenceLoaded ||
+                    !viewModel.isFontSizePreferenceLoaded ||
                     hasCompletedPreservationIntro == null ||
                     !minimumSplashDurationElapsed
                 ) {
@@ -75,7 +86,8 @@ class MainActivity : ComponentActivity() {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
                 var resultOriginRoute by remember { mutableStateOf<String?>(null) }
-                val bottomNavigationAlpha = remember { Animatable(0f) }
+                var showBottomNavigation by remember { mutableStateOf(false) }
+                var displayedBottomRoute by remember { mutableStateOf<String?>(null) }
                 val dictionaryFabProgress = remember { Animatable(0f) }
                 val featureRoutes = setOf(
                     AppDestinations.VOICE,
@@ -86,22 +98,33 @@ class MainActivity : ComponentActivity() {
                     AppDestinations.MORE,
                 )
                 LaunchedEffect(currentRoute) {
-                    bottomNavigationAlpha.snapTo(0f)
                     if (currentRoute in featureRoutes) {
-                        delay(300L)
-                        bottomNavigationAlpha.animateTo(
-                            targetValue = 1f,
-                            animationSpec = tween(durationMillis = 180),
-                        )
+                        displayedBottomRoute = currentRoute
+                        if (!showBottomNavigation) {
+                            delay(260L)
+                            showBottomNavigation = true
+                        }
+                    } else {
+                        showBottomNavigation = false
                     }
                 }
                 LaunchedEffect(currentRoute) {
-                    dictionaryFabProgress.snapTo(0f)
                     if (currentRoute == AppDestinations.HOME) {
-                        delay(300L)
+                        if (dictionaryFabProgress.value == 0f) delay(260L)
                         dictionaryFabProgress.animateTo(
                             targetValue = 1f,
-                            animationSpec = tween(durationMillis = 180),
+                            animationSpec = tween(
+                                durationMillis = 320,
+                                easing = FastOutSlowInEasing,
+                            ),
+                        )
+                    } else {
+                        dictionaryFabProgress.animateTo(
+                            targetValue = 0f,
+                            animationSpec = tween(
+                                durationMillis = 260,
+                                easing = FastOutSlowInEasing,
+                            ),
                         )
                     }
                 }
@@ -116,25 +139,40 @@ class MainActivity : ComponentActivity() {
                     },
                     contentWindowInsets = WindowInsets(0, 0, 0, 0),
                     bottomBar = {
-                        if (
-                            currentRoute in featureRoutes &&
-                            bottomNavigationAlpha.value > 0f
+                        AnimatedVisibility(
+                            visible = showBottomNavigation,
+                            enter = fadeIn(
+                                tween(320, easing = FastOutSlowInEasing),
+                            ) + slideInVertically(
+                                tween(360, easing = FastOutSlowInEasing),
+                                initialOffsetY = { it / 6 },
+                            ) + expandVertically(
+                                tween(360, easing = FastOutSlowInEasing),
+                                expandFrom = Alignment.Bottom,
+                            ),
+                            exit = fadeOut(
+                                tween(300, easing = FastOutSlowInEasing),
+                            ) + slideOutVertically(
+                                tween(340, easing = FastOutSlowInEasing),
+                                targetOffsetY = { it / 6 },
+                            ) + shrinkVertically(
+                                tween(360, easing = FastOutSlowInEasing),
+                                shrinkTowards = Alignment.Bottom,
+                            ),
                         ) {
-                            val activeFunctionRoute = when (currentRoute) {
+                            val activeFunctionRoute = when (displayedBottomRoute) {
                                 AppDestinations.HOME_RECORDING,
                                 AppDestinations.VOICE,
                                 -> AppDestinations.HOME_RECORDING
 
                                 AppDestinations.RESULT -> resultOriginRoute
 
-                                else -> currentRoute
+                                else -> displayedBottomRoute
                             }
                             AppBottomNavigation(
-                                currentRoute = currentRoute,
+                                currentRoute = displayedBottomRoute,
                                 activeFunctionRoute = activeFunctionRoute,
                                 content = viewModel.content.home,
-                                contentAlpha = bottomNavigationAlpha.value,
-                                enabled = bottomNavigationAlpha.value >= 0.99f,
                                 onNavigate = { route ->
                                     if (route != currentRoute) {
                                         navController.navigate(route) {
@@ -225,7 +263,21 @@ class MainActivity : ComponentActivity() {
                                 },
                             )
                         }
-                        composable(AppDestinations.TEXT) {
+                        composable(
+                            route = AppDestinations.TEXT,
+                            enterTransition = {
+                                fadeIn(tween(300)) + scaleIn(tween(300), initialScale = 0.96f)
+                            },
+                            exitTransition = {
+                                fadeOut(tween(300)) + scaleOut(tween(300), targetScale = 0.96f)
+                            },
+                            popEnterTransition = {
+                                fadeIn(tween(300)) + scaleIn(tween(300), initialScale = 0.96f)
+                            },
+                            popExitTransition = {
+                                fadeOut(tween(300)) + scaleOut(tween(300), targetScale = 0.96f)
+                            },
+                        ) {
                             TranslateTextScreen(
                                 viewModel,
                                 onTranslate = {
@@ -264,7 +316,7 @@ class MainActivity : ComponentActivity() {
                             SettingsScreen(viewModel) { navController.navigate(AppDestinations.LANGUAGE_SETTINGS) }
                         }
                         composable(AppDestinations.HELP) {
-                            VoiceGuidedDemoScreen(viewModel, onBack = { navController.popBackStack() })
+                            HelpOnboardingScreen(viewModel, onBack = { navController.popBackStack() })
                         }
                         composable(AppDestinations.LANGUAGE_SETTINGS) {
                             LanguageSettingsScreen(viewModel) { language ->

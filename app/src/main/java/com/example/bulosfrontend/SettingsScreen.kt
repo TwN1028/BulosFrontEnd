@@ -1,34 +1,31 @@
 package com.example.bulosfrontend
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.bulosfrontend.ui.theme.*
-import java.text.DateFormat
-import java.util.Date
 
 @Composable
 fun SettingsScreen(viewModel: MainViewModel, onLanguageClick: () -> Unit) {
     val content = viewModel.content
     val home = content.home
-    val context = LocalContext.current
     Surface(Modifier.fillMaxSize(), color = Color(0xFFFFFBF4)) {
         OverlappingHeaderLayout(
             // The content has 16.dp top padding, leaving a visible 24.dp card overlap.
@@ -40,15 +37,15 @@ fun SettingsScreen(viewModel: MainViewModel, onLanguageClick: () -> Unit) {
                 home.appLogoDescriptionRes,
                 R.drawable.ic_lucide_settings,
                 subtitle = stringResource(home.settingsSubtitleRes),
-                isOnline = viewModel.isOnline,
-                isServerReady = viewModel.isServerReady
             )
             },
         ) {
         Column(
             Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp)
+                .navigationBarsPadding(),
         ) {
             Card(
                 onClick = onLanguageClick,
@@ -146,7 +143,7 @@ fun SettingsScreen(viewModel: MainViewModel, onLanguageClick: () -> Unit) {
             }
             Spacer(Modifier.height(24.dp))
             Text(
-                text = "DATA & OFFLINE",
+                text = stringResource(home.fontSizeRes).uppercase(),
                 modifier = Modifier.padding(horizontal = 4.dp),
                 color = MaterialTheme.colorScheme.secondary,
                 style = MaterialTheme.typography.labelLarge.copy(
@@ -157,59 +154,74 @@ fun SettingsScreen(viewModel: MainViewModel, onLanguageClick: () -> Unit) {
             )
             Spacer(Modifier.height(10.dp))
             Card(
-                modifier = Modifier.fillMaxWidth().heightIn(min = 88.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 104.dp),
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
             ) {
-                Column(Modifier.padding(18.dp)) {
+                Column(Modifier.fillMaxWidth().padding(18.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                text = "Offline Model",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                            Spacer(Modifier.height(3.dp))
-                            val lastSyncStr = if (viewModel.lastSyncTime == 0L) {
-                                "Never synced"
-                            } else {
-                                "Last synced: ${DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(viewModel.lastSyncTime))}"
-                            }
-                            Text(
-                                text = lastSyncStr,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.secondary,
-                            )
-                        }
-                        Button(
-                            onClick = {
-                                viewModel.syncModel { success ->
-                                    Toast.makeText(
-                                        context,
-                                        if (success) "Sync successful!" else "Sync failed. Try again.",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            },
-                            enabled = viewModel.isOnline && !viewModel.isSyncing,
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = MaterialTheme.colorScheme.primary
-                            )
+                        Surface(
+                            modifier = Modifier.size(36.dp),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.primary,
                         ) {
-                            if (viewModel.isSyncing) {
-                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
-                            } else {
-                                Text("Sync Now", style = MaterialTheme.typography.labelMedium)
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.FormatSize,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(19.dp),
+                                )
                             }
                         }
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            text = stringResource(home.fontSizeRes),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
                     }
+                    Spacer(Modifier.height(14.dp))
+                    FontSizeSelector(
+                        selectedFontSize = viewModel.selectedFontSize,
+                        smallLabel = stringResource(home.smallFontRes),
+                        mediumLabel = stringResource(home.mediumFontRes),
+                        largeLabel = stringResource(home.largeFontRes),
+                        onFontSizeSelected = viewModel::selectFontSize,
+                    )
                 }
             }
         }
+        }
+    }
+}
+
+@Composable
+private fun FontSizeSelector(
+    selectedFontSize: AppFontSize,
+    smallLabel: String,
+    mediumLabel: String,
+    largeLabel: String,
+    onFontSizeSelected: (AppFontSize) -> Unit,
+) {
+    val options = listOf(
+        AppFontSize.SMALL to smallLabel,
+        AppFontSize.MEDIUM to mediumLabel,
+        AppFontSize.LARGE to largeLabel,
+    )
+    Row(
+        modifier = Modifier.fillMaxWidth().height(40.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        options.forEach { (fontSize, label) ->
+            ThemeOption(
+                label = label,
+                selected = selectedFontSize == fontSize,
+                onClick = { onFontSizeSelected(fontSize) },
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 }

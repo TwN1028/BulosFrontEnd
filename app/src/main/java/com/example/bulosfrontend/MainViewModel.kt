@@ -1,113 +1,71 @@
 package com.example.bulosfrontend
 
 import android.app.Application
+import android.content.Intent
+import android.media.MediaRecorder
+import android.os.Build
+import android.os.Bundle
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
 import androidx.compose.runtime.*
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.time.Duration.Companion.seconds
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val languagePreferences = LanguagePreferenceRepository(application)
-    private val historyRepository = HistoryRepository(application)
+    private val savedTranslationRepository = SavedTranslationRepository(application)
+    private val translationRepository = TranslationServiceProvider.repository(application)
+    private val textTranslationEventsChannel = Channel<TextTranslationEvent>(Channel.BUFFERED)
 
-    var selectedUiLanguage by mutableStateOf<UiLanguage?>(value = null)
+    var textTranslationState by mutableStateOf<TextTranslationUiState>(TextTranslationUiState.Idle)
         private set
-    var isLanguagePreferenceLoaded by mutableStateOf(value = false)
+    val textTranslationEvents = textTranslationEventsChannel.receiveAsFlow()
+
+    var selectedUiLanguage by mutableStateOf<UiLanguage?>(null)
         private set
-    var selectedAppTheme by mutableStateOf(value = AppTheme.LIGHT)
+    var isLanguagePreferenceLoaded by mutableStateOf(false)
         private set
-    var isThemePreferenceLoaded by mutableStateOf(value = false)
+    var selectedAppTheme by mutableStateOf(AppTheme.LIGHT)
+        private set
+    var isThemePreferenceLoaded by mutableStateOf(false)
+        private set
+    var selectedFontSize by mutableStateOf(AppFontSize.MEDIUM)
+        private set
+    var isFontSizePreferenceLoaded by mutableStateOf(false)
         private set
     val uiLanguage: UiLanguage get() = selectedUiLanguage ?: UiLanguage.ENGLISH
     val content: DialogueContent get() = DialogueProvider.getDialogue(uiLanguage)
 
-    // Vosk ASR
-    private var voskManager: VoskManager? = null
-    var isModelLoaded by mutableStateOf(value = false)
-        private set
-    var isModelLoading by mutableStateOf(value = false)
-        private set
-    private var currentLoadedLanguage: UiLanguage? = null
-    var asrStatus by mutableStateOf(value = "Ready")
-        private set
-
     // Recording State
-    var isRecording by mutableStateOf(value = false)
-    var recordingTime by mutableLongStateOf(value = 0L)
-    private var audioRecorder: AudioRecorder? = null
+    var isRecording by mutableStateOf(false)
+    var recordingTime by mutableLongStateOf(0L)
+    private var recorder: MediaRecorder? = null
     private var audioFile: File? = null
-    private var timerJob: Job? = null
-
-    // UI Feedback States
-    var isSpeechProcessing by mutableStateOf(value = false)
+    private var isRecorderStarting = false
+    private var recordingTimerJob: Job? = null
+    private var speechRecognizer: SpeechRecognizer? = null
+    private var usesBuiltInSpeechRecognizer = false
+    private var speechAmplitude = 0
+    var isSpeechProcessing by mutableStateOf(false)
         private set
-    var voiceInputReady by mutableStateOf(value = false)
+    var voiceInputReady by mutableStateOf(false)
         private set
-    var speechSessionFinished by mutableStateOf(value = false)
+    var speechSessionFinished by mutableStateOf(false)
         private set
-    var speechRecognitionError by mutableStateOf<String?>(value = null)
+    var speechRecognitionError by mutableStateOf<String?>(null)
         private set
-    var wasRecordingCancelled by mutableStateOf(value = false)
+    var wasRecordingCancelled by mutableStateOf(false)
         private set
-
-    private var capturedText = ""
-    private var currentPartialText = ""
-
-    // Dictionary
-    private val dictionaryManager = DictionaryManager(application)
-    var isDictionaryLoaded by mutableStateOf(value = false)
-        private set
-
-    // Translation Repository (Hybrid)
-    private val translationRepository = TranslationRepository(application, dictionaryManager)
-    var isTranslating by mutableStateOf(value = false)
-        private set
-    
-    var translationStatus by mutableStateOf(value = "")
-        private set
-
-    var isOnline by mutableStateOf(value = false)
-        private set
-    
-    var isServerReady by mutableStateOf(value = false)
-        private set
-
-    var isSyncing by mutableStateOf(value = false)
-        private set
-
-    var lastSyncTime by mutableLongStateOf(value = 0L)
-        private set
-
-    val historyItems = mutableStateListOf<HistoryItem>()
 
     init {
-        // Monitor network status and trigger server wake-up
-        viewModelScope.launch {
-            while (true) {
-                val currentlyOnline = NetworkUtils.isOnline(application)
-                if (currentlyOnline && !isOnline) {
-                    // Just came online, trigger wake-up
-                    viewModelScope.launch { translationRepository.wakeUpServer() }
-                }
-                isOnline = currentlyOnline
-                delay(3.seconds)
-            }
-        }
-        // Sync readiness from repository
-        viewModelScope.launch {
-            translationRepository.isServerReady.collect { ready ->
-                isServerReady = ready
-            }
-        }
-        viewModelScope.launch {
-            languagePreferences.lastSyncTime.collect { time ->
-                lastSyncTime = time
-            }
-        }
         viewModelScope.launch {
             languagePreferences.selectedLanguage.collect { language ->
                 selectedUiLanguage = language
@@ -121,80 +79,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
         viewModelScope.launch {
-            historyRepository.history.collect { items ->
-                historyItems.clear()
-                historyItems.addAll(items)
+            languagePreferences.selectedFontSize.collect { fontSize ->
+                selectedFontSize = fontSize
+                isFontSizePreferenceLoaded = true
             }
         }
         viewModelScope.launch {
-            dictionaryManager.load()
-            isDictionaryLoaded = true
-            // Pre-load default model
-            prepareModelForSourceLanguage()
-        }
-        initVosk()
-    }
-
-    private fun initVosk() {
-        voskManager = VoskManager(
-            getApplication(),
-            onPartialResultCallback = { partial ->
-                viewModelScope.launch {
-                    currentPartialText = partial
-                    val combined = if (capturedText.isEmpty()) partial else "$capturedText $partial"
-                    TranslationState.textToTranslate = combined.trim()
-                    asrStatus = "Listening..."
-                }
-            },
-            onResultCallback = { result ->
-                viewModelScope.launch {
-                    if (result.isNotBlank()) {
-                        capturedText = if (capturedText.isEmpty()) result else "$capturedText $result"
-                        currentPartialText = ""
-                        TranslationState.textToTranslate = capturedText.trim()
-                        asrStatus = "Listening..."
-                    }
-                }
-            },
-            onErrorCallback = { e ->
-                viewModelScope.launch {
-                    e.printStackTrace()
-                    asrStatus = "Error: ${e.message}"
-                    speechRecognitionError = e.message
-                    speechSessionFinished = true
-                }
-            },
-        )
-    }
-
-    fun prepareModelForSourceLanguage() {
-        val sourceLang = TranslationState.sourceLanguage
-        if ((currentLoadedLanguage == sourceLang) && isModelLoaded) return
-        
-        val modelPath = Design.LanguageModelMap[sourceLang] ?: return
-        
-        val assets = getApplication<Application>().assets
-        val exists = try {
-            assets.list(modelPath)?.isNotEmpty() == true
-        } catch (_: Exception) {
-            false
-        }
-
-        if (!exists) {
-            isModelLoaded = false
-            isModelLoading = false
-            asrStatus = "Model not found"
-            return
-        }
-
-        isModelLoaded = false
-        isModelLoading = true
-        asrStatus = "Loading model..."
-        voskManager?.loadModel(sourceLang, modelPath) { loaded ->
-            currentLoadedLanguage = if (loaded) sourceLang else null
-            isModelLoaded = loaded
-            isModelLoading = false
-            asrStatus = if (loaded) "Ready" else "Load failed"
+            savedTranslationRepository.entries.collect { entries ->
+                HistoryProvider.history.clear()
+                HistoryProvider.history.addAll(entries)
+            }
         }
     }
 
@@ -203,59 +97,69 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { languagePreferences.saveLanguage(language) }
     }
 
+    fun selectHomeUiLanguage(language: UiLanguage) {
+        selectUiLanguage(language)
+        TranslationState.synchronizeSourceWithUiLanguage(language)
+    }
+
     fun selectAppTheme(theme: AppTheme) {
         selectedAppTheme = theme
         viewModelScope.launch { languagePreferences.saveTheme(theme) }
     }
 
-    fun translateText(text: String, onComplete: () -> Unit = {}) {
+    fun selectFontSize(fontSize: AppFontSize) {
+        selectedFontSize = fontSize
+        viewModelScope.launch { languagePreferences.saveFontSize(fontSize) }
+    }
+
+    fun translateText(text: String) {
+        if (textTranslationState is TextTranslationUiState.Loading || text.isBlank()) return
+        val sourceLanguage = TranslationState.sourceLanguage
+        val targetLanguage = TranslationState.targetLanguage
+        if (!TranslationLanguageRules.isValidPair(sourceLanguage, targetLanguage)) {
+            val message = "Source and target languages must be different."
+            textTranslationState = TextTranslationUiState.Error(message)
+            viewModelScope.launch {
+                textTranslationEventsChannel.send(TextTranslationEvent.ShowError(message))
+            }
+            return
+        }
         TranslationState.textToTranslate = text
-        isTranslating = true
-        translationStatus = if (isOnline && !isServerReady) "Waking up server..." else "Translating..."
+        TranslationState.translatedText = ""
+        textTranslationState = TextTranslationUiState.Loading
         viewModelScope.launch {
-            try {
-                TranslationState.translatedText = translationRepository.translate(
-                    text,
-                    TranslationState.sourceLanguage,
-                    TranslationState.targetLanguage,
+            when (
+                val result = translationRepository.translate(
+                    sourceLanguage = sourceLanguage,
+                    targetLanguage = targetLanguage,
+                    text = text,
                 )
-                saveCurrentTranslation()
-                onComplete()
-            } finally {
-                isTranslating = false
-                translationStatus = ""
+            ) {
+                is TranslationResult.Success -> {
+                    TranslationState.textToTranslate = result.response.originalText
+                    TranslationState.translatedText = result.response.translatedText
+                    textTranslationState = TextTranslationUiState.Success(result.response)
+                    textTranslationEventsChannel.send(TextTranslationEvent.NavigateToResult)
+                }
+                is TranslationResult.Failure -> {
+                    textTranslationState = TextTranslationUiState.Error(result.message)
+                    textTranslationEventsChannel.send(TextTranslationEvent.ShowError(result.message))
+                }
             }
         }
     }
 
-    fun translateVoiceText(text: String, onComplete: () -> Unit = {}) {
-        if (text.isBlank()) return
+    fun translateVoiceText(text: String) {
+        if (!TranslationState.hasValidLanguagePair()) return
         TranslationState.textToTranslate = text
-        capturedText = text // Sync internal buffer
-        isTranslating = true
-        translationStatus = if (isOnline && !isServerReady) "Waking up server..." else "Translating..."
-        viewModelScope.launch {
-            try {
-                TranslationState.translatedText = translationRepository.translate(
-                    text,
-                    TranslationState.sourceLanguage,
-                    TranslationState.targetLanguage,
-                )
-                saveCurrentTranslation()
-                onComplete()
-            } finally {
-                isTranslating = false
-                translationStatus = ""
-            }
-        }
+        // Placeholder for the existing translation integration. No speech text is fabricated.
+        TranslationState.translatedText = text
     }
 
     fun clearVoiceDraft() {
         TranslationState.textToTranslate = ""
         TranslationState.translatedText = ""
         TranslationState.recordedAudioPath = null
-        capturedText = ""
-        currentPartialText = ""
         voiceInputReady = false
         speechSessionFinished = false
         speechRecognitionError = null
@@ -265,12 +169,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun saveCurrentTranslation() {
         val inputText = TranslationState.textToTranslate
         val translatedText = TranslationState.translatedText
-        val context = getApplication<Application>()
-        if (inputText.isNotEmpty() && translatedText.isNotEmpty()) {
+        val alreadySaved = HistoryProvider.history.any {
+            it.sourceLang == TranslationState.sourceLanguage &&
+                it.targetLang == TranslationState.targetLanguage &&
+                it.inputText == inputText &&
+                it.translatedText == translatedText
+        }
+        if (inputText.isNotEmpty() && translatedText.isNotEmpty() && !alreadySaved) {
             viewModelScope.launch {
-                historyRepository.addEntry(
-                    sourceLang = context.getString(TranslationState.sourceLanguage.displayNameRes),
-                    targetLang = context.getString(TranslationState.targetLanguage.displayNameRes),
+                savedTranslationRepository.save(
+                    sourceLang = TranslationState.sourceLanguage,
+                    targetLang = TranslationState.targetLanguage,
                     inputText = inputText,
                     translatedText = translatedText,
                 )
@@ -279,76 +188,185 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteSavedTranslations(timestamps: Set<Long>) {
-        viewModelScope.launch { historyRepository.delete(timestamps) }
+        viewModelScope.launch { savedTranslationRepository.delete(timestamps) }
     }
 
     fun clearSavedTranslations() {
-        viewModelScope.launch { historyRepository.clear() }
-    }
-
-    fun syncModel(onResult: (Boolean) -> Unit = {}) {
-        if (isSyncing) return
-        isSyncing = true
-        viewModelScope.launch {
-            try {
-                val success = translationRepository.syncOfflineModel()
-                if (success) {
-                    val now = System.currentTimeMillis()
-                    languagePreferences.saveLastSyncTime(now)
-                }
-                onResult(success)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                onResult(false)
-            } finally {
-                isSyncing = false
-            }
-        }
+        viewModelScope.launch { savedTranslationRepository.clear() }
     }
 
     fun startRecording() {
-        if (!isModelLoaded) {
-            prepareModelForSourceLanguage()
-            asrStatus = "Waiting for model..."
-            return
-        }
-
-        audioFile = File(getApplication<Application>().externalCacheDir, "recording_${System.currentTimeMillis()}.m4a")
-        
-        capturedText = ""
-        currentPartialText = ""
+        if (isRecording || recorder != null || speechRecognizer != null || isRecorderStarting) return
+        wasRecordingCancelled = false
         voiceInputReady = false
         speechSessionFinished = false
         speechRecognitionError = null
         isSpeechProcessing = false
-
-        if (isModelLoaded) {
-            voskManager?.start()
-            asrStatus = "Listening..."
+        usesBuiltInSpeechRecognizer = supportsBuiltInRecognition(TranslationState.sourceLanguage)
+        if (usesBuiltInSpeechRecognizer) {
+            startBuiltInSpeechRecognition(TranslationState.sourceLanguage)
+        } else {
+            startAudioFileRecording()
         }
-        
-        audioRecorder = AudioRecorder(audioFile!!) { buffer, length ->
-            if (isModelLoaded) {
-                voskManager?.feedAudio(buffer, length)
-            }
-        }
-        
-        audioRecorder?.start()
-        isRecording = true
-        startTimer()
     }
 
-    fun currentRecordingAmplitude(): Int = audioRecorder?.currentAmplitude ?: 0
+    private fun supportsBuiltInRecognition(language: String): Boolean =
+        language.equals("English", ignoreCase = true) ||
+            language.equals("Filipino", ignoreCase = true)
+
+    private fun recognitionLanguageTag(language: String): String =
+        if (language.equals("Filipino", ignoreCase = true)) "fil-PH" else "en-PH"
+
+    private fun startBuiltInSpeechRecognition(language: String) {
+        val context = getApplication<Application>()
+        if (!SpeechRecognizer.isRecognitionAvailable(context)) {
+            speechRecognitionError = "Speech recognition is unavailable on this device."
+            speechSessionFinished = true
+            usesBuiltInSpeechRecognizer = false
+            return
+        }
+        val recognizer = SpeechRecognizer.createSpeechRecognizer(context)
+        speechRecognizer = recognizer
+        recognizer.setRecognitionListener(object : RecognitionListener {
+            override fun onReadyForSpeech(params: Bundle?) {
+                isRecording = true
+                isSpeechProcessing = false
+                startTimer()
+            }
+
+            override fun onBeginningOfSpeech() = Unit
+
+            override fun onRmsChanged(rmsdB: Float) {
+                speechAmplitude = (((rmsdB + 2f) / 12f).coerceIn(0f, 1f) * 32767f).toInt()
+            }
+
+            override fun onBufferReceived(buffer: ByteArray?) = Unit
+
+            override fun onEndOfSpeech() {
+                isRecording = false
+                isSpeechProcessing = true
+                recordingTimerJob?.cancel()
+                recordingTimerJob = null
+            }
+
+            override fun onError(error: Int) {
+                finishBuiltInRecognition()
+                speechRecognitionError = speechRecognitionErrorMessage(error)
+                speechSessionFinished = true
+            }
+
+            override fun onResults(results: Bundle?) {
+                val recognizedText = results
+                    ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    ?.firstOrNull()
+                    .orEmpty()
+                    .trim()
+                if (recognizedText.isNotEmpty()) {
+                    TranslationState.textToTranslate = recognizedText
+                    voiceInputReady = true
+                }
+                finishBuiltInRecognition()
+                speechSessionFinished = true
+            }
+
+            override fun onPartialResults(partialResults: Bundle?) {
+                partialResults
+                    ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    ?.firstOrNull()
+                    ?.trim()
+                    ?.takeIf(String::isNotEmpty)
+                    ?.let { TranslationState.textToTranslate = it }
+            }
+
+            override fun onEvent(eventType: Int, params: Bundle?) = Unit
+        })
+        val languageTag = recognitionLanguageTag(language)
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, languageTag)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, languageTag)
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+            putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
+        }
+        recognizer.startListening(intent)
+    }
+
+    private fun speechRecognitionErrorMessage(error: Int): String = when (error) {
+        SpeechRecognizer.ERROR_AUDIO -> "Audio recording error. Please try again."
+        SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Microphone permission is required."
+        SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT ->
+            "Speech recognition network error. Please try again."
+        SpeechRecognizer.ERROR_NO_MATCH -> "No speech was recognized. Please try again."
+        SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Speech recognition is busy. Please try again."
+        SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "No speech was detected. Please try again."
+        else -> "Speech recognition could not be completed. Please try again."
+    }
+
+    private fun finishBuiltInRecognition() {
+        recordingTimerJob?.cancel()
+        recordingTimerJob = null
+        speechRecognizer?.destroy()
+        speechRecognizer = null
+        speechAmplitude = 0
+        isRecording = false
+        isSpeechProcessing = false
+    }
+
+    private fun startAudioFileRecording() {
+        isRecorderStarting = true
+        val context = getApplication<Application>()
+        audioFile = File(context.externalCacheDir, "recording_${System.currentTimeMillis()}.mp3")
+        recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            MediaRecorder(context)
+        } else {
+            createLegacyMediaRecorder()
+        }
+        recorder?.apply {
+            setAudioSource(MediaRecorder.AudioSource.MIC)
+            setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+            setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+            setOutputFile(audioFile?.absolutePath)
+            try {
+                prepare()
+                start()
+                isRecording = true
+                startTimer()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                release()
+                recorder = null
+                audioFile?.delete()
+                audioFile = null
+            } finally {
+                isRecorderStarting = false
+            }
+        }
+    }
+
+    fun currentRecordingAmplitude(): Int {
+        if (!isRecording) return 0
+        if (usesBuiltInSpeechRecognizer) return speechAmplitude
+        return try {
+            recorder?.maxAmplitude ?: 0
+        } catch (_: IllegalStateException) {
+            0
+        } catch (_: RuntimeException) {
+            0
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun createLegacyMediaRecorder(): MediaRecorder = MediaRecorder()
 
     private fun startTimer() {
-        timerJob?.cancel()
-        timerJob = viewModelScope.launch {
+        recordingTimerJob?.cancel()
+        recordingTimerJob = viewModelScope.launch {
             recordingTime = 0L
-            while (isRecording && (recordingTime < 60)) {
+            while (isRecording && recordingTime < 60) {
                 delay(1.seconds)
-                if (isRecording) {
-                    recordingTime++
-                }
+                if (!isRecording) break
+                recordingTime++
             }
             if (isRecording) {
                 stopRecording()
@@ -357,56 +375,86 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun stopRecording() {
-        if (!isRecording) return
-        timerJob?.cancel()
-        audioRecorder?.stop()
-        
-        isRecording = false
-        isSpeechProcessing = true
-        speechSessionFinished = false
-        
-        viewModelScope.launch {
-            if (isModelLoaded) {
-                val finalResult = voskManager?.stop() ?: ""
-                if (finalResult.isNotBlank()) {
-                    capturedText = if (capturedText.isEmpty()) finalResult else "$capturedText $finalResult"
-                }
-            }
-            
-            val finalCleanText = capturedText.trim()
-            if (finalCleanText.isNotBlank()) {
-                TranslationState.textToTranslate = finalCleanText
-                voiceInputReady = true
-            }
-            
-            currentPartialText = ""
+        if (usesBuiltInSpeechRecognizer && speechRecognizer != null) {
+            recordingTimerJob?.cancel()
+            recordingTimerJob = null
+            isRecording = false
+            isSpeechProcessing = true
+            speechRecognizer?.stopListening()
+            return
+        }
+        recordingTimerJob?.cancel()
+        recordingTimerJob = null
+        try {
+            recorder?.stop()
+            recorder?.release()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            recorder = null
+            isRecorderStarting = false
+            isRecording = false
             TranslationState.recordedAudioPath = audioFile?.absolutePath
-            isSpeechProcessing = false
+            voiceInputReady = TranslationState.recordedAudioPath != null
             speechSessionFinished = true
         }
     }
 
     fun cancelRecording() {
-        timerJob?.cancel()
-        audioRecorder?.stop()
-        if (isModelLoaded) {
-            voskManager?.stop()
+        recordingTimerJob?.cancel()
+        recordingTimerJob = null
+        speechRecognizer?.cancel()
+        speechRecognizer?.destroy()
+        speechRecognizer = null
+        speechAmplitude = 0
+        val activeRecorder = recorder
+        recorder = null
+        try {
+            activeRecorder?.stop()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            try {
+                activeRecorder?.release()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            isRecorderStarting = false
+            isRecording = false
+            recordingTime = 0L
+            audioFile?.delete()
+            audioFile = null
+            TranslationState.textToTranslate = ""
+            TranslationState.translatedText = ""
+            TranslationState.recordedAudioPath = null
+            voiceInputReady = false
+            speechSessionFinished = false
+            speechRecognitionError = null
+            isSpeechProcessing = false
+            usesBuiltInSpeechRecognizer = false
+            wasRecordingCancelled = true
         }
-        isRecording = false
-        TranslationState.textToTranslate = ""
-        audioFile?.delete()
-        audioFile = null
-        
-        voiceInputReady = false
-        speechSessionFinished = false
-        speechRecognitionError = null
-        isSpeechProcessing = false
-        wasRecordingCancelled = true
     }
 
     override fun onCleared() {
-        voskManager?.release()
-        audioRecorder?.stop()
-        timerJob?.cancel()
+        recordingTimerJob?.cancel()
+        recordingTimerJob = null
+        speechRecognizer?.cancel()
+        speechRecognizer?.destroy()
+        speechRecognizer = null
+        recorder?.release()
+        recorder = null
     }
+}
+
+sealed interface TextTranslationUiState {
+    data object Idle : TextTranslationUiState
+    data object Loading : TextTranslationUiState
+    data class Success(val response: TranslationResponse) : TextTranslationUiState
+    data class Error(val message: String) : TextTranslationUiState
+}
+
+sealed interface TextTranslationEvent {
+    data object NavigateToResult : TextTranslationEvent
+    data class ShowError(val message: String) : TextTranslationEvent
 }

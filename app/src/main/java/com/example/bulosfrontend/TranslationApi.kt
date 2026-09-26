@@ -97,6 +97,9 @@ class NetworkTranslationRepository(private val api: TranslationApi) : Translatio
         targetLanguage: String,
         text: String,
     ): TranslationResult {
+        if (!TranslationLanguageRules.isValidPair(sourceLanguage, targetLanguage)) {
+            return TranslationResult.Failure("Source and target languages must be different.")
+        }
         val sourceCode = runCatching { BackendLanguageCodes.forUiLabel(sourceLanguage) }
             .getOrElse { return TranslationResult.Failure("The selected language is not supported.") }
         val targetCode = runCatching { BackendLanguageCodes.forUiLabel(targetLanguage) }

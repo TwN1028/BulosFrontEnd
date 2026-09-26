@@ -47,7 +47,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,7 +54,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,6 +61,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -74,7 +73,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.os.ConfigurationCompat
-import com.example.bulosfrontend.ui.theme.*
+import com.example.bulosfrontend.ui.theme.ForestGreen
+import com.example.bulosfrontend.ui.theme.PrimaryGreen
+import com.example.bulosfrontend.ui.theme.SoftGreen
+import com.example.bulosfrontend.ui.theme.WarmWhite
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 @Composable
@@ -86,15 +89,6 @@ fun TranslateVoiceScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBa
     var isEditing by rememberSaveable { mutableStateOf(true) }
     val hasRecording = TranslationState.recordedAudioPath != null || TranslationState.textToTranslate.isNotBlank()
 
-    // Preserve new logic: Model Preparation
-    LaunchedEffect(Unit) { viewModel.prepareModelForSourceLanguage() }
-    LaunchedEffect(TranslationState.sourceLanguage) { viewModel.prepareModelForSourceLanguage() }
-
-    // Preserve new logic: Sync State
-    LaunchedEffect(TranslationState.textToTranslate) {
-        recognizedText = TranslationState.textToTranslate
-    }
-
     Surface(Modifier.fillMaxSize(), color = HomeContentCream) {
         Column(Modifier.fillMaxSize()) {
             FeaturePatternHeader(
@@ -103,8 +97,6 @@ fun TranslateVoiceScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBa
                 onBack = onBack,
                 iconRes = R.drawable.ic_lucide_mic,
                 headerBottomExtension = AppHeaderBottomExtension,
-                isOnline = viewModel.isOnline,
-                isServerReady = viewModel.isServerReady
             )
             BoxWithConstraints(Modifier.weight(1f)) {
                 val useScrollingLayout = maxHeight < 720.dp
@@ -127,7 +119,7 @@ fun TranslateVoiceScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBa
                     )
                     Spacer(Modifier.height(30.dp))
                     RecognizedTextCard(
-                        label = stringResource(labels.recognizedTextLabelRes, stringResource(TranslationState.sourceLanguage.displayNameRes)),
+                        label = stringResource(labels.recognizedTextLabelRes, TranslationState.sourceLanguage),
                         value = recognizedText,
                         placeholder = stringResource(labels.recognizedTextPlaceholderRes),
                         isEditing = isEditing,
@@ -151,24 +143,16 @@ fun TranslateVoiceScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBa
                             },
                             modifier = Modifier.weight(1f),
                         )
-                        Button(
+                        ResultSecondaryAction(
+                            text = stringResource(labels.translateRes),
                             onClick = {
-                                viewModel.translateVoiceText(recognizedText.trim(), onComplete = onTranslate)
+                                viewModel.translateVoiceText(recognizedText.trim())
+                                onTranslate()
                             },
-                            enabled = recognizedText.isNotBlank() && !viewModel.isRecording && !viewModel.isTranslating,
-                            modifier = Modifier.weight(1f).height(52.dp),
-                            shape = RoundedCornerShape(18.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = PrimaryGreen,
-                                contentColor = Color(0xFFFFFBF4),
-                            ),
-                        ) {
-                            if (viewModel.isTranslating) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = Color.White)
-                            } else {
-                                Text(stringResource(labels.translateRes), fontWeight = FontWeight.SemiBold)
-                            }
-                        }
+                            enabled = recognizedText.isNotBlank(),
+                            modifier = Modifier.weight(1f),
+                            emphasized = true,
+                        )
                     }
                     if (useScrollingLayout) {
                         Spacer(Modifier.height(24.dp))
@@ -185,7 +169,8 @@ fun TranslateVoiceScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBa
 fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain: () -> Unit) {
     val content = viewModel.content
     val labels = content.speechResult
-    val clipboard = LocalContext.current.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+    val clipboard = LocalClipboard.current
+    val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val currentLocale = remember(configuration) {
@@ -196,11 +181,9 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
     val translatedText = TranslationState.translatedText.ifEmpty { stringResource(content.resultPlaceholderRes) }
     val shareBody = stringResource(labels.shareBodyRes, originalText, TranslationState.translatedText)
     val shareChooserTitle = stringResource(labels.shareChooserTitleRes)
-    val sourceName = stringResource(TranslationState.sourceLanguage.displayNameRes)
-    val targetName = stringResource(TranslationState.targetLanguage.displayNameRes)
-    val isSaved = viewModel.historyItems.any {
-        it.sourceLang == sourceName &&
-            it.targetLang == targetName &&
+    val isSaved = HistoryProvider.history.any {
+        it.sourceLang == TranslationState.sourceLanguage &&
+            it.targetLang == TranslationState.targetLanguage &&
             it.inputText == originalText &&
             it.translatedText == TranslationState.translatedText
     }
@@ -215,8 +198,6 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
                     title = stringResource(content.resultHeaderRes),
                     onBack = onBack,
                     iconRes = R.drawable.ic_lucide_mic,
-                    isOnline = viewModel.isOnline,
-                    isServerReady = viewModel.isServerReady,
                     trailingContent = {
                         IconButton(
                             onClick = viewModel::saveCurrentTranslation,
@@ -246,15 +227,15 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
                             verticalArrangement = Arrangement.spacedBy(14.dp),
                         ) {
                             TranslationTextCard(
-                                label = "${sourceName.uppercase(currentLocale)} · ${stringResource(labels.originalRes)}",
+                                label = "${TranslationState.sourceLanguage.uppercase(currentLocale)} · ${stringResource(labels.originalRes)}",
                                 text = originalText,
                                 containerColor = MaterialTheme.colorScheme.surface,
                                 modifier = Modifier.weight(1f),
                                 scrollableText = true,
                             )
-                            LanguageDirectionPill(sourceName, targetName)
+                            LanguageDirectionPill(TranslationState.sourceLanguage, TranslationState.targetLanguage)
                             TranslationTextCard(
-                                label = "${targetName.uppercase(currentLocale)} · ${stringResource(labels.translationRes)}",
+                                label = "${TranslationState.targetLanguage.uppercase(currentLocale)} · ${stringResource(labels.translationRes)}",
                                 text = translatedText,
                                 containerColor = MaterialTheme.colorScheme.surface,
                                 modifier = Modifier.weight(1f),
@@ -267,8 +248,17 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
                             icon = Icons.Default.ContentCopy,
                             onClick = {
                                 if (TranslationState.translatedText.isNotEmpty()) {
-                                    clipboard.setPrimaryClip(ClipData.newPlainText("Translated text", TranslationState.translatedText))
-                                    showNotification = true
+                                    coroutineScope.launch {
+                                        clipboard.setClipEntry(
+                                            ClipEntry(
+                                                ClipData.newPlainText(
+                                                    "Translated text",
+                                                    TranslationState.translatedText,
+                                                ),
+                                            ),
+                                        )
+                                        showNotification = true
+                                    }
                                 }
                             },
                             modifier = Modifier.weight(1f),
@@ -317,8 +307,6 @@ fun FeaturePatternHeader(
     headerBottomExtension: Dp = AppHeaderBottomExtension,
     titleTopPadding: Dp = AppHeaderTitleTopPadding,
     showBackButton: Boolean = true,
-    isOnline: Boolean? = null,
-    isServerReady: Boolean = true,
     trailingContent: @Composable RowScope.() -> Unit = {},
 ) {
     val hasExtendedHeader = headerBottomExtension > 0.dp
@@ -376,10 +364,6 @@ fun FeaturePatternHeader(
                         overflow = TextOverflow.Clip,
                     )
                 }
-            }
-            if (isOnline != null) {
-                ConnectivityStatusPill(isOnline, isServerReady)
-                Spacer(Modifier.width(8.dp))
             }
             trailingContent()
         }
@@ -451,7 +435,8 @@ fun TranslationLanguageBar(
         ) {
             CompactLanguageMenu(
                 selected = TranslationState.sourceLanguage,
-                onSelected = { TranslationState.sourceLanguage = it },
+                unavailableLanguage = TranslationState.targetLanguage,
+                onSelected = TranslationState::selectSourceLanguage,
                 modifier = Modifier.weight(1f),
             )
             Row(
@@ -461,11 +446,7 @@ fun TranslationLanguageBar(
             ) {
                 VerticalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 IconButton(
-                    onClick = {
-                        val source = TranslationState.sourceLanguage
-                        TranslationState.sourceLanguage = TranslationState.targetLanguage
-                        TranslationState.targetLanguage = source
-                    },
+                    onClick = TranslationState::swapLanguages,
                     modifier = Modifier.weight(1f),
                 ) {
                     Icon(Icons.Default.SwapHoriz, swapLanguagesDescription, tint = MaterialTheme.colorScheme.secondary)
@@ -474,7 +455,8 @@ fun TranslationLanguageBar(
             }
             CompactLanguageMenu(
                 selected = TranslationState.targetLanguage,
-                onSelected = { TranslationState.targetLanguage = it },
+                unavailableLanguage = TranslationState.sourceLanguage,
+                onSelected = TranslationState::selectTargetLanguage,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -482,22 +464,40 @@ fun TranslationLanguageBar(
 }
 
 @Composable
-private fun CompactLanguageMenu(selected: UiLanguage, onSelected: (UiLanguage) -> Unit, modifier: Modifier = Modifier) {
+private fun CompactLanguageMenu(
+    selected: String,
+    unavailableLanguage: String,
+    onSelected: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     var expanded by remember { mutableStateOf(false) }
+    val languages = listOf(
+        stringResource(R.string.lang_label_eng),
+        stringResource(R.string.lang_label_fil),
+        stringResource(R.string.lang_label_bul),
+    )
     Box(modifier) {
         TextButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(selected.displayNameRes), color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                selected,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            UiLanguage.entries.forEach { language ->
-                DropdownMenuItem(
-                    text = { Text(stringResource(language.displayNameRes)) },
-                    onClick = {
-                        onSelected(language)
-                        expanded = false
-                    },
-                )
-            }
+            languages
+                .filterNot { it.equals(unavailableLanguage, ignoreCase = true) }
+                .forEach { language ->
+                    DropdownMenuItem(
+                        text = { Text(language) },
+                        onClick = {
+                            onSelected(language)
+                            expanded = false
+                        },
+                    )
+                }
         }
     }
 }

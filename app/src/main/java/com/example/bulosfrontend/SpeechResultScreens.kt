@@ -488,7 +488,10 @@ private fun CompactLanguageMenu(
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             languages
-                .filterNot { it.equals(unavailableLanguage, ignoreCase = true) }
+                .filterNot { language ->
+                    language.equals(selected, ignoreCase = true) ||
+                        language.equals(unavailableLanguage, ignoreCase = true)
+                }
                 .forEach { language ->
                     DropdownMenuItem(
                         text = { Text(language) },
@@ -605,7 +608,7 @@ private fun LanguageDirectionPill(source: String, target: String) {
 }
 
 @Composable
-private fun ResultSecondaryAction(
+internal fun ResultSecondaryAction(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,

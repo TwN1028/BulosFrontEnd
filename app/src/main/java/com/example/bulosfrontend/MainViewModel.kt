@@ -149,6 +149,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun resetTextTranslationResult() {
+        textTranslationState = TextTranslationUiState.Idle
+        TranslationState.translatedText = ""
+    }
+
     fun translateVoiceText(text: String) {
         if (!TranslationState.hasValidLanguagePair()) return
         TranslationState.textToTranslate = text

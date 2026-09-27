@@ -96,9 +96,16 @@
     <string name="ui_translate_to_bul">[BULOS: Translate to %1$s]</string>
     <string name="ui_translate_from_label_bul">[BULOS: Translate From]</string>
     <string name="ui_translate_to_label_bul">[BULOS: Translate To]</string>
+    <string name="ui_translating_bul">[BULOS: Translating…]</string>
+    <string name="ui_translation_placeholder_bul">[BULOS: Translation will appear here.]</string>
+    <string name="ui_text_back_bul">[BULOS: Back]</string>
     <string name="ui_speech_subtitle_bul">[BULOS: Speak clearly, Edit recognized text, Translate]</string>
     <string name="ui_speech_idle_bul">[BULOS: Tap to start recording]</string>
-    <string name="ui_speech_listening_bul">[BULOS: Listening… tap to stop]</string>
+    <string name="ui_speech_listening_bul">[BULOS: Listening…]</string>
+    <string name="ui_no_speech_recognized_bul">[BULOS: No speech was recognized. Please try again.]</string>
+    <string name="ui_done_recording_bul">[BULOS: Done]</string>
+    <string name="ui_cancel_recording_bul">[BULOS: Cancel Recording]</string>
+    <string name="ui_try_again_bul">[BULOS: Try Again]</string>
     <string name="ui_speech_review_bul">[BULOS: Recording complete. Edit text below if needed]</string>
     <string name="ui_transcribing_bul">[BULOS: Transcribing]</string>
     <string name="ui_recognized_text_label_bul">[BULOS: Recognized Text · %1$s]</string>

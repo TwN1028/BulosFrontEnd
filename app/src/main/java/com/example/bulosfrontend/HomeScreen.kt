@@ -53,6 +53,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
@@ -295,11 +296,16 @@ fun HomeRecordingScreen(
     viewModel: MainViewModel,
     onBack: () -> Unit,
     onRecordingFinished: () -> Unit,
-    autoStartRecording: Boolean = true,
+    autoStartRecording: Boolean = false,
 ) {
     val context = LocalContext.current
+    val labels = viewModel.content.speechResult
     var actionHandled by remember { mutableStateOf(false) }
     var finishRequested by remember { mutableStateOf(false) }
+    val recognitionFailed = viewModel.speechSessionFinished &&
+        !viewModel.voiceInputReady &&
+        !viewModel.isSpeechProcessing &&
+        !viewModel.isRecording
 
     fun cancelOnce() {
         actionHandled = true
@@ -332,23 +338,28 @@ fun HomeRecordingScreen(
         }
     }
 
-    fun toggleRecording() {
-        if (viewModel.isRecording) viewModel.stopRecording() else startRecordingOnce()
-    }
-
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
         if (granted) startRecordingOnce() else cancelOnce()
     }
 
-    LaunchedEffect(autoStartRecording) {
-        if (!autoStartRecording) return@LaunchedEffect
+    fun requestPermissionOrStartRecording() {
+        if (viewModel.isSpeechProcessing) return
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
             startRecordingOnce()
         } else {
             permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         }
+    }
+
+    fun toggleRecording() {
+        if (viewModel.isRecording) viewModel.stopRecording() else requestPermissionOrStartRecording()
+    }
+
+    LaunchedEffect(autoStartRecording) {
+        if (!autoStartRecording) return@LaunchedEffect
+        requestPermissionOrStartRecording()
     }
 
     LaunchedEffect(viewModel.voiceInputReady, viewModel.speechSessionFinished, finishRequested) {
@@ -441,10 +452,28 @@ fun HomeRecordingScreen(
                 useHomeCardStyle = true,
             )
             Spacer(Modifier.height(20.dp))
+            Box(
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = when {
+                        viewModel.isSpeechProcessing -> "Processing speech…"
+                        viewModel.isRecording -> stringResource(labels.listeningStatusRes)
+                        viewModel.voiceInputReady || recognitionFailed -> ""
+                        else -> stringResource(viewModel.content.home.speechSubtitleRes)
+                    },
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            Spacer(Modifier.height(12.dp))
             HomeVoiceHero(
                 promptRes = R.string.feature_speech_subtitle,
                 onClick = ::toggleRecording,
                 modifier = Modifier,
+                enabled = !viewModel.isSpeechProcessing && !recognitionFailed && !viewModel.voiceInputReady,
                 isRecording = viewModel.isRecording,
                 isStopped = !viewModel.isRecording && viewModel.voiceInputReady,
                 amplitudeProvider = viewModel::currentRecordingAmplitude,
@@ -457,42 +486,64 @@ fun HomeRecordingScreen(
             Spacer(Modifier.height(18.dp))
             Text(
                 text = when {
-                    viewModel.speechRecognitionError != null -> viewModel.speechRecognitionError.orEmpty()
-                    viewModel.isSpeechProcessing -> "Processing speech…"
-                    viewModel.isRecording -> "Recording Audio, Speak Now"
+                    recognitionFailed -> viewModel.speechRecognitionError
+                        ?: stringResource(labels.noSpeechRecognizedRes)
                     viewModel.voiceInputReady -> "Speech captured. Tap Done to continue."
-                    else -> "Tap the microphone to try again."
+                    else -> ""
                 },
-                color = PrimaryGreen,
+                color = Color.White,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
-            Spacer(Modifier.height(54.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Button(
-                    onClick = ::cancelOnce,
-                    modifier = Modifier.weight(1f).height(52.dp),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFFFEFA),
-                        contentColor = PrimaryGreen,
-                    ),
-                ) {
-                    Text(stringResource(viewModel.content.cancelBtnRes), fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(40.dp))
+            when {
+                viewModel.isRecording || viewModel.voiceInputReady -> {
+                    Button(
+                        onClick = ::completeRecordingOnce,
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF4F7045),
+                            contentColor = Color(0xFFFFFBF4),
+                        ),
+                    ) {
+                        Text(
+                            stringResource(labels.doneRecordingRes),
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                    TextButton(onClick = ::cancelOnce) {
+                        Text(
+                            stringResource(labels.cancelRecordingRes),
+                            color = PrimaryGreen,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
                 }
-                Button(
-                    onClick = ::completeRecordingOnce,
-                    modifier = Modifier.weight(1f).height(52.dp),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF4F7045),
-                        contentColor = Color(0xFFFFFBF4),
-                    ),
-                ) {
-                    Text("Done", fontWeight = FontWeight.SemiBold)
+                recognitionFailed -> {
+                    Button(
+                        onClick = ::requestPermissionOrStartRecording,
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF4F7045),
+                            contentColor = Color(0xFFFFFBF4),
+                        ),
+                    ) {
+                        Text(
+                            stringResource(labels.tryAgainRes),
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                    TextButton(onClick = ::goBackOnce) {
+                        Text(
+                            stringResource(viewModel.content.goBackRes),
+                            color = PrimaryGreen,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
                 }
             }
                 Spacer(Modifier.weight(1.1f))
@@ -536,6 +587,7 @@ private fun HomeVoiceHero(
     @androidx.annotation.StringRes promptRes: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     isRecording: Boolean = false,
     isStopped: Boolean = false,
     amplitudeProvider: () -> Int = { 0 },
@@ -818,7 +870,7 @@ private fun HomeVoiceHero(
         }
         Surface(
             onClick = onClick,
-            enabled = !isStopped,
+            enabled = enabled && !isStopped,
             modifier = Modifier
                 .align(Alignment.Center)
                 .size(112.dp)

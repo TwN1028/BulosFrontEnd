@@ -279,14 +279,15 @@ class MainActivity : ComponentActivity() {
                             },
                         ) {
                             TranslateTextScreen(
-                                viewModel,
-                                onTranslate = {
-                                    resultOriginRoute = AppDestinations.TEXT
-                                    navController.navigate(AppDestinations.RESULT)
+                                viewModel = viewModel,
+                                onBack = { navController.popBackStack() },
+                                onHome = {
+                                    navController.navigate(AppDestinations.HOME) {
+                                        launchSingleTop = true
+                                        popUpTo(AppDestinations.HOME)
+                                    }
                                 },
-                            ) {
-                                navController.popBackStack()
-                            }
+                            )
                         }
                         composable(AppDestinations.VOICE) {
                             TranslateVoiceScreen(

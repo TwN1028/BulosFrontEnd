@@ -71,12 +71,20 @@ data class TextTranslationDialogueContent(
     @StringRes val translateToRes: Int,
     @StringRes val translateFromRes: Int,
     @StringRes val translateToLabelRes: Int,
+    @StringRes val clearRes: Int,
+    @StringRes val translatingRes: Int,
+    @StringRes val outputPlaceholderRes: Int,
+    @StringRes val backRes: Int,
 )
 
 data class SpeechResultDialogueContent(
     @StringRes val speechSubtitleRes: Int,
     @StringRes val idleStatusRes: Int,
     @StringRes val listeningStatusRes: Int,
+    @StringRes val noSpeechRecognizedRes: Int,
+    @StringRes val doneRecordingRes: Int,
+    @StringRes val cancelRecordingRes: Int,
+    @StringRes val tryAgainRes: Int,
     @StringRes val reviewStatusRes: Int,
     @StringRes val transcribingRes: Int,
     @StringRes val recognizedTextLabelRes: Int,
@@ -280,6 +288,10 @@ object DialogueProvider {
             R.string.ui_translate_to_fil,
             R.string.ui_translate_from_label_fil,
             R.string.ui_translate_to_label_fil,
+            R.string.ui_clear_fil,
+            R.string.ui_translating_fil,
+            R.string.ui_translation_placeholder_fil,
+            R.string.ui_text_back_fil,
         )
         "bul" -> TextTranslationDialogueContent(
             R.string.ui_text_subtitle_bul,
@@ -287,6 +299,10 @@ object DialogueProvider {
             R.string.ui_translate_to_bul,
             R.string.ui_translate_from_label_bul,
             R.string.ui_translate_to_label_bul,
+            R.string.ui_clear_bul,
+            R.string.ui_translating_bul,
+            R.string.ui_translation_placeholder_bul,
+            R.string.ui_text_back_bul,
         )
         else -> TextTranslationDialogueContent(
             R.string.ui_text_subtitle_eng,
@@ -294,13 +310,20 @@ object DialogueProvider {
             R.string.ui_translate_to_eng,
             R.string.ui_translate_from_label_eng,
             R.string.ui_translate_to_label_eng,
+            R.string.ui_clear_eng,
+            R.string.ui_translating_eng,
+            R.string.ui_translation_placeholder_eng,
+            R.string.ui_text_back_eng,
         )
     }
 
     private fun speechResult(suffix: String): SpeechResultDialogueContent = when (suffix) {
         "fil" -> SpeechResultDialogueContent(
             R.string.ui_speech_subtitle_fil, R.string.ui_speech_idle_fil,
-            R.string.ui_speech_listening_fil, R.string.ui_speech_review_fil, R.string.ui_transcribing_fil,
+            R.string.ui_speech_listening_fil,
+            R.string.ui_no_speech_recognized_fil, R.string.ui_done_recording_fil,
+            R.string.ui_cancel_recording_fil, R.string.ui_try_again_fil,
+            R.string.ui_speech_review_fil, R.string.ui_transcribing_fil,
             R.string.ui_recognized_text_label_fil, R.string.ui_recognized_text_placeholder_fil,
             R.string.ui_edit_fil, R.string.ui_done_editing_fil, R.string.ui_translate_voice_fil,
             R.string.ui_clear_fil, R.string.ui_original_fil, R.string.ui_translation_fil,
@@ -310,7 +333,10 @@ object DialogueProvider {
         )
         "bul" -> SpeechResultDialogueContent(
             R.string.ui_speech_subtitle_bul, R.string.ui_speech_idle_bul,
-            R.string.ui_speech_listening_bul, R.string.ui_speech_review_bul, R.string.ui_transcribing_bul,
+            R.string.ui_speech_listening_bul,
+            R.string.ui_no_speech_recognized_bul, R.string.ui_done_recording_bul,
+            R.string.ui_cancel_recording_bul, R.string.ui_try_again_bul,
+            R.string.ui_speech_review_bul, R.string.ui_transcribing_bul,
             R.string.ui_recognized_text_label_bul, R.string.ui_recognized_text_placeholder_bul,
             R.string.ui_edit_bul, R.string.ui_done_editing_bul, R.string.ui_translate_voice_bul,
             R.string.ui_clear_bul, R.string.ui_original_bul, R.string.ui_translation_bul,
@@ -320,7 +346,10 @@ object DialogueProvider {
         )
         else -> SpeechResultDialogueContent(
             R.string.ui_speech_subtitle_eng, R.string.ui_speech_idle_eng,
-            R.string.ui_speech_listening_eng, R.string.ui_speech_review_eng, R.string.ui_transcribing_eng,
+            R.string.ui_speech_listening_eng,
+            R.string.ui_no_speech_recognized_eng, R.string.ui_done_recording_eng,
+            R.string.ui_cancel_recording_eng, R.string.ui_try_again_eng,
+            R.string.ui_speech_review_eng, R.string.ui_transcribing_eng,
             R.string.ui_recognized_text_label_eng, R.string.ui_recognized_text_placeholder_eng,
             R.string.ui_edit_eng, R.string.ui_done_editing_eng, R.string.ui_translate_voice_eng,
             R.string.ui_clear_eng, R.string.ui_original_eng, R.string.ui_translation_eng,

@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -63,6 +64,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
@@ -295,15 +297,13 @@ fun HomeRecordingScreen(
     viewModel: MainViewModel,
     onBack: () -> Unit,
     onRecordingFinished: () -> Unit,
-    autoStartRecording: Boolean = true,
+    autoStartRecording: Boolean = false,
 ) {
     val context = LocalContext.current
     var actionHandled by remember { mutableStateOf(false) }
-    var finishRequested by remember { mutableStateOf(false) }
 
     fun cancelOnce() {
         actionHandled = true
-        finishRequested = false
         viewModel.cancelRecording()
         actionHandled = false
     }
@@ -321,19 +321,11 @@ fun HomeRecordingScreen(
     }
 
     fun completeRecordingOnce() {
-        if (actionHandled) return
-        actionHandled = true
-        finishRequested = true
         if (viewModel.isRecording) {
             viewModel.stopRecording()
-        } else if (!viewModel.voiceInputReady && !viewModel.isSpeechProcessing) {
-            actionHandled = false
-            finishRequested = false
+        } else if (viewModel.voiceInputReady || TranslationState.textToTranslate.isNotBlank() || TranslationState.recordedAudioPath != null) {
+            onRecordingFinished()
         }
-    }
-
-    fun toggleRecording() {
-        if (viewModel.isRecording) viewModel.stopRecording() else startRecordingOnce()
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -342,105 +334,182 @@ fun HomeRecordingScreen(
         if (granted) startRecordingOnce() else cancelOnce()
     }
 
-    LaunchedEffect(autoStartRecording) {
-        if (!autoStartRecording) return@LaunchedEffect
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-            startRecordingOnce()
+    fun toggleRecording() {
+        if (viewModel.isRecording) {
+            viewModel.stopRecording()
         } else {
-            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-        }
-    }
-
-    LaunchedEffect(viewModel.voiceInputReady, viewModel.speechSessionFinished, finishRequested) {
-        if (!finishRequested) return@LaunchedEffect
-        when {
-            viewModel.voiceInputReady -> onRecordingFinished()
-            viewModel.speechSessionFinished -> {
-                actionHandled = false
-                finishRequested = false
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                startRecordingOnce()
+            } else {
+                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
             }
         }
     }
 
     BackHandler(onBack = ::goBackOnce)
 
-    Column(
+    Box(
         Modifier
             .fillMaxSize()
             .background(speechTranslationGradientBrush()),
     ) {
-        Row(
+        // Light radial highlight at the bottom of the screen near the record button
+        Canvas(
             modifier = Modifier
                 .fillMaxWidth()
-                .safeHeaderInsets()
-                .padding(
-                    start = 4.dp,
-                    top = AppHeaderTitleTopPadding,
-                    end = 16.dp,
-                    bottom = 7.dp + (
-                        AppHeaderBottomExtension - (AppHeaderTitleTopPadding - 10.dp)
-                    ).coerceAtLeast(0.dp),
-                ),
-            verticalAlignment = Alignment.CenterVertically,
+                .height(300.dp)
+                .align(Alignment.BottomCenter),
         ) {
-            IconButton(onClick = ::goBackOnce) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = null,
-                    tint = WarmWhite,
-                )
-            }
-            Icon(
-                painter = painterResource(R.drawable.ic_lucide_mic),
-                contentDescription = null,
-                tint = WarmWhite.copy(alpha = 0.72f),
-                modifier = Modifier.size(20.dp),
+            drawCircle(
+                brush = Brush.radialGradient(
+                    0.0f to Color.White.copy(alpha = 0.3f),
+                    0.6f to Color.White.copy(alpha = 0.1f),
+                    1.0f to Color.Transparent,
+                    center = Offset(size.width / 2f, size.height),
+                    radius = size.width * 0.8f,
+                ),
+                radius = size.width * 0.8f,
+                center = Offset(size.width / 2f, size.height),
             )
-            Spacer(Modifier.width(10.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(viewModel.content.voiceHeaderRes),
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = stringResource(viewModel.content.speechResult.speechSubtitleRes),
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = 13.sp,
-                        lineHeight = 20.sp,
-                    ),
-                    fontWeight = FontWeight.Normal,
-                )
-            }
         }
-        BoxWithConstraints(Modifier.weight(1f)) {
-            val speechAuraDiameter = maxWidth * SPEECH_AURA_SCREEN_WIDTH_FRACTION
-            val speechAuraMaxDiameter = maxWidth * SPEECH_AURA_MAX_SCREEN_WIDTH_FRACTION
-            Column(
+
+        // Top Header & Language Bar
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopCenter)
+                .safeHeaderInsets()
+        ) {
+            Row(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .windowInsetsPadding(
-                        WindowInsets.safeDrawing.only(
-                            WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
-                        ),
-                    )
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                    .fillMaxWidth()
+                    .padding(
+                        start = 4.dp,
+                        top = AppHeaderTitleTopPadding,
+                        end = 16.dp,
+                        bottom = 7.dp,
+                    ),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
+                IconButton(onClick = ::goBackOnce) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = null,
+                        tint = WarmWhite,
+                    )
+                }
+                Icon(
+                    painter = painterResource(R.drawable.ic_lucide_mic),
+                    contentDescription = null,
+                    tint = WarmWhite.copy(alpha = 0.72f),
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(viewModel.content.voiceHeaderRes),
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
             TranslationLanguageBar(
                 swapLanguagesDescription = stringResource(
                     viewModel.content.speechResult.swapLanguagesDescriptionRes,
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .offset(y = (-50).dp)
+                    .padding(horizontal = 24.dp)
                     .height(50.dp),
                 useHomeCardStyle = true,
             )
-            Spacer(Modifier.height(20.dp))
+        }
+
+        // Center Area: Label & Recording Buttons
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            val speechAuraDiameter = maxWidth * SPEECH_AURA_SCREEN_WIDTH_FRACTION
+            val speechAuraMaxDiameter = maxWidth * SPEECH_AURA_MAX_SCREEN_WIDTH_FRACTION
+            val showButtons = viewModel.isRecording || viewModel.voiceInputReady || TranslationState.textToTranslate.isNotBlank() || TranslationState.recordedAudioPath != null
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                if (showButtons) {
+                    // When voice is being recorded or speech is captured: label and two buttons near the center
+                    Text(
+                        text = if (viewModel.isRecording) "Listening..." else "Speech captured. Tap Done to continue.",
+                        color = PrimaryGreen,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(Modifier.height(32.dp))
+                    Column(
+                        modifier = Modifier.widthIn(max = 320.dp).fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Button(
+                            onClick = ::completeRecordingOnce,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF4F7045),
+                                contentColor = Color(0xFFFFFBF4),
+                            ),
+                        ) {
+                            Text("Done", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        }
+                        Button(
+                            onClick = ::cancelOnce,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFFFFEFA),
+                                contentColor = PrimaryGreen,
+                            ),
+                        ) {
+                            Text("Cancel Recording", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        }
+                    }
+                } else {
+                    // "Tap to speak" label above the voice record button, closer to the center of the screen
+                    Text(
+                        text = when {
+                            viewModel.speechRecognitionError != null -> viewModel.speechRecognitionError.orEmpty()
+                            else -> "Tap to speak"
+                        },
+                        color = PrimaryGreen,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
+        }
+
+        // Bottom Center: Voice Record Button
+        BoxWithConstraints(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(bottom = 48.dp),
+        ) {
+            val speechAuraDiameter = maxWidth * SPEECH_AURA_SCREEN_WIDTH_FRACTION
+            val speechAuraMaxDiameter = maxWidth * SPEECH_AURA_MAX_SCREEN_WIDTH_FRACTION
+
             HomeVoiceHero(
                 promptRes = R.string.feature_speech_subtitle,
                 onClick = ::toggleRecording,
@@ -454,49 +523,6 @@ fun HomeRecordingScreen(
                 speechAuraDiameter = speechAuraDiameter,
                 speechAuraMaxDiameter = speechAuraMaxDiameter,
             )
-            Spacer(Modifier.height(18.dp))
-            Text(
-                text = when {
-                    viewModel.speechRecognitionError != null -> viewModel.speechRecognitionError.orEmpty()
-                    viewModel.isSpeechProcessing -> "Processing speech…"
-                    viewModel.isRecording -> "Recording Audio, Speak Now"
-                    viewModel.voiceInputReady -> "Speech captured. Tap Done to continue."
-                    else -> "Tap the microphone to try again."
-                },
-                color = PrimaryGreen,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(Modifier.height(54.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Button(
-                    onClick = ::cancelOnce,
-                    modifier = Modifier.weight(1f).height(52.dp),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFFFEFA),
-                        contentColor = PrimaryGreen,
-                    ),
-                ) {
-                    Text(stringResource(viewModel.content.cancelBtnRes), fontWeight = FontWeight.SemiBold)
-                }
-                Button(
-                    onClick = ::completeRecordingOnce,
-                    modifier = Modifier.weight(1f).height(52.dp),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF4F7045),
-                        contentColor = Color(0xFFFFFBF4),
-                    ),
-                ) {
-                    Text("Done", fontWeight = FontWeight.SemiBold)
-                }
-            }
-                Spacer(Modifier.weight(1.1f))
-            }
         }
     }
 }

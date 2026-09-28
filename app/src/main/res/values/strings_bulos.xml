@@ -15,7 +15,7 @@
     <string name="ui_footer_bul">[BULOS: Footer]</string>
     <string name="ui_stop_bul">[BULOS: Stop]</string>
     <string name="ui_copy_description_bul">[BULOS: Copy translated text]</string>
-    <string name="ui_result_placeholder_bul">[BULOS: Result]</string>
+    <string name="ui_result_placeholder_bul">Loading Result</string>
     <string name="ui_no_history_bul">[BULOS: No history yet]</string>
     <string name="ui_voice_result_bul">[BULOS: Voice translation placeholder]</string>
     <string name="ui_voice_recording_bul">[BULOS: Voice Recording]</string>

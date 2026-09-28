@@ -22,7 +22,11 @@ import kotlin.time.Duration.Companion.seconds
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val languagePreferences = LanguagePreferenceRepository(application)
     private val savedTranslationRepository = SavedTranslationRepository(application)
-    private val translationRepository = TranslationServiceProvider.repository(application)
+    
+    // Hybrid / Offline translation components from commit c7de634
+    private val dictionaryManager = DictionaryManager(application)
+    private val translationRepository = TranslationRepository(application, dictionaryManager)
+
     private val textTranslationEventsChannel = Channel<TextTranslationEvent>(Channel.BUFFERED)
 
     var textTranslationState by mutableStateOf<TextTranslationUiState>(TextTranslationUiState.Idle)
@@ -41,8 +45,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private set
     var isFontSizePreferenceLoaded by mutableStateOf(false)
         private set
+
     val uiLanguage: UiLanguage get() = selectedUiLanguage ?: UiLanguage.ENGLISH
     val content: DialogueContent get() = DialogueProvider.getDialogue(uiLanguage)
+
+    // Hybrid Translation / Server States
+    var isOnline by mutableStateOf(false)
+        private set
+    var isServerReady by mutableStateOf(false)
+        private set
+    var isTranslating by mutableStateOf(false)
+        private set
+    var translationStatus by mutableStateOf("")
+        private set
+    var isSyncing by mutableStateOf(false)
+        private set
+    var lastSyncTime by mutableLongStateOf(0L)
+        private set
+    var isDictionaryLoaded by mutableStateOf(false)
+        private set
 
     // Recording State
     var isRecording by mutableStateOf(false)
@@ -66,6 +87,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private set
 
     init {
+        // Monitor network and wake up server
+        viewModelScope.launch {
+            while (true) {
+                val currentlyOnline = NetworkUtils.isOnline(application)
+                if (currentlyOnline && !isOnline) {
+                    viewModelScope.launch { translationRepository.wakeUpServer() }
+                }
+                isOnline = currentlyOnline
+                delay(3.seconds)
+            }
+        }
+        viewModelScope.launch {
+            translationRepository.isServerReady.collect { ready ->
+                isServerReady = ready
+            }
+        }
         viewModelScope.launch {
             languagePreferences.selectedLanguage.collect { language ->
                 selectedUiLanguage = language
@@ -90,6 +127,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 HistoryProvider.history.addAll(entries)
             }
         }
+        viewModelScope.launch {
+            dictionaryManager.load()
+            isDictionaryLoaded = true
+        }
+    }
+
+    private fun uiLanguageFromStr(str: String): UiLanguage = when (str.lowercase()) {
+        "filipino", "tagalog" -> UiLanguage.FILIPINO
+        "bulos" -> UiLanguage.BULOS
+        else -> UiLanguage.ENGLISH
     }
 
     fun selectUiLanguage(language: UiLanguage) {
@@ -112,11 +159,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { languagePreferences.saveFontSize(fontSize) }
     }
 
+    fun syncModel(onResult: (Boolean) -> Unit = {}) {
+        if (isSyncing) return
+        isSyncing = true
+        viewModelScope.launch {
+            try {
+                val success = translationRepository.syncOfflineModel()
+                if (success) {
+                    lastSyncTime = System.currentTimeMillis()
+                }
+                onResult(success)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onResult(false)
+            } finally {
+                isSyncing = false
+            }
+        }
+    }
+
     fun translateText(text: String) {
         if (textTranslationState is TextTranslationUiState.Loading || text.isBlank()) return
-        val sourceLanguage = TranslationState.sourceLanguage
-        val targetLanguage = TranslationState.targetLanguage
-        if (!TranslationLanguageRules.isValidPair(sourceLanguage, targetLanguage)) {
+        val sourceLanguageStr = TranslationState.sourceLanguage
+        val targetLanguageStr = TranslationState.targetLanguage
+        if (!TranslationLanguageRules.isValidPair(sourceLanguageStr, targetLanguageStr)) {
             val message = "Source and target languages must be different."
             textTranslationState = TextTranslationUiState.Error(message)
             viewModelScope.launch {
@@ -127,33 +193,59 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         TranslationState.textToTranslate = text
         TranslationState.translatedText = ""
         textTranslationState = TextTranslationUiState.Loading
+        isTranslating = true
+        translationStatus = if (isOnline && !isServerReady) "Waking up server..." else "Translating..."
+
         viewModelScope.launch {
-            when (
-                val result = translationRepository.translate(
-                    sourceLanguage = sourceLanguage,
-                    targetLanguage = targetLanguage,
-                    text = text,
+            try {
+                val sourceLangEnum = uiLanguageFromStr(sourceLanguageStr)
+                val targetLangEnum = uiLanguageFromStr(targetLanguageStr)
+                val translated = translationRepository.translate(text, sourceLangEnum, targetLangEnum)
+                TranslationState.translatedText = translated
+                val response = TranslationResponse(
+                    originalText = text,
+                    translatedText = translated,
+                    sourceLanguage = sourceLanguageStr,
+                    targetLanguage = targetLanguageStr,
+                    confidence = 1.0,
+                    translationMethod = if (NetworkUtils.isOnline(getApplication()) && isServerReady) "Online" else "Offline"
                 )
-            ) {
-                is TranslationResult.Success -> {
-                    TranslationState.textToTranslate = result.response.originalText
-                    TranslationState.translatedText = result.response.translatedText
-                    textTranslationState = TextTranslationUiState.Success(result.response)
-                    textTranslationEventsChannel.send(TextTranslationEvent.NavigateToResult)
-                }
-                is TranslationResult.Failure -> {
-                    textTranslationState = TextTranslationUiState.Error(result.message)
-                    textTranslationEventsChannel.send(TextTranslationEvent.ShowError(result.message))
-                }
+                textTranslationState = TextTranslationUiState.Success(response)
+                saveCurrentTranslation()
+                textTranslationEventsChannel.send(TextTranslationEvent.NavigateToResult)
+            } catch (e: Exception) {
+                val msg = e.message ?: "Translation error"
+                textTranslationState = TextTranslationUiState.Error(msg)
+                textTranslationEventsChannel.send(TextTranslationEvent.ShowError(msg))
+            } finally {
+                isTranslating = false
+                translationStatus = ""
             }
         }
     }
 
     fun translateVoiceText(text: String) {
-        if (!TranslationState.hasValidLanguagePair()) return
+        if (!TranslationState.hasValidLanguagePair() || text.isBlank()) return
         TranslationState.textToTranslate = text
-        // Placeholder for the existing translation integration. No speech text is fabricated.
-        TranslationState.translatedText = text
+        val sourceLanguageStr = TranslationState.sourceLanguage
+        val targetLanguageStr = TranslationState.targetLanguage
+        isTranslating = true
+        translationStatus = if (isOnline && !isServerReady) "Waking up server..." else "Translating..."
+
+        viewModelScope.launch {
+            try {
+                val sourceLangEnum = uiLanguageFromStr(sourceLanguageStr)
+                val targetLangEnum = uiLanguageFromStr(targetLanguageStr)
+                val translated = translationRepository.translate(text, sourceLangEnum, targetLangEnum)
+                TranslationState.translatedText = translated
+                saveCurrentTranslation()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                isTranslating = false
+                translationStatus = ""
+            }
+        }
     }
 
     fun clearVoiceDraft() {
@@ -446,6 +538,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         recorder = null
     }
 }
+
+data class TranslationResponse(
+    val originalText: String,
+    val translatedText: String,
+    val sourceLanguage: String = "",
+    val targetLanguage: String = "",
+    val confidence: Double = 1.0,
+    val intermediateLanguage: String? = null,
+    val translationMethod: String = "hybrid"
+)
 
 sealed interface TextTranslationUiState {
     data object Idle : TextTranslationUiState

@@ -15,7 +15,7 @@
     <string name="ui_footer_eng">Made by research thesis kineme, 2026</string>
     <string name="ui_stop_eng">Stop</string>
     <string name="ui_copy_description_eng">Copy translated text</string>
-    <string name="ui_result_placeholder_eng">Loading Result</string>
+    <string name="ui_result_placeholder_eng">Result…</string>
     <string name="ui_no_history_eng">No history yet</string>
     <string name="ui_voice_result_eng">Voice translation placeholder</string>
     <string name="ui_voice_recording_eng">Voice Recording</string>
@@ -96,9 +96,16 @@
     <string name="ui_translate_to_eng">Translate to %1$s</string>
     <string name="ui_translate_from_label_eng">Translate From</string>
     <string name="ui_translate_to_label_eng">Translate To</string>
+    <string name="ui_translating_eng">Translating…</string>
+    <string name="ui_translation_placeholder_eng">Translation will appear here.</string>
+    <string name="ui_text_back_eng">Back</string>
     <string name="ui_speech_subtitle_eng">Speak clearly, Edit recognized text, Translate</string>
     <string name="ui_speech_idle_eng">Tap to start recording</string>
-    <string name="ui_speech_listening_eng">Listening… tap to stop</string>
+    <string name="ui_speech_listening_eng">Listening…</string>
+    <string name="ui_no_speech_recognized_eng">No speech was recognized. Please try again.</string>
+    <string name="ui_done_recording_eng">Done</string>
+    <string name="ui_cancel_recording_eng">Cancel Recording</string>
+    <string name="ui_try_again_eng">Try Again</string>
     <string name="ui_speech_review_eng">Recording complete. Edit text below if needed</string>
     <string name="ui_transcribing_eng">Transcribing</string>
     <string name="ui_recognized_text_label_eng">Recognized Text · %1$s</string>

@@ -66,6 +66,9 @@ class MainActivity : ComponentActivity() {
                 val hasCompletedPreservationIntro by preferenceRepository.hasCompletedPreservationIntro
                     .collectAsState(initial = null)
                 val coroutineScope = rememberCoroutineScope()
+                LaunchedEffect(TranslationState.sourceLanguage) {
+                    viewModel.preloadOfflineSpeechModel(TranslationState.sourceLanguage)
+                }
                 LaunchedEffect(Unit) {
                     delay(3_000L)
                     minimumSplashDurationElapsed = true
@@ -278,14 +281,15 @@ class MainActivity : ComponentActivity() {
                             },
                         ) {
                             TranslateTextScreen(
-                                viewModel,
-                                onTranslate = {
-                                    resultOriginRoute = AppDestinations.TEXT
-                                    navController.navigate(AppDestinations.RESULT)
+                                viewModel = viewModel,
+                                onBack = { navController.popBackStack() },
+                                onHome = {
+                                    navController.navigate(AppDestinations.HOME) {
+                                        launchSingleTop = true
+                                        popUpTo(AppDestinations.HOME)
+                                    }
                                 },
-                            ) {
-                                navController.popBackStack()
-                            }
+                            )
                         }
                         composable(AppDestinations.VOICE) {
                             TranslateVoiceScreen(

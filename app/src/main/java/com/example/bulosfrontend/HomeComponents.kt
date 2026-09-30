@@ -119,7 +119,7 @@ fun FeatureCard(feature: HomeFeature, onClick: () -> Unit, modifier: Modifier = 
     Card(
         onClick = onClick,
         modifier = modifier
-            .heightIn(min = 118.dp)
+            .height(118.dp)
             .shadow(
                 elevation = cardElevation,
                 shape = cardShape,
@@ -129,7 +129,7 @@ fun FeatureCard(feature: HomeFeature, onClick: () -> Unit, modifier: Modifier = 
             ),
         interactionSource = interactionSource,
         shape = cardShape,
-        colors = CardDefaults.cardColors(containerColor = feature.backgroundColor),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         border = BorderStroke(
             width = 1.dp,
             color = cardBorderColor,
@@ -139,13 +139,16 @@ fun FeatureCard(feature: HomeFeature, onClick: () -> Unit, modifier: Modifier = 
             pressedElevation = 0.dp,
         ),
     ) {
-        Column(
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
+                .background(feature.backgroundColor)
                 .padding(horizontal = 16.dp, vertical = 14.dp),
         ) {
             Surface(
-                modifier = Modifier.size(iconContainerSize),
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .size(iconContainerSize),
                 shape = CircleShape,
                 color = Color(0xFFFFFEFA),
                 border = BorderStroke(0.75.dp, Color(0xFFE8E2D8)),
@@ -160,32 +163,37 @@ fun FeatureCard(feature: HomeFeature, onClick: () -> Unit, modifier: Modifier = 
                     )
                 }
             }
-            Spacer(Modifier.height(14.dp))
-            Text(
-                stringResource(feature.titleRes),
-                color = textColor,
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = 14.sp,
-                    lineHeight = 18.sp,
-                    letterSpacing = 0.sp,
-                ),
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Spacer(Modifier.height(3.dp))
-            Text(
-                stringResource(feature.subtitleRes),
-                color = textColor,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = 12.sp,
-                    lineHeight = 16.sp,
-                    letterSpacing = 0.sp,
-                ),
-                fontWeight = FontWeight.Normal,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(top = 58.dp),
+            ) {
+                Text(
+                    stringResource(feature.titleRes),
+                    color = textColor,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = 14.sp,
+                        lineHeight = 18.sp,
+                        letterSpacing = 0.sp,
+                    ),
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    stringResource(feature.subtitleRes),
+                    color = textColor,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp,
+                        letterSpacing = 0.sp,
+                    ),
+                    fontWeight = FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }

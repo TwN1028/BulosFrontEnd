@@ -163,6 +163,53 @@ class DictionaryManager(private val context: Context) {
         return match?.get(targetLang)
     }
 
+    private fun findFuzzyMatch(text: String, sourceLang: UiLanguage, targetLang: UiLanguage, threshold: Double): String? {
+        val input = clean(text)
+        if (input.length < 3) return null
+        var bestMatch: String? = null
+        var highestSimilarity = threshold
+
+        dictionaryData.forEach { row ->
+            val sourceVal = row[sourceLang] ?: return@forEach
+            val sim = calculateSimilarity(input, sourceVal)
+            if (sim >= highestSimilarity) {
+                highestSimilarity = sim
+                bestMatch = row[targetLang]
+            }
+        }
+        return bestMatch
+    }
+
+    private fun levenshteinDistance(lhs: CharSequence, rhs: CharSequence): Int {
+        val lhsLength = lhs.length
+        val rhsLength = rhs.length
+        var cost = IntArray(lhsLength + 1) { it }
+        var newCost = IntArray(lhsLength + 1) { 0 }
+
+        for (i in 1..rhsLength) {
+            newCost[0] = i
+            for (j in 1..lhsLength) {
+                val match = if (lhs[j - 1] == rhs[i - 1]) 0 else 1
+                newCost[j] = minOf(
+                    newCost[j - 1] + 1,
+                    cost[j] + 1,
+                    cost[j - 1] + match
+                )
+            }
+            val swap = cost
+            cost = newCost
+            newCost = swap
+        }
+        return cost[lhsLength]
+    }
+
+    private fun calculateSimilarity(s1: String, s2: String): Double {
+        val maxLen = maxOf(s1.length, s2.length)
+        if (maxLen == 0) return 1.0
+        val dist = levenshteinDistance(s1.lowercase(), s2.lowercase())
+        return 1.0 - (dist.toDouble() / maxLen.toDouble())
+    }
+
     fun translate(text: String, sourceLang: UiLanguage, targetLang: UiLanguage): String {
         val rawInput = text.trim()
         if (rawInput.isEmpty()) return ""
@@ -176,7 +223,6 @@ class DictionaryManager(private val context: Context) {
         if (dictionaryData.isEmpty()) return "Dictionary is empty"
 
         // --- TIER 1: Full Sentence Match ---
-        // Clean punctuation for matching but preserve for result
         val sentenceRegex = Regex("^(.+?)([,.!?]+)?$")
         val matchResult = sentenceRegex.find(rawInput)
         val inputBody = clean(matchResult?.groupValues?.get(1) ?: rawInput)
@@ -189,13 +235,11 @@ class DictionaryManager(private val context: Context) {
         var currentText = rawInput
         val replacements = mutableListOf<String>()
 
-        // phrasesCache is already sorted by word count descending
         phrasesCache.forEach { row ->
             val phrase = row[sourceLang] ?: ""
             val translation = row[targetLang] ?: ""
 
             if (phrase.isNotEmpty() && phrase.contains(" ")) {
-                // Word boundary check (respects punctuation/spaces)
                 val regex = Regex("(?i)(?<![a-zA-Z0-9-])${Regex.escape(phrase)}(?![a-zA-Z0-9-])")
                 if (regex.containsMatchIn(currentText)) {
                     val placeholder = "[[P${replacements.size}]]"
@@ -210,11 +254,9 @@ class DictionaryManager(private val context: Context) {
         val translatedTokens = tokens.map { token ->
             if (token.startsWith("[[P") && token.endsWith("]]")) return@map token
 
-            // Try direct word match
             val directMatch = findExactMatch(token, sourceLang, targetLang)
             if (directMatch != null) return@map directMatch
 
-            // Punctuation-aware word match
             val wordMatch = Regex("^(.+?)([,.!?]+)?$").find(token)
             if (wordMatch != null) {
                 val coreWord = wordMatch.groupValues[1]
@@ -223,12 +265,19 @@ class DictionaryManager(private val context: Context) {
                 if (coreMatch != null) return@map coreMatch + punctuation
             }
 
-            token // Keep original if no match
+            // --- TIER 4: Fuzzy Matching (High Threshold) ---
+            val fuzzyHigh = findFuzzyMatch(token, sourceLang, targetLang, 0.80)
+            if (fuzzyHigh != null) return@map fuzzyHigh
+
+            // --- TIER 5: Fuzzy Matching (Lower Threshold / More Leniency) ---
+            val fuzzyLow = findFuzzyMatch(token, sourceLang, targetLang, 0.60)
+            if (fuzzyLow != null) return@map fuzzyLow
+
+            token
         }
 
         var finalResult = translatedTokens.joinToString(" ")
 
-        // Restore replaced phrases
         replacements.forEachIndexed { index, translation ->
             finalResult = finalResult.replace("[[P$index]]", translation)
         }

@@ -1,7 +1,9 @@
 package com.example.bulosfrontend
 
 import android.content.ClipData
-import android.content.Intent
+import android.content.ClipboardManager
+import android.content.Context
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -11,15 +13,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,77 +26,34 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.platform.ClipEntry
-import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.os.ConfigurationCompat
 import com.example.bulosfrontend.ui.theme.*
 import java.util.Locale
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @Composable
 fun TranslateTextScreen(
     viewModel: MainViewModel,
+    onTranslate: () -> Unit,
     onBack: () -> Unit,
-    onHome: () -> Unit,
 ) {
     var text by remember { mutableStateOf("") }
     val content = viewModel.content
     val labels = content.textTranslation
-    val resultLabels = content.speechResult
     val context = LocalContext.current
-    val clipboard = LocalClipboard.current
-    val coroutineScope = rememberCoroutineScope()
-    val keyboardController = LocalSoftwareKeyboardController.current
-    val focusManager = LocalFocusManager.current
-    val translateButtonRequester = remember { BringIntoViewRequester() }
-    var isInputFocused by remember { mutableStateOf(false) }
-    var showCopiedFeedback by remember { mutableStateOf(false) }
     val configuration = LocalConfiguration.current
     val currentLocale = remember(configuration) {
         ConfigurationCompat.getLocales(configuration)[0] ?: Locale.ROOT
     }
     val isTranslationLoading = viewModel.textTranslationState is TextTranslationUiState.Loading
-    val successfulResponse =
-        (viewModel.textTranslationState as? TextTranslationUiState.Success)?.response
-            ?.takeIf { it.originalText == text && it.translatedText.isNotBlank() }
-    val successfulTranslation = successfulResponse?.translatedText
-    val hasSuccessfulResult = successfulTranslation != null
-    val translationCardHeight = if (hasSuccessfulResult) 156.dp else 220.dp
-    val inputFieldHeight = if (hasSuccessfulResult) 66.dp else 130.dp
-
-    fun submitTranslation() {
-        if (text.isBlank() || isTranslationLoading) return
-        keyboardController?.hide()
-        focusManager.clearFocus(force = true)
-        viewModel.translateText(text)
-    }
-
-    LaunchedEffect(isInputFocused) {
-        if (isInputFocused) {
-            delay(300)
-            translateButtonRequester.bringIntoView()
-        }
-    }
-
-    LaunchedEffect(showCopiedFeedback) {
-        if (showCopiedFeedback) {
-            delay(1_800)
-            showCopiedFeedback = false
-        }
-    }
 
     LaunchedEffect(viewModel) {
         viewModel.textTranslationEvents.collect { event ->
             when (event) {
-                TextTranslationEvent.NavigateToResult -> Unit
+                TextTranslationEvent.NavigateToResult -> onTranslate()
                 is TextTranslationEvent.ShowError ->
                     Toast.makeText(context, event.message, Toast.LENGTH_LONG).show()
             }
@@ -157,216 +112,79 @@ fun TranslateTextScreen(
                     value = text,
                     placeholder = stringResource(labels.inputPlaceholderRes, TranslationState.sourceLanguage),
                     onValueChange = { if (it.length <= 100) text = it },
-                    minimumHeight = translationCardHeight,
-                    textFieldHeight = inputFieldHeight,
-                    headerAction = if (text.isNotEmpty()) {
-                        {
+                    footer = {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                stringResource(content.characterCountRes, text.length, 100),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.labelSmall,
+                            )
                             TextButton(
-                                onClick = { text = "" },
+                                onClick = {
+                                    text = ""
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                        clipboard.clearPrimaryClip()
+                                    } else {
+                                        clipboard.setPrimaryClip(ClipData.newPlainText("", ""))
+                                    }
+                                },
                                 modifier = Modifier.height(28.dp),
                                 contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
                             ) {
                                 Text(
-                                    text = stringResource(labels.clearRes),
-                                    color = Color(0xFF36583A),
-                                    style = MaterialTheme.typography.labelMedium,
+                                    text = stringResource(R.string.clear_all),
+                                    style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.SemiBold,
                                 )
                             }
                         }
-                    } else {
-                        null
                     },
-                    footer = {
-                        Text(
-                            stringResource(content.characterCountRes, text.length, 100),
-                            modifier = Modifier.padding(start = 2.dp, bottom = 2.dp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.labelMedium,
-                        )
-                    },
-                    onSubmit = ::submitTranslation,
-                    onFocusChanged = { isInputFocused = it },
                 )
-                Spacer(Modifier.height(if (hasSuccessfulResult) 8.dp else 16.dp))
-                if (hasSuccessfulResult) {
+                Spacer(Modifier.height(16.dp))
+                Button(
+                    onClick = {
+                        viewModel.translateText(text)
+                    },
+                    enabled = text.isNotBlank() && !isTranslationLoading,
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .widthIn(max = 480.dp)
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF4F7045),
+                        contentColor = WarmWhite,
+                        disabledContainerColor = Sand.copy(alpha = 0.50f),
+                        disabledContentColor = MutedText,
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(disabledElevation = 0.dp),
+                ) {
                     Text(
-                        text = "${TranslationState.sourceLanguage} → ${TranslationState.targetLanguage}",
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.labelLarge,
-                        textAlign = TextAlign.Center,
+                        stringResource(labels.translateToRes, TranslationState.targetLanguage),
+                        fontWeight = FontWeight.Bold,
                     )
-                } else {
-                    Button(
-                        onClick = ::submitTranslation,
-                        enabled = text.isNotBlank() && !isTranslationLoading,
-                        modifier = Modifier
-                            .align(Alignment.CenterHorizontally)
-                            .widthIn(max = 480.dp)
-                            .fillMaxWidth()
-                            .bringIntoViewRequester(translateButtonRequester)
-                            .height(56.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF4F7045),
-                            contentColor = WarmWhite,
-                            disabledContainerColor = Sand.copy(alpha = 0.50f),
-                            disabledContentColor = MutedText,
-                        ),
-                        elevation = ButtonDefaults.buttonElevation(disabledElevation = 0.dp),
-                    ) {
-                        if (isTranslationLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp,
-                                color = MutedText,
-                            )
-                            Spacer(Modifier.width(10.dp))
-                            Text(stringResource(labels.translatingRes), fontWeight = FontWeight.Bold)
-                        } else {
-                            Text(
-                                stringResource(labels.translateToRes, TranslationState.targetLanguage),
-                                fontWeight = FontWeight.Bold,
-                            )
-                        }
-                    }
                 }
-                Spacer(Modifier.height(if (hasSuccessfulResult) 8.dp else 16.dp))
-                TranslationOutputCard(
-                    label = TranslationState.targetLanguage.uppercase(currentLocale),
-                    translatedText = successfulTranslation,
-                    placeholder = stringResource(labels.outputPlaceholderRes),
-                    minimumHeight = translationCardHeight,
-                )
-                if (hasSuccessfulResult) {
-                    Spacer(Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        ResultSecondaryAction(
-                            text = stringResource(resultLabels.copyRes),
-                            icon = Icons.Default.ContentCopy,
-                            onClick = {
-                                coroutineScope.launch {
-                                    clipboard.setClipEntry(
-                                        ClipEntry(
-                                            ClipData.newPlainText(
-                                                "Translated text",
-                                                successfulTranslation,
-                                            ),
-                                        ),
-                                    )
-                                    showCopiedFeedback = true
-                                }
-                            },
-                            modifier = Modifier.weight(1f),
-                        )
-                        ResultSecondaryAction(
-                            text = stringResource(resultLabels.shareRes),
-                            icon = Icons.Default.Share,
-                            emphasized = true,
-                            onClick = {
-                                val shareText =
-                                    "${TranslationState.sourceLanguage} → ${TranslationState.targetLanguage}\n\n$successfulTranslation"
-                                val intent = Intent(Intent.ACTION_SEND).apply {
-                                    type = "text/plain"
-                                    putExtra(Intent.EXTRA_TEXT, shareText)
-                                }
-                                context.startActivity(
-                                    Intent.createChooser(
-                                        intent,
-                                        context.getString(resultLabels.shareChooserTitleRes),
-                                    ),
-                                )
-                            },
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Button(
-                        onClick = viewModel::resetTextTranslationResult,
-                        modifier = Modifier
-                            .align(Alignment.CenterHorizontally)
-                            .widthIn(max = 480.dp)
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF4F7045),
-                            contentColor = WarmWhite,
-                        ),
-                    ) {
-                        Text(
-                            stringResource(resultLabels.translateAgainRes),
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
+                TextButton(
+                    onClick = onBack,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                        .height(48.dp),
+                ) {
+                    Text(
+                        stringResource(content.goBackRes),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
                 }
                 Spacer(Modifier.height(12.dp))
             }
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 12.dp),
-            ) {
-                TextButton(
-                    onClick = onHome,
-                    modifier = Modifier.align(Alignment.Center).height(48.dp),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
-                ) {
-                    Text(
-                        text = stringResource(labels.backRes),
-                        color = Color(0xFF36583A),
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-            }
         }
-            TopToastNotification(
-                visible = showCopiedFeedback,
-                message = stringResource(content.copiedRes),
-                innerPadding = PaddingValues(top = 88.dp),
-            )
-        }
-    }
-}
-
-@Composable
-private fun TranslationOutputCard(
-    label: String,
-    translatedText: String?,
-    placeholder: String,
-    minimumHeight: Dp,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth().heightIn(min = minimumHeight),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = androidx.compose.foundation.BorderStroke(
-            TranslationInputBorderWidth,
-            TranslationInputBorderColor,
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    ) {
-        Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) {
-            Text(
-                text = label,
-                color = MaterialTheme.colorScheme.secondary,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.height(16.dp))
-            Text(
-                text = translatedText?.takeIf { it.isNotBlank() } ?: placeholder,
-                color = if (translatedText.isNullOrBlank()) {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
-                style = MaterialTheme.typography.bodyLarge,
-            )
         }
     }
 }

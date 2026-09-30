@@ -198,6 +198,8 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
                     title = stringResource(content.resultHeaderRes),
                     onBack = onBack,
                     iconRes = R.drawable.ic_lucide_mic,
+                    isOnline = viewModel.isOnline,
+                    isServerReady = viewModel.isServerReady,
                     trailingContent = {
                         IconButton(
                             onClick = viewModel::saveCurrentTranslation,
@@ -240,6 +242,7 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
                                 containerColor = MaterialTheme.colorScheme.surface,
                                 modifier = Modifier.weight(1f),
                                 scrollableText = true,
+                                sourceInfo = TranslationState.translationSource,
                             )
                         }
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -307,6 +310,8 @@ fun FeaturePatternHeader(
     headerBottomExtension: Dp = AppHeaderBottomExtension,
     titleTopPadding: Dp = AppHeaderTitleTopPadding,
     showBackButton: Boolean = true,
+    isOnline: Boolean? = null,
+    isServerReady: Boolean = true,
     trailingContent: @Composable RowScope.() -> Unit = {},
 ) {
     val hasExtendedHeader = headerBottomExtension > 0.dp
@@ -364,6 +369,10 @@ fun FeaturePatternHeader(
                         overflow = TextOverflow.Clip,
                     )
                 }
+            }
+            if (isOnline != null) {
+                ConnectivityStatusPill(isOnline, isServerReady)
+                Spacer(Modifier.width(8.dp))
             }
             trailingContent()
         }
@@ -488,10 +497,7 @@ private fun CompactLanguageMenu(
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             languages
-                .filterNot { language ->
-                    language.equals(selected, ignoreCase = true) ||
-                        language.equals(unavailableLanguage, ignoreCase = true)
-                }
+                .filterNot { it.equals(unavailableLanguage, ignoreCase = true) }
                 .forEach { language ->
                     DropdownMenuItem(
                         text = { Text(language) },
@@ -551,6 +557,7 @@ private fun TranslationTextCard(
     containerColor: Color,
     modifier: Modifier = Modifier,
     scrollableText: Boolean = false,
+    sourceInfo: String? = null,
 ) {
     Card(
         modifier = modifier
@@ -573,7 +580,23 @@ private fun TranslationTextCard(
                 .fillMaxWidth()
                 .padding(horizontal = 18.dp, vertical = 16.dp),
         ) {
-            Text(label, color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(label, color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                sourceInfo?.let { info ->
+                    Surface(
+                        color = if (info == "Online") MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(4.dp),
+                        modifier = Modifier.padding(start = 8.dp)
+                    ) {
+                        Text(
+                            text = info.uppercase(),
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                            color = if (info == "Online") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
             Spacer(Modifier.height(12.dp))
             Text(
                 text = text,
@@ -608,7 +631,7 @@ private fun LanguageDirectionPill(source: String, target: String) {
 }
 
 @Composable
-internal fun ResultSecondaryAction(
+private fun ResultSecondaryAction(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,

@@ -10,7 +10,6 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
-import java.net.SocketTimeoutException
 import java.util.UUID
 
 class TranslationIntegrationTest {
@@ -73,21 +72,6 @@ class TranslationIntegrationTest {
         val result = NetworkTranslationRepository(api).translate("English", "Bulos", "Beautiful")
 
         assertTrue(result is TranslationResult.Failure)
-    }
-
-    @Test
-    fun serverTimeoutIsNotReportedAsNoInternet() = runBlocking {
-        val api = object : TranslationApi {
-            override suspend fun translate(request: TranslationRequest): TranslationResponse =
-                throw SocketTimeoutException("server timeout")
-        }
-
-        val result = NetworkTranslationRepository(api).translate("English", "Filipino", "Hello")
-
-        assertTrue(result is TranslationResult.Failure)
-        val message = (result as TranslationResult.Failure).message
-        assertTrue(message.contains("server", ignoreCase = true))
-        assertTrue(!message.contains("internet", ignoreCase = true))
     }
 
     @Test

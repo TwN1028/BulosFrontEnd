@@ -204,7 +204,7 @@ class MainActivity : ComponentActivity() {
                                 titleRes = DialogueProvider.getDialogue(UiLanguage.ENGLISH).home.selectionTitleRes,
                                 selectedLanguage = null,
                                 onLanguageSelected = { language ->
-                                    viewModel.selectUiLanguage(language)
+                                    viewModel.selectHomeUiLanguage(language)
                                     navController.navigate(AppDestinations.PRESERVATION_INTRO) {
                                         popUpTo(AppDestinations.LANGUAGE_SELECTION) { inclusive = true }
                                     }

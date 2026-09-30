@@ -103,8 +103,8 @@
     <string name="ui_speech_idle_fil">Pindutin upang magsimulang mag-record</string>
     <string name="ui_speech_listening_fil">Nakikinig…</string>
     <string name="ui_no_speech_recognized_fil">Walang nakilalang pananalita. Subukan muli.</string>
-    <string name="ui_done_recording_fil">Tapos Na</string>
-    <string name="ui_cancel_recording_fil">Kanselahin ang Recording</string>
+    <string name="ui_done_recording_fil">Tapusin</string>
+    <string name="ui_cancel_recording_fil">Kanselahin</string>
     <string name="ui_try_again_fil">Subukan Muli</string>
     <string name="ui_speech_review_fil">Tapos na ang recording. Ayusin ang teksto kung kailangan</string>
     <string name="ui_transcribing_fil">Isinusulat</string>

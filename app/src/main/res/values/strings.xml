@@ -177,6 +177,7 @@
     <string name="splash_logo_content_description">Bulos Translator app icon</string>
     <string name="splash_title">Dumagat Speech\nTranslator</string>
     <string name="splash_subtitle">Preserving Indigenous Language\nThrough Technology</string>
+    <string name="splash_preparing">Preparing your translator…</string>
     <string name="splash_initiative">Dumagat Speech Translator v2.0 · Interactive Prototype</string>
 
     <!-- Redesigned home screen: Filipino -->

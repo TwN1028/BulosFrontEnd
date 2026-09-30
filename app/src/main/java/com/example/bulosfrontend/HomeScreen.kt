@@ -544,14 +544,14 @@ fun HomeRecordingScreen(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .padding(bottom = bottomHeroHeight + 4.dp),
+                        .padding(bottom = (bottomHeroHeight - 20.dp).coerceAtLeast(0.dp)),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
                         text = when {
                             recognitionFailed -> viewModel.speechRecognitionError
                                 ?: stringResource(labels.noSpeechRecognizedRes)
-                            viewModel.voiceInputReady -> "Speech captured. Tap Done to continue."
+                            viewModel.voiceInputReady -> "Speech captured. Tap Finish to continue."
                             else -> ""
                         },
                         color = Color.White,
@@ -563,26 +563,20 @@ fun HomeRecordingScreen(
                     }
                     when {
                         viewModel.isRecording || viewModel.voiceInputReady -> {
-                            Button(
-                                onClick = ::completeRecordingOnce,
-                                modifier = Modifier.fillMaxWidth().height(52.dp),
-                                shape = RoundedCornerShape(18.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF4F7045),
-                                    contentColor = Color(0xFFFFFBF4),
-                                ),
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
-                                Text(
-                                    stringResource(labels.doneRecordingRes),
-                                    fontWeight = FontWeight.SemiBold,
+                                ResultSecondaryAction(
+                                    text = stringResource(labels.cancelRecordingRes),
+                                    onClick = ::cancelOnce,
+                                    modifier = Modifier.weight(1f),
                                 )
-                            }
-                            TextButton(onClick = ::cancelOnce) {
-                                Text(
-                                    stringResource(labels.cancelRecordingRes),
-                                    color = PrimaryGreen,
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.SemiBold,
+                                ResultSecondaryAction(
+                                    text = stringResource(labels.doneRecordingRes),
+                                    onClick = ::completeRecordingOnce,
+                                    modifier = Modifier.weight(1f),
+                                    emphasized = true,
                                 )
                             }
                         }
@@ -879,10 +873,21 @@ private fun BottomSpeechMicrophoneHero(
         }
 
         if (isProcessing || statusText.isNotEmpty()) {
+            val isIdlePrompt = !isProcessing && !isRecording && recordingSeconds == null
             Column(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 76.dp, start = 16.dp, end = 16.dp),
+                modifier = if (isIdlePrompt) {
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(
+                            start = 16.dp,
+                            end = 16.dp,
+                            bottom = microphoneBottomPadding + microphoneButtonSize + 16.dp,
+                        )
+                } else {
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 76.dp, start = 16.dp, end = 16.dp)
+                },
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 if (isProcessing) {
@@ -903,6 +908,7 @@ private fun BottomSpeechMicrophoneHero(
                 }
                 if (recordingSeconds != null) {
                     val boundedSeconds = recordingSeconds.coerceIn(0L, 60L)
+                    val remainingSeconds = 60L - boundedSeconds
                     Spacer(Modifier.height(4.dp))
                     Text(
                         text = "${boundedSeconds / 60}:${(boundedSeconds % 60).toString().padStart(2, '0')} / 1:00",
@@ -916,7 +922,11 @@ private fun BottomSpeechMicrophoneHero(
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        text = if (boundedSeconds >= 50L) "10 seconds left" else "",
+                        text = when (remainingSeconds) {
+                            1L -> "1 second left"
+                            in 2L..10L -> "$remainingSeconds seconds left"
+                            else -> ""
+                        },
                         color = Color.White.copy(alpha = 0.68f),
                         style = MaterialTheme.typography.labelSmall,
                         textAlign = TextAlign.Center,

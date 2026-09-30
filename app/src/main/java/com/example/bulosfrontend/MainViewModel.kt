@@ -124,6 +124,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         viewModelScope.launch {
             languagePreferences.selectedLanguage.collect { language ->
+                if (!isLanguagePreferenceLoaded && language != null) {
+                    TranslationState.synchronizeSourceWithUiLanguage(language)
+                }
                 selectedUiLanguage = language
                 isLanguagePreferenceLoaded = true
             }
@@ -317,7 +320,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val language = TranslationState.sourceLanguage
         usesVoskRecognizer = voskModelManager.supports(language)
         if (usesVoskRecognizer && canUseOnDeviceRecognizer()) {
-            startOnDeviceSpeechRecognition(language)
+            startAndroidSpeechRecognition(language, preferOffline = true)
+        } else if (usesVoskRecognizer && isOnline && canUseSystemRecognizer()) {
+            startAndroidSpeechRecognition(language, preferOffline = false)
         } else if (usesVoskRecognizer) {
             startVoskSpeechRecognition(language)
         } else {
@@ -326,10 +331,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun preloadOfflineSpeechModel(language: String) {
-        if (!language.equals("Filipino", ignoreCase = true)) return
+        if (!voskModelManager.supports(language)) return
         if (voskModelLanguage == language && voskModel != null) return
-        if (voskPreloadJob?.isActive == true) return
+        val previousPreload = voskPreloadJob
         voskPreloadJob = viewModelScope.launch {
+            previousPreload?.join()
             runCatching {
                 val loadedModel = withContext(Dispatchers.IO) { voskModelManager.load(language) }
                 if (voskModelLanguage != language || voskModel == null) {
@@ -343,13 +349,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private fun canUseSystemRecognizer(): Boolean =
+        SpeechRecognizer.isRecognitionAvailable(getApplication())
+
     private fun canUseOnDeviceRecognizer(): Boolean {
         val context = getApplication<Application>()
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
             SpeechRecognizer.isOnDeviceRecognitionAvailable(context)
     }
 
-    private fun startOnDeviceSpeechRecognition(language: String) {
+    private fun startAndroidSpeechRecognition(language: String, preferOffline: Boolean) {
         val context = getApplication<Application>()
         val sessionId = ++speechSessionId
         isRecorderStarting = true
@@ -357,11 +366,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         usesOnDeviceRecognizer = true
         TranslationState.textToTranslate = ""
         val recognizer = runCatching {
-            SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
+            if (preferOffline) {
+                SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
+            } else {
+                SpeechRecognizer.createSpeechRecognizer(context)
+            }
         }.getOrElse {
             usesOnDeviceRecognizer = false
             isRecorderStarting = false
-            startVoskSpeechRecognition(language)
+            startFallbackSpeechRecognition(language, preferOffline)
             return
         }
         onDeviceSpeechRecognizer = recognizer
@@ -391,7 +404,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (sessionId != speechSessionId || !usesOnDeviceRecognizer) return
                 if (shouldFallbackFromOnDevice(error)) {
                     finishOnDeviceRecognition(markFinished = false)
-                    startVoskSpeechRecognition(language)
+                    startFallbackSpeechRecognition(language, preferOffline)
                 } else {
                     speechRecognitionError = onDeviceRecognitionError(error)
                     finishOnDeviceRecognition(markFinished = true)
@@ -410,17 +423,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             override fun onEvent(eventType: Int, params: Bundle?) = Unit
         })
-        recognizer.startListening(onDeviceRecognizerIntent(context.packageName, language))
+        recognizer.startListening(
+            androidRecognizerIntent(context.packageName, language, preferOffline),
+        )
     }
 
-    private fun onDeviceRecognizerIntent(packageName: String, language: String) =
+    private fun startFallbackSpeechRecognition(language: String, attemptedOffline: Boolean) {
+        if (attemptedOffline && isOnline && canUseSystemRecognizer()) {
+            startAndroidSpeechRecognition(language, preferOffline = false)
+        } else {
+            startVoskSpeechRecognition(language)
+        }
+    }
+
+    private fun androidRecognizerIntent(
+        packageName: String,
+        language: String,
+        preferOffline: Boolean,
+    ) =
         Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             val tag = if (language.equals("Filipino", ignoreCase = true)) "fil-PH" else "en-PH"
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, tag)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, tag)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, preferOffline)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
             putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
         }

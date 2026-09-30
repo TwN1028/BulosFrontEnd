@@ -3,7 +3,6 @@ package com.example.bulosfrontend
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -14,7 +13,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.bulosfrontend.ui.theme.LocalBulosDarkTheme
 import com.example.bulosfrontend.ui.theme.PatternGreen
 import com.example.bulosfrontend.ui.theme.PrimaryGreen
 
@@ -45,29 +43,22 @@ fun HomeHeaderBackground(
     }
 }
 
-@Composable
 fun homeHeaderGradientBrush(includeCreamTail: Boolean = true): Brush {
-    val darkTheme = LocalBulosDarkTheme.current
-    val backgroundColor = MaterialTheme.colorScheme.background
-    return Brush.verticalGradient(*homeHeaderGradientStops(includeCreamTail, backgroundColor))
+    return Brush.verticalGradient(*homeHeaderGradientStops(includeCreamTail))
 }
 
-@Composable
-fun appHeaderGradientBrush(): Brush {
-    val backgroundColor = MaterialTheme.colorScheme.background
-    return Brush.verticalGradient(*homeHeaderGradientStops(includeCreamTail = true, backgroundColor))
-}
+fun appHeaderGradientBrush(): Brush =
+    Brush.verticalGradient(*homeHeaderGradientStops(includeCreamTail = true))
 
-@Composable
-fun speechTranslationGradientBrush(): Brush {
-    val backgroundColor = MaterialTheme.colorScheme.background
-    return Brush.verticalGradient(*homeHeaderGradientStops(includeCreamTail = true, backgroundColor))
-}
+fun speechTranslationGradientBrush(): Brush =
+    Brush.verticalGradient(
+        0.00f to Color(0xFF1E3F20),
+        0.32f to Color(0xFF5E7A4A),
+        0.70f to Color(0xFFEAEBD9),
+        1.00f to Color(0xFFF7F8F2),
+    )
 
-fun homeHeaderGradientStops(
-    includeCreamTail: Boolean = true,
-    tailColor: Color = HomeContentCream
-): Array<Pair<Float, Color>> =
+fun homeHeaderGradientStops(includeCreamTail: Boolean = true): Array<Pair<Float, Color>> =
     buildList {
         add(0.00f to Color(0xFF1E3F20))
         add(0.30f to Color(0xFF4F7045))
@@ -75,7 +66,7 @@ fun homeHeaderGradientStops(
             add(0.56f to Color(0xFF879B70))
             add(0.78f to Color(0xFFC8CFB3))
             add(0.92f to Color(0xFFEDEBDD))
-            add(1.00f to tailColor)
+            add(1.00f to HomeContentCream)
         } else {
             clear()
             add(0.00f to Color(0xFF1E3F20))
@@ -83,7 +74,7 @@ fun homeHeaderGradientStops(
             add(0.48f to Color(0xFF5E7A4A))
             add(0.66f to Color(0xFFA6B394))
             add(0.84f to Color(0xFFE6E5D6))
-            add(1.00f to tailColor)
+            add(1.00f to HomeContentCream)
         }
     }.toTypedArray()
 

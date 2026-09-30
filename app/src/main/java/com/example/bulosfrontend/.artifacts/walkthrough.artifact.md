@@ -1,31 +1,26 @@
-# Walkthrough: Design Reversion to "Vosk API" State
+# Walkthrough: Enhanced History Item Layout
 
-I have successfully reverted the purely design changes of the Bulos Translator to the state introduced in the "apply Vosk API" commit, while carefully preserving all the functional logic added since then.
+I have updated the layout of the items in the **Translation History** screen to follow the requested format, making it easier to see the relationship between the source and translated text.
 
-## Key Changes Made
+## Changes Made
 
-### 1. Restored "EarthlyBrown" Design Foundation
-- **Reverted `Design.kt`**: Restored the original color palette (EarthlyBrown, ButtonBrown, etc.), dimension constants, and component shapes (ButtonShape, CardShape).
-- **Reverted `Color.kt`**: Restored the light/warm color set and removed recently added dark mode overrides to ensure the app matches the previous design language.
-
-### 2. Reverted UI Components & Layouts
-- **Consolidated `UIComponents.kt`**: Re-implemented the previous versions of shared headers, app bars, and navigation elements. I also manually re-implemented the missing `TranslationInputCard` to match the exact look and feel of the target commit.
-- **Restored Home Components**: Reverted `HomeComponents.kt` and `HomeScreen.kt` to use the previous card styles and layout structure, while maintaining the new connectivity status logic.
-
-### 3. Preserved Functional Logic
-- **Vosk ASR**: Kept all code related to the working Vosk integration, model loading, and speech processing.
-- **Persistent History**: The DataStore-backed history repository remains fully functional and integrated with the reverted UI.
-- **Server Diagnostics**: The Connectivity Status Pill and server wake-up logic were preserved and restyled to match the restored design.
-
-### 4. Bug & Error Fixes
-- **Reference Resolution**: Fixed all unresolved references caused by the removal of newer design constants by mapping them back to the restored foundation.
-- **ViewModel Sync**: Added the `wasRecordingCancelled` state to the ViewModel to support the restored UI feedback mechanisms.
+### 1. Updated `HistoryCard` Layout
+- Modified the `HistoryCard` component in [Screens.kt](file:///D:/Android_Studio_Projects/app/src/main/java/com/example/bulosfrontend/Screens.kt).
+- Refactored the previous row-based header into a centered column-based stack.
+- Each history item now displays:
+    1. **Source Language and Input Text**: e.g., "English: I am a tree." (Bold)
+    2. **Downward Arrow**: A primary-colored arrow pointing from input to output.
+    3. **Target Language and Translated Text**: e.g., "Filipino: Ako ay isang puno." (Primary Color)
 
 ## Verification Results
 
 ### Automated Tests
-- Successfully ran `gradle assembleDebug`. The project is now free of compile errors and building with the restored design.
+- Successfully ran `gradle assembleDebug`. The new layout and icons are correctly integrated.
 
 ### Manual Verification
-- **UI Consistency**: Confirmed that the app now uses the "EarthlyBrown" theme across all screens (Home, Text Translation, Voice Review, History, and Settings).
-- **Functional Integrity**: Verified that speech recognition still triggers, translations are processed, and history entries persist correctly.
+- Verified that the History screen displays translations in the new vertical format.
+- Confirmed that the text is centered within each card for a balanced visual appearance.
+- Verified that the downward arrow correctly separates the source and result.
+
+> [!TIP]
+> This new vertical format significantly improves readability, especially for longer sentences, by clearly labeling both the input and the result with their respective languages.

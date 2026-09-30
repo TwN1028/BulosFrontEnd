@@ -2,10 +2,8 @@ package com.example.bulosfrontend
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,131 +20,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.bulosfrontend.ui.theme.Aileron
-
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-
-val TranslationInputBorderColor = Color(0xFFE5DDD2).copy(alpha = 0.65f)
-val TranslationInputBorderWidth = 0.5.dp
-
-@Composable
-fun TranslationInputCard(
-    label: String,
-    value: String,
-    placeholder: String,
-    onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    editingEnabled: Boolean = true,
-    footer: @Composable (() -> Unit)? = null,
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = 106.dp)
-            .shadow(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(16.dp),
-                clip = false,
-                ambientColor = Color.Black.copy(alpha = 0.08f),
-                spotColor = Color.Black.copy(alpha = 0.08f),
-            ),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(TranslationInputBorderWidth, TranslationInputBorderColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    ) {
-        Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) {
-            Text(
-                text = label,
-                color = MaterialTheme.colorScheme.secondary,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.height(12.dp))
-            BasicTextField(
-                value = value,
-                onValueChange = onValueChange,
-                enabled = editingEnabled,
-                modifier = Modifier.fillMaxWidth().height(252.dp),
-                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontFamily = Aileron,
-                ),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Text,
-                    imeAction = ImeAction.Default,
-                ),
-                decorationBox = { innerTextField ->
-                    Box(Modifier.fillMaxSize()) {
-                        if (value.isEmpty()) {
-                            Text(
-                                text = placeholder,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.bodyLarge.copy(fontFamily = Aileron),
-                            )
-                        }
-                        innerTextField()
-                    }
-                },
-            )
-            if (footer != null) {
-                Spacer(Modifier.height(8.dp))
-                footer()
-            }
-        }
-    }
-}
-
-@Composable
-fun ConnectivityStatusPill(isOnline: Boolean, isServerReady: Boolean = true, modifier: Modifier = Modifier) {
-    val containerColor = when {
-        !isOnline -> MaterialTheme.colorScheme.surfaceVariant
-        !isServerReady -> Color(0xFFFFF8E1) // Amber for waking up
-        else -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-    }
-    val contentColor = when {
-        !isOnline -> MaterialTheme.colorScheme.onSurfaceVariant
-        !isServerReady -> Color(0xFFFFA000) // Amber for waking up
-        else -> MaterialTheme.colorScheme.primary
-    }
-    val dotColor = when {
-        !isOnline -> Color(0xFF9E9E9E)
-        !isServerReady -> Color(0xFFFFC107) // Amber dot
-        else -> Color(0xFF4CAF50)
-    }
-    val statusText = when {
-        !isOnline -> "Offline"
-        !isServerReady -> "Waking up..."
-        else -> "Online"
-    }
-
-    Surface(
-        modifier = modifier.height(24.dp),
-        color = containerColor,
-        shape = RoundedCornerShape(50),
-        border = BorderStroke(0.5.dp, contentColor.copy(alpha = 0.5f))
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Box(
-                Modifier
-                    .size(6.dp)
-                    .background(dotColor, CircleShape)
-            )
-            Text(
-                text = statusText,
-                style = MaterialTheme.typography.labelSmall,
-                color = contentColor,
-                fontWeight = FontWeight.Bold
-            )
-        }
-    }
-}
 
 @Composable
 internal fun Modifier.safeHeaderInsets(): Modifier = windowInsetsPadding(
@@ -189,8 +62,6 @@ fun SharedTopAppBar(
     @androidx.annotation.StringRes logoDescriptionRes: Int = R.string.app_logo_content_description,
     @androidx.annotation.DrawableRes iconRes: Int? = null,
     subtitle: String? = null,
-    isOnline: Boolean? = null,
-    isServerReady: Boolean = true,
     trailingContent: @Composable RowScope.() -> Unit = {},
     selectionMode: Boolean = false,
     selectionContent: @Composable RowScope.() -> Unit = {},
@@ -241,10 +112,6 @@ fun SharedTopAppBar(
                                 maxLines = 1,
                             )
                         }
-                    }
-                    if (isOnline != null) {
-                        ConnectivityStatusPill(isOnline, isServerReady)
-                        Spacer(Modifier.width(8.dp))
                     }
                     trailingContent()
                 }

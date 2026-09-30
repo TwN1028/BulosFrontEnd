@@ -5,11 +5,14 @@ import com.google.gson.annotations.SerializedName
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import retrofit2.HttpException
+import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.POST
 import java.io.IOException
+import java.net.SocketTimeoutException
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
@@ -33,6 +36,29 @@ interface TranslationApi {
     @POST("api/v1/translate/")
     suspend fun translate(@Body request: TranslationRequest): TranslationResponse
 }
+
+interface TranslationSupportApi {
+    @GET("api/v1/health/")
+    suspend fun healthCheck(): Response<Unit>
+
+    @GET("api/v1/dictionary/categories")
+    suspend fun dictionaryCategories(): Response<List<DictionaryCategoryResponse>>
+
+    @GET("api/v1/dictionary/category/{categoryKey}")
+    suspend fun dictionaryCategory(
+        @retrofit2.http.Path("categoryKey") categoryKey: String,
+    ): Response<List<OfflineDictionaryEntryResponse>>
+}
+
+data class DictionaryCategoryResponse(
+    @SerializedName("category_key") val categoryKey: String,
+)
+
+data class OfflineDictionaryEntryResponse(
+    @SerializedName("english") val english: String?,
+    @SerializedName("filipino") val filipino: String?,
+    @SerializedName("bulos") val bulos: String?,
+)
 
 object BackendLanguageCodes {
     private val codes = mapOf(
@@ -89,6 +115,11 @@ sealed interface TranslationResult {
 
 interface TranslationRepository {
     suspend fun translate(sourceLanguage: String, targetLanguage: String, text: String): TranslationResult
+    suspend fun wakeUpServer() = Unit
+    suspend fun loadOfflineModel() = Unit
+    suspend fun syncOfflineModel(): Boolean = false
+    val isServerReady: Boolean get() = true
+    val isOfflineModelLoaded: Boolean get() = false
 }
 
 class NetworkTranslationRepository(private val api: TranslationApi) : TranslationRepository {
@@ -120,11 +151,113 @@ class NetworkTranslationRepository(private val api: TranslationApi) : Translatio
         TranslationResult.Success(response)
     } catch (_: HttpException) {
         TranslationResult.Failure("Translation service is unavailable. Please try again.")
+    } catch (_: SocketTimeoutException) {
+        TranslationResult.Failure("The translation server took too long to respond. Please try again shortly.")
     } catch (_: IOException) {
         TranslationResult.Failure("Unable to connect. Check your internet and try again.")
     } catch (_: Exception) {
         TranslationResult.Failure("The translation response could not be read. Please try again.")
     }
+    }
+}
+
+class HybridTranslationRepository(
+    private val context: Context,
+    private val supportApi: TranslationSupportApi,
+    private val networkRepository: NetworkTranslationRepository,
+    private val offlineDictionary: OfflineDictionaryManager,
+) : TranslationRepository {
+    @Volatile
+    override var isServerReady: Boolean = false
+        private set
+    override val isOfflineModelLoaded: Boolean
+        get() = offlineDictionary.isLoaded
+
+    override suspend fun wakeUpServer() {
+        if (!NetworkUtils.isOnline(context)) {
+            isServerReady = false
+            return
+        }
+        repeat(20) {
+            val awake = runCatching {
+                val response = supportApi.healthCheck()
+                response.isSuccessful
+            }.getOrDefault(false)
+            if (awake) {
+                isServerReady = true
+                return
+            }
+            kotlinx.coroutines.delay(3_000L)
+        }
+        isServerReady = false
+    }
+
+    override suspend fun translate(
+        sourceLanguage: String,
+        targetLanguage: String,
+        text: String,
+    ): TranslationResult {
+        val networkResult = if (NetworkUtils.isOnline(context)) {
+            networkRepository.translate(sourceLanguage, targetLanguage, text)
+        } else {
+            TranslationResult.Failure("Unable to connect. Check your internet and try again.")
+        }
+        if (networkResult is TranslationResult.Success) {
+            isServerReady = true
+            return networkResult
+        }
+        val source = sourceLanguage.toUiLanguage()
+        val target = targetLanguage.toUiLanguage()
+        val offlineText = offlineDictionary.translate(text, source, target)
+            ?: return networkResult
+        return TranslationResult.Success(
+            TranslationResponse(
+                originalText = text,
+                translatedText = offlineText,
+                sourceLanguage = BackendLanguageCodes.forUiLabel(sourceLanguage),
+                targetLanguage = BackendLanguageCodes.forUiLabel(targetLanguage),
+                confidence = 1.0,
+                intermediateLanguage = null,
+                translationMethod = "offline_dictionary",
+            ),
+        )
+    }
+
+    override suspend fun syncOfflineModel(): Boolean {
+        if (!NetworkUtils.isOnline(context)) return false
+        return runCatching {
+            val categoriesResponse = supportApi.dictionaryCategories()
+            val categories = categoriesResponse.body()
+            if (!categoriesResponse.isSuccessful || categories == null) return false
+            val entries = buildList {
+                categories.forEach { category ->
+                    val response = supportApi.dictionaryCategory(category.categoryKey)
+                    if (!response.isSuccessful) return false
+                    response.body().orEmpty().forEach { entry ->
+                        add(
+                            buildMap {
+                                entry.english?.takeIf(String::isNotBlank)?.let { put("English", it) }
+                                entry.filipino?.takeIf(String::isNotBlank)?.let { put("Filipino", it) }
+                                entry.bulos?.takeIf(String::isNotBlank)?.let { put("Bulos", it) }
+                            },
+                        )
+                    }
+                }
+            }.filter(Map<String, String>::isNotEmpty)
+            if (entries.isEmpty()) return false
+            offlineDictionary.replace(entries)
+            true
+        }.getOrDefault(false)
+    }
+
+    override suspend fun loadOfflineModel() {
+        offlineDictionary.load()
+    }
+
+    private fun String.toUiLanguage(): UiLanguage = when (lowercase()) {
+        "filipino", "tagalog" -> UiLanguage.FILIPINO
+        "bulos" -> UiLanguage.BULOS
+        else -> UiLanguage.ENGLISH
     }
 }
 
@@ -147,12 +280,19 @@ object TranslationServiceProvider {
             .callTimeout(120, TimeUnit.SECONDS)
             .retryOnConnectionFailure(false)
             .build()
-        val api = Retrofit.Builder()
+        val retrofit = Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-            .create(TranslationApi::class.java)
-        return NetworkTranslationRepository(api)
+        val api = retrofit.create(TranslationApi::class.java)
+        val supportApi = retrofit.create(TranslationSupportApi::class.java)
+        val offlineDictionary = OfflineDictionaryManager(context)
+        return HybridTranslationRepository(
+            context = context,
+            supportApi = supportApi,
+            networkRepository = NetworkTranslationRepository(api),
+            offlineDictionary = offlineDictionary,
+        )
     }
 }

@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.bulosfrontend"
-        minSdk = 26
+        minSdk = 23
         @Suppress("OldTargetApi")
         targetSdk = 36
         versionCode = 1
@@ -33,15 +33,6 @@ android {
         compose = true
         viewBinding = true
     }
-    packaging {
-        resources {
-            excludes += "/META-INF/DEPENDENCIES"
-            excludes += "/META-INF/NOTICE"
-            excludes += "/META-INF/LICENSE"
-            excludes += "/META-INF/LICENSE.txt"
-            excludes += "/META-INF/NOTICE.txt"
-        }
-    }
 }
 
 dependencies {
@@ -63,20 +54,20 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.core.splashscreen)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.gson)
+    implementation(libs.okhttp)
     implementation(libs.vosk.android)
-    implementation(libs.poi.main)
-    implementation(libs.poi.ooxml)
-    implementation(libs.retrofit.main)
-    implementation(libs.retrofit.gson)
-    implementation(libs.okhttp.main)
-    implementation(libs.okhttp.logging)
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
     implementation(libs.material)
     testImplementation(libs.junit)
+    testImplementation(libs.okhttp.mockwebserver)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
+    debugImplementation(platform(libs.androidx.compose.bom))
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

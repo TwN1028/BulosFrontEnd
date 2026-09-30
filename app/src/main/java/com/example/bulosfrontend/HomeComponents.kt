@@ -119,7 +119,7 @@ fun FeatureCard(feature: HomeFeature, onClick: () -> Unit, modifier: Modifier = 
     Card(
         onClick = onClick,
         modifier = modifier
-            .height(118.dp)
+            .heightIn(min = 118.dp)
             .shadow(
                 elevation = cardElevation,
                 shape = cardShape,
@@ -129,7 +129,7 @@ fun FeatureCard(feature: HomeFeature, onClick: () -> Unit, modifier: Modifier = 
             ),
         interactionSource = interactionSource,
         shape = cardShape,
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        colors = CardDefaults.cardColors(containerColor = feature.backgroundColor),
         border = BorderStroke(
             width = 1.dp,
             color = cardBorderColor,
@@ -139,16 +139,13 @@ fun FeatureCard(feature: HomeFeature, onClick: () -> Unit, modifier: Modifier = 
             pressedElevation = 0.dp,
         ),
     ) {
-        Box(
+        Column(
             modifier = Modifier
-                .fillMaxSize()
-                .background(feature.backgroundColor)
+                .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 14.dp),
         ) {
             Surface(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .size(iconContainerSize),
+                modifier = Modifier.size(iconContainerSize),
                 shape = CircleShape,
                 color = Color(0xFFFFFEFA),
                 border = BorderStroke(0.75.dp, Color(0xFFE8E2D8)),
@@ -163,37 +160,32 @@ fun FeatureCard(feature: HomeFeature, onClick: () -> Unit, modifier: Modifier = 
                     )
                 }
             }
-            Column(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(top = 58.dp),
-            ) {
-                Text(
-                    stringResource(feature.titleRes),
-                    color = textColor,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = 14.sp,
-                        lineHeight = 18.sp,
-                        letterSpacing = 0.sp,
-                    ),
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(Modifier.height(3.dp))
-                Text(
-                    stringResource(feature.subtitleRes),
-                    color = textColor,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 12.sp,
-                        lineHeight = 16.sp,
-                        letterSpacing = 0.sp,
-                    ),
-                    fontWeight = FontWeight.Normal,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
+            Spacer(Modifier.height(14.dp))
+            Text(
+                stringResource(feature.titleRes),
+                color = textColor,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontSize = 14.sp,
+                    lineHeight = 18.sp,
+                    letterSpacing = 0.sp,
+                ),
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(3.dp))
+            Text(
+                stringResource(feature.subtitleRes),
+                color = textColor,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    letterSpacing = 0.sp,
+                ),
+                fontWeight = FontWeight.Normal,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
@@ -305,17 +297,15 @@ fun HomeDynamicContentCard(
     @StringRes titleRes: Int,
     @StringRes emptyRes: Int,
     @StringRes historyActionRes: Int,
-    historyItems: List<HistoryItem>,
     onHistoryClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val recentItems = historyItems.take(3)
     val cardShape = RoundedCornerShape(16.dp)
 
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 63.dp)
+            .height(63.dp)
             .shadow(
                 elevation = 4.dp,
                 shape = cardShape,
@@ -349,28 +339,17 @@ fun HomeDynamicContentCard(
                 )
                 Spacer(Modifier.height(2.dp))
 
-                if (recentItems.isEmpty()) {
-                    Text(
-                        stringResource(emptyRes),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = 12.sp,
-                            lineHeight = 15.sp,
-                        ),
-                        fontWeight = FontWeight.Normal,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                } else {
-                    recentItems.forEachIndexed { index, historyItem ->
-                        RecentTranslationRow(historyItem)
-                        if (index < recentItems.lastIndex) {
-                            Spacer(Modifier.height(6.dp))
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
-                            Spacer(Modifier.height(6.dp))
-                        }
-                    }
-                }
+                Text(
+                    stringResource(emptyRes),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 12.sp,
+                        lineHeight = 15.sp,
+                    ),
+                    fontWeight = FontWeight.Normal,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
             HomeCardAction(
                 text = stringResource(historyActionRes),
@@ -380,25 +359,6 @@ fun HomeDynamicContentCard(
             )
         }
     }
-}
-
-@Composable
-private fun RecentTranslationRow(item: HistoryItem) {
-    Text(
-        text = item.inputText,
-        color = MaterialTheme.colorScheme.onSurface,
-        style = MaterialTheme.typography.bodyMedium,
-        fontWeight = FontWeight.Bold,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis
-    )
-    Text(
-        text = item.translatedText,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        style = MaterialTheme.typography.bodySmall,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis
-    )
 }
 
 @Composable

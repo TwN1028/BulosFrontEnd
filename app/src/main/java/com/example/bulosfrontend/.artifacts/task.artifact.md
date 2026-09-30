@@ -1,8 +1,7 @@
-# Task: Revert Design to "Vosk API" State
+# Tasks: Absolute Design Centralization
 
-- `[x]` Restore Design Foundation (`Design.kt`, `Color.kt`)
-- `[x]` Revert UI Components (`UIComponents.kt`, `AppBottomNavigation.kt`)
-- `[x]` Revert Screens (`HomeScreen.kt`, `Screens.kt`, `SpeechResultScreens.kt`, `SettingsScreen.kt`)
-- `[x]` Revert Resources (`strings.xml`, `themes.xml`)
-- `[x]` Fix Errors & Preserve Functionality (Update `MainViewModel.kt` references, etc.)
-- `[x]` Verification (`gradle assembleDebug`, Manual check)
+- `[x]` Update `Design.kt` with all remaining style constants (Typography, Alpha, Sizes)
+- `[x]` Refactor `Type.kt` to reference `Design` constants
+- `[x]` Clean up `UIComponents.kt` hardcoded styles
+- `[x]` Clean up `Screens.kt` hardcoded styles
+- `[x]` Verification & Testing

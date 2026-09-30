@@ -56,14 +56,12 @@ fun DictionaryScreen(viewModel: MainViewModel) {
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = Color(0xFFFFFBF4),
         topBar = {
             SharedTopAppBar(
                 title = stringResource(home.dictionaryTitleRes),
                 logoDescriptionRes = home.appLogoDescriptionRes,
                 iconRes = R.drawable.ic_dictionary_book,
-                isOnline = viewModel.isOnline,
-                isServerReady = viewModel.isServerReady
             )
         },
     ) { padding ->

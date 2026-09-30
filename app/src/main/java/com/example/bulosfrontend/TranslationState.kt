@@ -56,14 +56,13 @@ object TranslationLanguageRules {
 
 /**
  * Singleton object to hold the current translation state.
- * Using enums for logic to prevent localization-based bugs.
+ * Decoupled from the ViewModel to allow custom API integration.
  */
 object TranslationState {
-    var sourceLanguage by mutableStateOf(UiLanguage.ENGLISH)
-    var targetLanguage by mutableStateOf(UiLanguage.BULOS)
+    var sourceLanguage by mutableStateOf("English")
+    var targetLanguage by mutableStateOf("Bulos")
     var textToTranslate by mutableStateOf("")
     var translatedText by mutableStateOf("")
-    var translationSource by mutableStateOf("") // "Online" or "Offline"
     var recordedAudioPath by mutableStateOf<String?>(null)
 
     fun selectSourceLanguage(language: String) {

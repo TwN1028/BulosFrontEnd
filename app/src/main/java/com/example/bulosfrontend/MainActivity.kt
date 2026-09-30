@@ -44,7 +44,6 @@ import com.example.bulosfrontend.ui.theme.BulosFrontEndTheme
 import com.example.bulosfrontend.ui.theme.LocalBulosDarkTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.time.Duration.Companion.seconds
 
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
@@ -67,8 +66,11 @@ class MainActivity : ComponentActivity() {
                 val hasCompletedPreservationIntro by preferenceRepository.hasCompletedPreservationIntro
                     .collectAsState(initial = null)
                 val coroutineScope = rememberCoroutineScope()
+                LaunchedEffect(TranslationState.sourceLanguage) {
+                    viewModel.preloadOfflineSpeechModel(TranslationState.sourceLanguage)
+                }
                 LaunchedEffect(Unit) {
-                    delay(3.seconds)
+                    delay(3_000L)
                     minimumSplashDurationElapsed = true
                 }
 

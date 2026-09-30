@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Delete
@@ -26,6 +28,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.res.stringResource
@@ -52,6 +56,10 @@ fun TranslateTextScreen(
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
     val coroutineScope = rememberCoroutineScope()
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    val translateButtonRequester = remember { BringIntoViewRequester() }
+    var isInputFocused by remember { mutableStateOf(false) }
     var showCopiedFeedback by remember { mutableStateOf(false) }
     val configuration = LocalConfiguration.current
     val currentLocale = remember(configuration) {
@@ -65,6 +73,20 @@ fun TranslateTextScreen(
     val hasSuccessfulResult = successfulTranslation != null
     val translationCardHeight = if (hasSuccessfulResult) 156.dp else 220.dp
     val inputFieldHeight = if (hasSuccessfulResult) 66.dp else 130.dp
+
+    fun submitTranslation() {
+        if (text.isBlank() || isTranslationLoading) return
+        keyboardController?.hide()
+        focusManager.clearFocus(force = true)
+        viewModel.translateText(text)
+    }
+
+    LaunchedEffect(isInputFocused) {
+        if (isInputFocused) {
+            delay(300)
+            translateButtonRequester.bringIntoView()
+        }
+    }
 
     LaunchedEffect(showCopiedFeedback) {
         if (showCopiedFeedback) {
@@ -163,6 +185,8 @@ fun TranslateTextScreen(
                             style = MaterialTheme.typography.labelMedium,
                         )
                     },
+                    onSubmit = ::submitTranslation,
+                    onFocusChanged = { isInputFocused = it },
                 )
                 Spacer(Modifier.height(if (hasSuccessfulResult) 8.dp else 16.dp))
                 if (hasSuccessfulResult) {
@@ -175,12 +199,13 @@ fun TranslateTextScreen(
                     )
                 } else {
                     Button(
-                        onClick = { viewModel.translateText(text) },
+                        onClick = ::submitTranslation,
                         enabled = text.isNotBlank() && !isTranslationLoading,
                         modifier = Modifier
                             .align(Alignment.CenterHorizontally)
                             .widthIn(max = 480.dp)
                             .fillMaxWidth()
+                            .bringIntoViewRequester(translateButtonRequester)
                             .height(56.dp),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
@@ -288,7 +313,8 @@ fun TranslateTextScreen(
             ) {
                 TextButton(
                     onClick = onHome,
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    modifier = Modifier.align(Alignment.Center).height(48.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
                 ) {
                     Text(
                         text = stringResource(labels.backRes),

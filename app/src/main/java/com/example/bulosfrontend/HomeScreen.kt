@@ -110,7 +110,6 @@ fun HomeScreen(
         HomeScreenContent(
             content = DialogueProvider.getDialogue(language),
             selectedLanguage = viewModel.uiLanguage,
-            viewModel = viewModel,
             onLanguageSelected = viewModel::selectHomeUiLanguage,
             onNavigate = onNavigate,
             listState = listState,
@@ -123,7 +122,6 @@ fun HomeScreen(
 private fun HomeScreenContent(
     content: DialogueContent,
     selectedLanguage: UiLanguage,
-    viewModel: MainViewModel,
     onLanguageSelected: (UiLanguage) -> Unit,
     onNavigate: (String) -> Unit,
     listState: LazyListState,
@@ -169,13 +167,6 @@ private fun HomeScreenContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 22.dp, top = 32.dp, end = 22.dp),
-            )
-            ConnectivityStatusPill(
-                isOnline = viewModel.isOnline,
-                isServerReady = viewModel.isServerReady,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 32.dp, end = 22.dp)
             )
             HomeVoiceHero(
                 promptRes = labels.speechSubtitleRes,

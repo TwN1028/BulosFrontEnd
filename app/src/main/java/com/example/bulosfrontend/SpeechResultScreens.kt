@@ -198,8 +198,6 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
                     title = stringResource(content.resultHeaderRes),
                     onBack = onBack,
                     iconRes = R.drawable.ic_lucide_mic,
-                    isOnline = viewModel.isOnline,
-                    isServerReady = viewModel.isServerReady,
                     trailingContent = {
                         IconButton(
                             onClick = viewModel::saveCurrentTranslation,
@@ -242,7 +240,6 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
                                 containerColor = MaterialTheme.colorScheme.surface,
                                 modifier = Modifier.weight(1f),
                                 scrollableText = true,
-                                sourceInfo = TranslationState.translationSource,
                             )
                         }
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -310,8 +307,6 @@ fun FeaturePatternHeader(
     headerBottomExtension: Dp = AppHeaderBottomExtension,
     titleTopPadding: Dp = AppHeaderTitleTopPadding,
     showBackButton: Boolean = true,
-    isOnline: Boolean? = null,
-    isServerReady: Boolean = true,
     trailingContent: @Composable RowScope.() -> Unit = {},
 ) {
     val hasExtendedHeader = headerBottomExtension > 0.dp
@@ -369,10 +364,6 @@ fun FeaturePatternHeader(
                         overflow = TextOverflow.Clip,
                     )
                 }
-            }
-            if (isOnline != null) {
-                ConnectivityStatusPill(isOnline, isServerReady)
-                Spacer(Modifier.width(8.dp))
             }
             trailingContent()
         }
@@ -557,7 +548,6 @@ private fun TranslationTextCard(
     containerColor: Color,
     modifier: Modifier = Modifier,
     scrollableText: Boolean = false,
-    sourceInfo: String? = null,
 ) {
     Card(
         modifier = modifier
@@ -580,23 +570,7 @@ private fun TranslationTextCard(
                 .fillMaxWidth()
                 .padding(horizontal = 18.dp, vertical = 16.dp),
         ) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(label, color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                sourceInfo?.let { info ->
-                    Surface(
-                        color = if (info == "Online") MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-                        shape = RoundedCornerShape(4.dp),
-                        modifier = Modifier.padding(start = 8.dp)
-                    ) {
-                        Text(
-                            text = info.uppercase(),
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
-                            color = if (info == "Online") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
+            Text(label, color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(12.dp))
             Text(
                 text = text,

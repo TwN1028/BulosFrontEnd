@@ -51,7 +51,12 @@ fun appHeaderGradientBrush(): Brush =
     Brush.verticalGradient(*homeHeaderGradientStops(includeCreamTail = true))
 
 fun speechTranslationGradientBrush(): Brush =
-    Brush.verticalGradient(*homeHeaderGradientStops(includeCreamTail = true))
+    Brush.verticalGradient(
+        0.00f to Color(0xFF1E3F20),
+        0.32f to Color(0xFF5E7A4A),
+        0.70f to Color(0xFFEAEBD9),
+        1.00f to Color(0xFFF7F8F2),
+    )
 
 fun homeHeaderGradientStops(includeCreamTail: Boolean = true): Array<Pair<Float, Color>> =
     buildList {

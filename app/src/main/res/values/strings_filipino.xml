@@ -15,7 +15,7 @@
     <string name="ui_footer_fil">Gawa ng research thesis kineme, 2026</string>
     <string name="ui_stop_fil">Ihinto</string>
     <string name="ui_copy_description_fil">Kopyahin ang isinaling teksto</string>
-    <string name="ui_result_placeholder_fil">Loading Result</string>
+    <string name="ui_result_placeholder_fil">Resulta…</string>
     <string name="ui_no_history_fil">Wala pang nakaraang salin</string>
     <string name="ui_voice_result_fil">Placeholder ng pagsasalin ng boses</string>
     <string name="ui_voice_recording_fil">Recording ng Boses</string>
@@ -96,9 +96,16 @@
     <string name="ui_translate_to_fil">Isalin sa %1$s</string>
     <string name="ui_translate_from_label_fil">Isalin Mula Sa</string>
     <string name="ui_translate_to_label_fil">Isalin Sa</string>
+    <string name="ui_translating_fil">Nagsasalin…</string>
+    <string name="ui_translation_placeholder_fil">Dito lalabas ang salin.</string>
+    <string name="ui_text_back_fil">Bumalik</string>
     <string name="ui_speech_subtitle_fil">Magsalita nang malinaw, I-edit ang nakilalang teksto, Isalin</string>
     <string name="ui_speech_idle_fil">Pindutin upang magsimulang mag-record</string>
-    <string name="ui_speech_listening_fil">Nakikinig… pindutin upang ihinto</string>
+    <string name="ui_speech_listening_fil">Nakikinig…</string>
+    <string name="ui_no_speech_recognized_fil">Walang nakilalang pananalita. Subukan muli.</string>
+    <string name="ui_done_recording_fil">Tapos Na</string>
+    <string name="ui_cancel_recording_fil">Kanselahin ang Recording</string>
+    <string name="ui_try_again_fil">Subukan Muli</string>
     <string name="ui_speech_review_fil">Tapos na ang recording. Ayusin ang teksto kung kailangan</string>
     <string name="ui_transcribing_fil">Isinusulat</string>
     <string name="ui_recognized_text_label_fil">Nakilalang Teksto · %1$s</string>

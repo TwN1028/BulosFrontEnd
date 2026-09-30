@@ -198,8 +198,6 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
                     title = stringResource(content.resultHeaderRes),
                     onBack = onBack,
                     iconRes = R.drawable.ic_lucide_mic,
-                    isOnline = viewModel.isOnline,
-                    isServerReady = viewModel.isServerReady,
                     trailingContent = {
                         IconButton(
                             onClick = viewModel::saveCurrentTranslation,
@@ -309,8 +307,6 @@ fun FeaturePatternHeader(
     headerBottomExtension: Dp = AppHeaderBottomExtension,
     titleTopPadding: Dp = AppHeaderTitleTopPadding,
     showBackButton: Boolean = true,
-    isOnline: Boolean? = null,
-    isServerReady: Boolean = true,
     trailingContent: @Composable RowScope.() -> Unit = {},
 ) {
     val hasExtendedHeader = headerBottomExtension > 0.dp
@@ -368,10 +364,6 @@ fun FeaturePatternHeader(
                         overflow = TextOverflow.Clip,
                     )
                 }
-            }
-            if (isOnline != null) {
-                ConnectivityStatusPill(isOnline, isServerReady)
-                Spacer(Modifier.width(8.dp))
             }
             trailingContent()
         }
@@ -496,7 +488,10 @@ private fun CompactLanguageMenu(
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             languages
-                .filterNot { it.equals(unavailableLanguage, ignoreCase = true) }
+                .filterNot { language ->
+                    language.equals(selected, ignoreCase = true) ||
+                        language.equals(unavailableLanguage, ignoreCase = true)
+                }
                 .forEach { language ->
                     DropdownMenuItem(
                         text = { Text(language) },
@@ -613,7 +608,7 @@ private fun LanguageDirectionPill(source: String, target: String) {
 }
 
 @Composable
-private fun ResultSecondaryAction(
+internal fun ResultSecondaryAction(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,

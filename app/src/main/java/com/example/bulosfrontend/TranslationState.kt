@@ -64,7 +64,6 @@ object TranslationState {
     var textToTranslate by mutableStateOf("")
     var translatedText by mutableStateOf("")
     var recordedAudioPath by mutableStateOf<String?>(null)
-    var translationSource by mutableStateOf("Online")
 
     fun selectSourceLanguage(language: String) {
         applyLanguagePair(

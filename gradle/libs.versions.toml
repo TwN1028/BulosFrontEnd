@@ -21,7 +21,7 @@ splashScreen = "1.2.0"
 retrofit = "2.11.0"
 okhttp = "4.12.0"
 vosk = "0.3.75"
-poi = "5.2.3"
+poi = "5.2.5"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -57,7 +57,7 @@ okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhtt
 okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
 okhttp-mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver", version.ref = "okhttp" }
 vosk-android = { group = "com.alphacephei", name = "vosk-android", version.ref = "vosk" }
-poi-main = { group = "org.apache.poi", name = "poi", version.ref = "poi" }
+poi = { group = "org.apache.poi", name = "poi", version.ref = "poi" }
 poi-ooxml = { group = "org.apache.poi", name = "poi-ooxml", version.ref = "poi" }
 
 [plugins]

@@ -113,7 +113,7 @@ fun TranslateTextScreen(
                     label = TranslationState.sourceLanguage.uppercase(currentLocale),
                     value = text,
                     placeholder = stringResource(labels.inputPlaceholderRes, TranslationState.sourceLanguage),
-                    onValueChange = { if (it.length <= 100) text = it },
+                    onValueChange = { if (it.length <= 300) text = it },
                     footer = {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -121,7 +121,7 @@ fun TranslateTextScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                stringResource(content.characterCountRes, text.length, 100),
+                                stringResource(content.characterCountRes, text.length, 300),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.labelSmall,
                             )

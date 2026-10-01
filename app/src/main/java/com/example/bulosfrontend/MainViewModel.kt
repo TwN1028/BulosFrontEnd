@@ -87,8 +87,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private set
 
     init {
-        // Monitor network and wake up server
+        // Automatically boot up Render backend server on startup and monitor network
         viewModelScope.launch {
+            val initialOnline = NetworkUtils.isOnline(application)
+            isOnline = initialOnline
+            if (initialOnline) {
+                viewModelScope.launch { translationRepository.wakeUpServer() }
+            }
             while (true) {
                 val currentlyOnline = NetworkUtils.isOnline(application)
                 if (currentlyOnline && !isOnline) {

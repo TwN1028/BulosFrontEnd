@@ -304,10 +304,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun supportsBuiltInRecognition(language: String): Boolean =
         language.equals("English", ignoreCase = true) ||
-            language.equals("Filipino", ignoreCase = true)
+            language.equals("Filipino", ignoreCase = true) ||
+            language.equals("Bulos", ignoreCase = true)
 
     private fun recognitionLanguageTag(language: String): String =
-        if (language.equals("Filipino", ignoreCase = true)) "fil-PH" else "en-PH"
+        if (language.equals("English", ignoreCase = true)) "en-PH" else "fil-PH"
 
     private fun startBuiltInSpeechRecognition(language: String) {
         val context = getApplication<Application>()

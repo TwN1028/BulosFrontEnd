@@ -111,6 +111,7 @@ class VoskModelManager(
     private fun modelSpec(language: String): ModelSpec? = when {
         language.equals("English", ignoreCase = true) -> ENGLISH_MODEL
         language.equals("Filipino", ignoreCase = true) -> FILIPINO_MODEL
+        language.equals("Bulos", ignoreCase = true) -> FILIPINO_MODEL
         else -> null
     }
 

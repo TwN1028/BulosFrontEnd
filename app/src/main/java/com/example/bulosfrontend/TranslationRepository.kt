@@ -19,6 +19,37 @@ import java.io.File
 import java.io.FileOutputStream
 import kotlin.time.Duration.Companion.seconds
 
+import java.util.UUID
+
+interface InstallationIdStore {
+    fun read(): String?
+    fun write(value: String)
+}
+
+private class SharedPreferencesInstallationIdStore(context: Context) : InstallationIdStore {
+    private val preferences = context.getSharedPreferences("installation_identity", Context.MODE_PRIVATE)
+
+    override fun read(): String? = preferences.getString("installation_uuid", null)
+
+    override fun write(value: String) {
+        preferences.edit().putString("installation_uuid", value).apply()
+    }
+}
+
+class InstallationIdProvider(private val store: InstallationIdStore) {
+    constructor(context: Context) : this(SharedPreferencesInstallationIdStore(context))
+
+    @Synchronized
+    fun get(): String {
+        store.read()?.let { stored ->
+            if (runCatching { UUID.fromString(stored) }.isSuccess) return stored
+        }
+        return UUID.randomUUID().toString().also { generated ->
+            store.write(generated)
+        }
+    }
+}
+
 class TranslationRepository(
     private val context: Context,
     private val offlineManager: DictionaryManager,
@@ -35,9 +66,10 @@ class TranslationRepository(
             level = HttpLoggingInterceptor.Level.BODY
         }
 
+        val installationIdProvider = InstallationIdProvider(context)
         val headerInterceptor = Interceptor { chain ->
             val request = chain.request().newBuilder()
-                .addHeader("X-Device-ID", "123e4567-e89b-42d3-a456-426614174000")
+                .addHeader("X-Device-ID", installationIdProvider.get())
                 .build()
             chain.proceed(request)
         }

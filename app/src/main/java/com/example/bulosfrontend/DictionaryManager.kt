@@ -271,11 +271,11 @@ class DictionaryManager(private val context: Context) {
             }
 
             // --- TIER 4: Fuzzy Matching (High Threshold) ---
-            val fuzzyHigh = findFuzzyMatch(token, sourceLang, targetLang, 0.80)
+            val fuzzyHigh = findFuzzyMatch(token, sourceLang, targetLang, 0.70)
             if (fuzzyHigh != null) return@map fuzzyHigh
 
             // --- TIER 5: Fuzzy Matching (Lower Threshold / More Leniency) ---
-            val fuzzyLow = findFuzzyMatch(token, sourceLang, targetLang, 0.60)
+            val fuzzyLow = findFuzzyMatch(token, sourceLang, targetLang, 0.45)
             if (fuzzyLow != null) return@map fuzzyLow
 
             token // Keep original if no match

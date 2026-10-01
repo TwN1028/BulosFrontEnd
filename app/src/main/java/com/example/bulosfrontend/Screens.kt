@@ -69,6 +69,8 @@ fun TranslateTextScreen(
                 onBack = onBack,
                 iconRes = R.drawable.ic_lucide_languages,
                 headerBottomExtension = AppHeaderBottomExtension,
+                isOnline = viewModel.isOnline,
+                isServerReady = viewModel.isServerReady,
             )
             Column(
                 modifier = Modifier

@@ -62,6 +62,8 @@ fun DictionaryScreen(viewModel: MainViewModel) {
                 title = stringResource(home.dictionaryTitleRes),
                 logoDescriptionRes = home.appLogoDescriptionRes,
                 iconRes = R.drawable.ic_dictionary_book,
+                isOnline = viewModel.isOnline,
+                isServerReady = viewModel.isServerReady,
             )
         },
     ) { padding ->

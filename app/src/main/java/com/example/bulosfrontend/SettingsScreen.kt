@@ -33,10 +33,12 @@ fun SettingsScreen(viewModel: MainViewModel, onLanguageClick: () -> Unit) {
             modifier = Modifier.fillMaxSize(),
             header = {
             SharedTopAppBar(
-                stringResource(home.settingsTitleRes),
-                home.appLogoDescriptionRes,
-                R.drawable.ic_lucide_settings,
+                title = stringResource(home.settingsTitleRes),
+                logoDescriptionRes = home.appLogoDescriptionRes,
+                iconRes = R.drawable.ic_lucide_settings,
                 subtitle = stringResource(home.settingsSubtitleRes),
+                isOnline = viewModel.isOnline,
+                isServerReady = viewModel.isServerReady,
             )
             },
         ) {

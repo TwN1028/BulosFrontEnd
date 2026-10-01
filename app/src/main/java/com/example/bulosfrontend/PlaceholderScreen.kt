@@ -238,12 +238,21 @@ private fun HelpTip(text: String) {
 
 @Composable
 fun PlaceholderScreen(
+    viewModel: MainViewModel,
     @StringRes titleRes: Int,
     @StringRes messageRes: Int,
     @StringRes descriptionRes: Int,
     @StringRes logoDescriptionRes: Int = R.string.app_logo_content_description,
 ) {
-    Scaffold(topBar = { SharedTopAppBar(stringResource(titleRes), logoDescriptionRes, R.drawable.ic_lucide_book_open) }) { padding ->
+    Scaffold(topBar = {
+        SharedTopAppBar(
+            title = stringResource(titleRes),
+            logoDescriptionRes = logoDescriptionRes,
+            iconRes = R.drawable.ic_lucide_book_open,
+            isOnline = viewModel.isOnline,
+            isServerReady = viewModel.isServerReady,
+        )
+    }) { padding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(padding).padding(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,

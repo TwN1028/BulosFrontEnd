@@ -2,13 +2,15 @@ package com.example.bulosfrontend
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -21,8 +23,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -34,78 +39,129 @@ import androidx.compose.ui.unit.sp
 import com.example.bulosfrontend.ui.theme.BulosFrontEndTheme
 
 private val SplashCream = Color(0xFFFFFBF4)
+private val SplashForest = Color(0xFF173819)
+private val SplashSage = Color(0xFF819976)
+private val SplashGold = Color(0xFFE7B861)
 
 @Composable
 fun BrandedSplashScreen(modifier: Modifier = Modifier) {
     Box(
         modifier
             .fillMaxSize()
-            .background(homeHeaderGradientBrush()),
+            .background(
+                Brush.verticalGradient(
+                    0.00f to SplashForest,
+                    0.25f to Color(0xFF355B35),
+                    0.55f to SplashSage,
+                    0.78f to Color(0xFFC5CEB6),
+                    1.00f to SplashCream,
+                ),
+            )
+            .drawBehind {
+                val glowCenter = Offset(size.width / 2f, size.height * 0.34f)
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        0.00f to Color(0xFFFFF4B8).copy(alpha = 0.72f),
+                        0.28f to Color(0xFFF2EDB9).copy(alpha = 0.46f),
+                        0.58f to Color(0xFFD9DEB4).copy(alpha = 0.18f),
+                        1.00f to Color.Transparent,
+                        center = glowCenter,
+                        radius = size.width * 0.64f,
+                    ),
+                    center = glowCenter,
+                    radius = size.width * 0.64f,
+                )
+            },
     ) {
-        Box(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.safeDrawing),
         ) {
-            Column(
-                modifier = Modifier.align(Alignment.Center).padding(horizontal = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(120.dp)
-                        .shadow(
-                            elevation = 10.dp,
-                            shape = RoundedCornerShape(32.dp),
-                            ambientColor = Color.Black.copy(alpha = 0.16f),
-                            spotColor = Color.Black.copy(alpha = 0.12f),
-                        )
-                        .clip(RoundedCornerShape(32.dp))
-                        .background(SplashCream)
-                        .border(
-                            width = 1.dp,
-                            color = Color.White.copy(alpha = 0.72f),
-                            shape = RoundedCornerShape(32.dp),
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    // Replace this drawable with the official app icon when available.
-                    Image(
-                        painter = painterResource(R.drawable.ic_app_logo_placeholder),
-                        contentDescription = stringResource(R.string.splash_logo_content_description),
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.size(76.dp),
-                    )
-                }
-
-                Spacer(Modifier.height(30.dp))
-                Text(
-                    text = stringResource(R.string.splash_title),
-                    color = SplashCream,
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                    lineHeight = 38.sp,
-                    textAlign = TextAlign.Center,
+            Canvas(Modifier.fillMaxSize()) {
+                val center = Offset(size.width / 2f, size.height * 0.32f)
+                drawCircle(
+                    color = Color.White.copy(alpha = 0.25f),
+                    radius = size.width * 0.29f,
+                    center = center,
+                    style = Stroke(width = 0.75.dp.toPx()),
                 )
-                Spacer(Modifier.height(11.dp))
-                Text(
-                    text = stringResource(R.string.splash_subtitle),
-                    color = Color.White.copy(alpha = 0.76f),
-                    fontSize = 16.sp,
-                    lineHeight = 22.sp,
-                    textAlign = TextAlign.Center,
-                )
-                Spacer(Modifier.height(22.dp))
-                LinearProgressIndicator(
-                    modifier = Modifier
-                        .width(170.dp)
-                        .height(5.dp)
-                        .clip(RoundedCornerShape(50)),
-                    color = Color(0xFFE7B861),
-                    trackColor = Color.White.copy(alpha = 0.38f),
+                drawCircle(
+                    color = Color.White.copy(alpha = 0.10f),
+                    radius = size.width * 0.41f,
+                    center = center,
+                    style = Stroke(width = 0.65.dp.toPx()),
                 )
             }
 
+            val iconMountSize = (maxWidth * 0.29f).coerceIn(104.dp, 128.dp)
+            val progressWidth = (maxWidth * 0.34f).coerceIn(132.dp, 170.dp)
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .offset(y = maxHeight * 0.32f - iconMountSize / 2f)
+                    .size(iconMountSize)
+                    .background(SplashCream, RoundedCornerShape(50)),
+                contentAlignment = Alignment.Center,
+            ) {
+                // This remains the dedicated placement for the final official app icon.
+                Image(
+                    painter = painterResource(R.drawable.ic_app_logo_placeholder),
+                    contentDescription = stringResource(R.string.splash_logo_content_description),
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.size(iconMountSize * 0.58f),
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .offset(y = maxHeight * 0.50f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = stringResource(R.string.splash_title),
+                    color = SplashCream,
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.Bold,
+                    lineHeight = 37.sp,
+                    textAlign = TextAlign.Center,
+                )
+                Text(
+                    text = stringResource(R.string.splash_subtitle),
+                    modifier = Modifier.padding(top = 18.dp),
+                    color = Color.White.copy(alpha = 0.92f),
+                    fontSize = 16.sp,
+                    lineHeight = 21.sp,
+                    textAlign = TextAlign.Center,
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .offset(y = maxHeight * 0.84f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .width(progressWidth)
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(50)),
+                    color = SplashGold,
+                    trackColor = Color.White.copy(alpha = 0.62f),
+                )
+                Text(
+                    text = stringResource(R.string.splash_preparing),
+                    modifier = Modifier.padding(top = 18.dp),
+                    color = Color(0xFF294E2C),
+                    fontSize = 14.sp,
+                    lineHeight = 18.sp,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
 }

@@ -36,6 +36,17 @@ data class HelpDialogueContent(
     @StringRes val screenTitleRes: Int,
     @StringRes val messageRes: Int,
     @StringRes val backRes: Int,
+    @StringRes val stepsTitleRes: Int,
+    @StringRes val speechStepTitleRes: Int,
+    @StringRes val speechStepBodyRes: Int,
+    @StringRes val textStepTitleRes: Int,
+    @StringRes val textStepBodyRes: Int,
+    @StringRes val resultStepTitleRes: Int,
+    @StringRes val resultStepBodyRes: Int,
+    @StringRes val tipsTitleRes: Int,
+    @StringRes val firstTipRes: Int,
+    @StringRes val secondTipRes: Int,
+    @StringRes val thirdTipRes: Int,
 )
 
 data class PreservationIntroDialogueContent(
@@ -58,12 +69,22 @@ data class TextTranslationDialogueContent(
     @StringRes val subtitleRes: Int,
     @StringRes val inputPlaceholderRes: Int,
     @StringRes val translateToRes: Int,
+    @StringRes val translateFromRes: Int,
+    @StringRes val translateToLabelRes: Int,
+    @StringRes val clearRes: Int,
+    @StringRes val translatingRes: Int,
+    @StringRes val outputPlaceholderRes: Int,
+    @StringRes val backRes: Int,
 )
 
 data class SpeechResultDialogueContent(
     @StringRes val speechSubtitleRes: Int,
     @StringRes val idleStatusRes: Int,
     @StringRes val listeningStatusRes: Int,
+    @StringRes val noSpeechRecognizedRes: Int,
+    @StringRes val doneRecordingRes: Int,
+    @StringRes val cancelRecordingRes: Int,
+    @StringRes val tryAgainRes: Int,
     @StringRes val reviewStatusRes: Int,
     @StringRes val transcribingRes: Int,
     @StringRes val recognizedTextLabelRes: Int,
@@ -103,6 +124,8 @@ data class HomeDialogueContent(
     @StringRes val dictionaryEmptyRes: Int, @StringRes val dictionaryNoResultsRes: Int,
     @StringRes val appearanceRes: Int, @StringRes val themeRes: Int,
     @StringRes val lightThemeRes: Int, @StringRes val darkThemeRes: Int,
+    @StringRes val fontSizeRes: Int, @StringRes val smallFontRes: Int,
+    @StringRes val mediumFontRes: Int, @StringRes val largeFontRes: Int,
 )
 
 object DialogueProvider {
@@ -160,6 +183,17 @@ object DialogueProvider {
             R.string.ui_help_screen_title_fil,
             R.string.ui_help_message_fil,
             R.string.ui_help_back_fil,
+            R.string.ui_help_steps_title_fil,
+            R.string.ui_help_speech_step_title_fil,
+            R.string.ui_help_speech_step_body_fil,
+            R.string.ui_help_text_step_title_fil,
+            R.string.ui_help_text_step_body_fil,
+            R.string.ui_help_result_step_title_fil,
+            R.string.ui_help_result_step_body_fil,
+            R.string.ui_help_tips_title_fil,
+            R.string.ui_help_tip_one_fil,
+            R.string.ui_help_tip_two_fil,
+            R.string.ui_help_tip_three_fil,
         )
         "bul" -> HelpDialogueContent(
             R.string.ui_help_card_title_bul,
@@ -167,6 +201,17 @@ object DialogueProvider {
             R.string.ui_help_screen_title_bul,
             R.string.ui_help_message_bul,
             R.string.ui_help_back_bul,
+            R.string.ui_help_steps_title_bul,
+            R.string.ui_help_speech_step_title_bul,
+            R.string.ui_help_speech_step_body_bul,
+            R.string.ui_help_text_step_title_bul,
+            R.string.ui_help_text_step_body_bul,
+            R.string.ui_help_result_step_title_bul,
+            R.string.ui_help_result_step_body_bul,
+            R.string.ui_help_tips_title_bul,
+            R.string.ui_help_tip_one_bul,
+            R.string.ui_help_tip_two_bul,
+            R.string.ui_help_tip_three_bul,
         )
         else -> HelpDialogueContent(
             R.string.ui_help_card_title_eng,
@@ -174,6 +219,17 @@ object DialogueProvider {
             R.string.ui_help_screen_title_eng,
             R.string.ui_help_message_eng,
             R.string.ui_help_back_eng,
+            R.string.ui_help_steps_title_eng,
+            R.string.ui_help_speech_step_title_eng,
+            R.string.ui_help_speech_step_body_eng,
+            R.string.ui_help_text_step_title_eng,
+            R.string.ui_help_text_step_body_eng,
+            R.string.ui_help_result_step_title_eng,
+            R.string.ui_help_result_step_body_eng,
+            R.string.ui_help_tips_title_eng,
+            R.string.ui_help_tip_one_eng,
+            R.string.ui_help_tip_two_eng,
+            R.string.ui_help_tip_three_eng,
         )
     }
 
@@ -230,23 +286,44 @@ object DialogueProvider {
             R.string.ui_text_subtitle_fil,
             R.string.ui_text_input_placeholder_fil,
             R.string.ui_translate_to_fil,
+            R.string.ui_translate_from_label_fil,
+            R.string.ui_translate_to_label_fil,
+            R.string.ui_clear_fil,
+            R.string.ui_translating_fil,
+            R.string.ui_translation_placeholder_fil,
+            R.string.ui_text_back_fil,
         )
         "bul" -> TextTranslationDialogueContent(
             R.string.ui_text_subtitle_bul,
             R.string.ui_text_input_placeholder_bul,
             R.string.ui_translate_to_bul,
+            R.string.ui_translate_from_label_bul,
+            R.string.ui_translate_to_label_bul,
+            R.string.ui_clear_bul,
+            R.string.ui_translating_bul,
+            R.string.ui_translation_placeholder_bul,
+            R.string.ui_text_back_bul,
         )
         else -> TextTranslationDialogueContent(
             R.string.ui_text_subtitle_eng,
             R.string.ui_text_input_placeholder_eng,
             R.string.ui_translate_to_eng,
+            R.string.ui_translate_from_label_eng,
+            R.string.ui_translate_to_label_eng,
+            R.string.ui_clear_eng,
+            R.string.ui_translating_eng,
+            R.string.ui_translation_placeholder_eng,
+            R.string.ui_text_back_eng,
         )
     }
 
     private fun speechResult(suffix: String): SpeechResultDialogueContent = when (suffix) {
         "fil" -> SpeechResultDialogueContent(
             R.string.ui_speech_subtitle_fil, R.string.ui_speech_idle_fil,
-            R.string.ui_speech_listening_fil, R.string.ui_speech_review_fil, R.string.ui_transcribing_fil,
+            R.string.ui_speech_listening_fil,
+            R.string.ui_no_speech_recognized_fil, R.string.ui_done_recording_fil,
+            R.string.ui_cancel_recording_fil, R.string.ui_try_again_fil,
+            R.string.ui_speech_review_fil, R.string.ui_transcribing_fil,
             R.string.ui_recognized_text_label_fil, R.string.ui_recognized_text_placeholder_fil,
             R.string.ui_edit_fil, R.string.ui_done_editing_fil, R.string.ui_translate_voice_fil,
             R.string.ui_clear_fil, R.string.ui_original_fil, R.string.ui_translation_fil,
@@ -256,7 +333,10 @@ object DialogueProvider {
         )
         "bul" -> SpeechResultDialogueContent(
             R.string.ui_speech_subtitle_bul, R.string.ui_speech_idle_bul,
-            R.string.ui_speech_listening_bul, R.string.ui_speech_review_bul, R.string.ui_transcribing_bul,
+            R.string.ui_speech_listening_bul,
+            R.string.ui_no_speech_recognized_bul, R.string.ui_done_recording_bul,
+            R.string.ui_cancel_recording_bul, R.string.ui_try_again_bul,
+            R.string.ui_speech_review_bul, R.string.ui_transcribing_bul,
             R.string.ui_recognized_text_label_bul, R.string.ui_recognized_text_placeholder_bul,
             R.string.ui_edit_bul, R.string.ui_done_editing_bul, R.string.ui_translate_voice_bul,
             R.string.ui_clear_bul, R.string.ui_original_bul, R.string.ui_translation_bul,
@@ -266,7 +346,10 @@ object DialogueProvider {
         )
         else -> SpeechResultDialogueContent(
             R.string.ui_speech_subtitle_eng, R.string.ui_speech_idle_eng,
-            R.string.ui_speech_listening_eng, R.string.ui_speech_review_eng, R.string.ui_transcribing_eng,
+            R.string.ui_speech_listening_eng,
+            R.string.ui_no_speech_recognized_eng, R.string.ui_done_recording_eng,
+            R.string.ui_cancel_recording_eng, R.string.ui_try_again_eng,
+            R.string.ui_speech_review_eng, R.string.ui_transcribing_eng,
             R.string.ui_recognized_text_label_eng, R.string.ui_recognized_text_placeholder_eng,
             R.string.ui_edit_eng, R.string.ui_done_editing_eng, R.string.ui_translate_voice_eng,
             R.string.ui_clear_eng, R.string.ui_original_eng, R.string.ui_translation_eng,
@@ -297,6 +380,8 @@ object DialogueProvider {
             R.string.ui_dictionary_empty_fil, R.string.ui_dictionary_no_results_fil,
             R.string.ui_appearance_fil, R.string.ui_theme_fil,
             R.string.ui_theme_light_fil, R.string.ui_theme_dark_fil,
+            R.string.ui_font_size_fil, R.string.ui_font_size_small_fil,
+            R.string.ui_font_size_medium_fil, R.string.ui_font_size_large_fil,
         )
         "bul" -> HomeDialogueContent(
             R.string.ui_selection_title_bul,
@@ -318,6 +403,8 @@ object DialogueProvider {
             R.string.ui_dictionary_empty_bul, R.string.ui_dictionary_no_results_bul,
             R.string.ui_appearance_bul, R.string.ui_theme_bul,
             R.string.ui_theme_light_bul, R.string.ui_theme_dark_bul,
+            R.string.ui_font_size_bul, R.string.ui_font_size_small_bul,
+            R.string.ui_font_size_medium_bul, R.string.ui_font_size_large_bul,
         )
         else -> HomeDialogueContent(
             R.string.ui_selection_title_eng,
@@ -339,6 +426,8 @@ object DialogueProvider {
             R.string.ui_dictionary_empty_eng, R.string.ui_dictionary_no_results_eng,
             R.string.ui_appearance_eng, R.string.ui_theme_eng,
             R.string.ui_theme_light_eng, R.string.ui_theme_dark_eng,
+            R.string.ui_font_size_eng, R.string.ui_font_size_small_eng,
+            R.string.ui_font_size_medium_eng, R.string.ui_font_size_large_eng,
         )
     }
 }

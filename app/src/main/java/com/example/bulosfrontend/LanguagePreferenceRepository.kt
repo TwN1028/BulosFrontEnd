@@ -18,6 +18,7 @@ private val Context.languageDataStore by preferencesDataStore(name = LANGUAGE_PR
 class LanguagePreferenceRepository(private val context: Context) {
     private val languageKey = stringPreferencesKey("selected_ui_language")
     private val themeKey = stringPreferencesKey("selected_app_theme")
+    private val fontSizeKey = stringPreferencesKey("selected_font_size")
     private val preservationIntroCompletedKey = booleanPreferencesKey("has_completed_preservation_intro")
 
     val selectedLanguage: Flow<UiLanguage?> = context.languageDataStore.data
@@ -38,6 +39,12 @@ class LanguagePreferenceRepository(private val context: Context) {
         }
         .map { preferences: Preferences -> AppTheme.fromStoredValue(preferences[themeKey]) }
 
+    val selectedFontSize: Flow<AppFontSize> = context.languageDataStore.data
+        .catch { exception ->
+            if (exception is IOException) emit(emptyPreferences()) else throw exception
+        }
+        .map { preferences: Preferences -> AppFontSize.fromStoredValue(preferences[fontSizeKey]) }
+
     suspend fun saveLanguage(language: UiLanguage) {
         context.languageDataStore.edit { preferences ->
             preferences[languageKey] = language.name
@@ -47,6 +54,12 @@ class LanguagePreferenceRepository(private val context: Context) {
     suspend fun saveTheme(theme: AppTheme) {
         context.languageDataStore.edit { preferences ->
             preferences[themeKey] = theme.name
+        }
+    }
+
+    suspend fun saveFontSize(fontSize: AppFontSize) {
+        context.languageDataStore.edit { preferences ->
+            preferences[fontSizeKey] = fontSize.name
         }
     }
 

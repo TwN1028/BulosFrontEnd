@@ -1,15 +1,20 @@
 package com.example.bulosfrontend
 
 import android.content.Context
+import android.util.Log
 import com.google.gson.annotations.SerializedName
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import retrofit2.HttpException
+import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.Query
 import java.io.IOException
+import java.net.SocketTimeoutException
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
@@ -34,6 +39,33 @@ interface TranslationApi {
     suspend fun translate(@Body request: TranslationRequest): TranslationResponse
 }
 
+interface TranslationSupportApi {
+    @GET("api/v1/health/")
+    suspend fun healthCheck(): Response<Unit>
+
+    @GET("api/v1/dictionary/categories")
+    suspend fun dictionaryCategories(): Response<List<DictionaryCategoryResponse>>
+
+    @GET("api/v1/dictionary/category/{categoryKey}")
+    suspend fun dictionaryCategory(
+        @retrofit2.http.Path("categoryKey") categoryKey: String,
+        @Query("skip") skip: Int,
+        @Query("limit") limit: Int,
+    ): Response<List<OfflineDictionaryEntryResponse>>
+}
+
+data class DictionaryCategoryResponse(
+    @SerializedName("category_key") val categoryKey: String,
+    @SerializedName(value = "entry_count", alternate = ["count", "total", "total_count"])
+    val entryCount: Int = 0,
+)
+
+data class OfflineDictionaryEntryResponse(
+    @SerializedName("english") val english: String?,
+    @SerializedName("filipino") val filipino: String?,
+    @SerializedName("bulos") val bulos: String?,
+)
+
 object BackendLanguageCodes {
     private val codes = mapOf(
         "English" to "en",
@@ -47,7 +79,7 @@ object BackendLanguageCodes {
 
 interface InstallationIdStore {
     fun read(): String?
-    fun write(value: String)
+    fun write(value: String): Boolean
 }
 
 private class SharedPreferencesInstallationIdStore(context: Context) : InstallationIdStore {
@@ -55,22 +87,42 @@ private class SharedPreferencesInstallationIdStore(context: Context) : Installat
 
     override fun read(): String? = preferences.getString("installation_uuid", null)
 
-    override fun write(value: String) {
+    override fun write(value: String): Boolean =
         preferences.edit().putString("installation_uuid", value).commit()
-    }
 }
 
 class InstallationIdProvider(private val store: InstallationIdStore) {
     constructor(context: Context) : this(SharedPreferencesInstallationIdStore(context))
 
+    private var currentId: String? = null
+    private var needsPersistence = false
+
     @Synchronized
     fun get(): String {
-        store.read()?.let { stored ->
-            if (runCatching { UUID.fromString(stored) }.isSuccess) return stored
+        currentId?.let { id ->
+            if (needsPersistence) needsPersistence = !store.write(id)
+            return id
         }
-        return UUID.randomUUID().toString().also { generated ->
-            store.write(generated)
+
+        val storedId = store.read()
+        val id = storedId?.takeIf(::isUuidV4) ?: UUID.randomUUID().toString()
+        currentId = id
+        if (storedId != id) {
+            needsPersistence = !store.write(id)
         }
+        return id
+    }
+
+    private fun isUuidV4(value: String): Boolean {
+        if (!UUID_PATTERN.matches(value)) return false
+        return runCatching { UUID.fromString(value).version() == 4 }.getOrDefault(false)
+    }
+
+    private companion object {
+        val UUID_PATTERN = Regex(
+            "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            RegexOption.IGNORE_CASE,
+        )
     }
 }
 
@@ -84,11 +136,18 @@ class DeviceIdInterceptor(private val installationIdProvider: InstallationIdProv
 
 sealed interface TranslationResult {
     data class Success(val response: TranslationResponse) : TranslationResult
+    data class Suggestions(val candidates: List<OfflineTranslationSuggestion>) : TranslationResult
     data class Failure(val message: String) : TranslationResult
 }
 
 interface TranslationRepository {
     suspend fun translate(sourceLanguage: String, targetLanguage: String, text: String): TranslationResult
+    suspend fun wakeUpServer() = Unit
+    suspend fun loadOfflineModel() = Unit
+    suspend fun syncOfflineModel(): Boolean = false
+    val isServerReady: Boolean get() = true
+    val isOfflineModelLoaded: Boolean get() = false
+    val offlineDictionaryEntries: List<DictionaryEntry> get() = emptyList()
 }
 
 class NetworkTranslationRepository(private val api: TranslationApi) : TranslationRepository {
@@ -97,6 +156,9 @@ class NetworkTranslationRepository(private val api: TranslationApi) : Translatio
         targetLanguage: String,
         text: String,
     ): TranslationResult {
+        if (!TranslationLanguageRules.isValidPair(sourceLanguage, targetLanguage)) {
+            return TranslationResult.Failure("This language pair is not supported.")
+        }
         val sourceCode = runCatching { BackendLanguageCodes.forUiLabel(sourceLanguage) }
             .getOrElse { return TranslationResult.Failure("The selected language is not supported.") }
         val targetCode = runCatching { BackendLanguageCodes.forUiLabel(targetLanguage) }
@@ -115,14 +177,211 @@ class NetworkTranslationRepository(private val api: TranslationApi) : Translatio
         require(response.targetLanguage == targetCode)
         require(response.translationMethod.isNotBlank())
         TranslationResult.Success(response)
-    } catch (_: HttpException) {
-        TranslationResult.Failure("Translation service is unavailable. Please try again.")
+    } catch (error: HttpException) {
+        if (error.isDeviceIdError()) {
+            TranslationResult.Failure(DEVICE_ID_ERROR_MESSAGE)
+        } else {
+            TranslationResult.Failure("Translation service is unavailable. Please try again.")
+        }
+    } catch (_: SocketTimeoutException) {
+        TranslationResult.Failure("The translation server took too long to respond. Please try again shortly.")
     } catch (_: IOException) {
         TranslationResult.Failure("Unable to connect. Check your internet and try again.")
     } catch (_: Exception) {
         TranslationResult.Failure("The translation response could not be read. Please try again.")
     }
     }
+}
+
+private const val DEVICE_ID_ERROR_MESSAGE =
+    "This installation could not be identified. Restart the app and try again."
+
+private fun HttpException.isDeviceIdError(): Boolean {
+    if (code() != 400) return false
+    val details = runCatching { response()?.errorBody()?.string()?.lowercase().orEmpty() }
+        .getOrDefault("")
+    val identifiesDeviceId = listOf("x-device-id", "device_id", "device id", "device-id")
+        .any(details::contains)
+    val identifiesValidationFailure = listOf("missing", "required", "invalid", "uuid", "malformed")
+        .any(details::contains)
+    return identifiesDeviceId && identifiesValidationFailure
+}
+
+class HybridTranslationRepository(
+    private val context: Context,
+    private val supportApi: TranslationSupportApi,
+    private val networkRepository: NetworkTranslationRepository,
+    private val offlineDictionary: OfflineDictionaryManager,
+) : TranslationRepository {
+    @Volatile
+    override var isServerReady: Boolean = false
+        private set
+    override val isOfflineModelLoaded: Boolean
+        get() = offlineDictionary.isLoaded
+    override val offlineDictionaryEntries: List<DictionaryEntry>
+        get() = offlineDictionary.entries()
+
+    override suspend fun wakeUpServer() {
+        if (!NetworkUtils.isOnline(context)) {
+            isServerReady = false
+            return
+        }
+        repeat(20) {
+            val awake = runCatching {
+                val response = supportApi.healthCheck()
+                response.isSuccessful
+            }.getOrDefault(false)
+            if (awake) {
+                isServerReady = true
+                return
+            }
+            kotlinx.coroutines.delay(3_000L)
+        }
+        isServerReady = false
+    }
+
+    override suspend fun translate(
+        sourceLanguage: String,
+        targetLanguage: String,
+        text: String,
+    ): TranslationResult {
+        val wasOnline = NetworkUtils.isOnline(context)
+        val networkResult = if (wasOnline) {
+            networkRepository.translate(sourceLanguage, targetLanguage, text)
+        } else {
+            TranslationResult.Failure("Unable to connect. Check your internet and try again.")
+        }
+        if (networkResult is TranslationResult.Success) {
+            isServerReady = true
+            return networkResult
+        }
+        val source = sourceLanguage.toUiLanguage()
+        val target = targetLanguage.toUiLanguage()
+        return when (val offlineResult = offlineDictionary.lookup(text, source, target)) {
+            is OfflineLookupResult.Translation -> TranslationResult.Success(
+                TranslationResponse(
+                    originalText = text,
+                    translatedText = offlineResult.translatedText,
+                    sourceLanguage = BackendLanguageCodes.forUiLabel(sourceLanguage),
+                    targetLanguage = BackendLanguageCodes.forUiLabel(targetLanguage),
+                    confidence = offlineResult.confidence,
+                    intermediateLanguage = null,
+                    translationMethod = offlineResult.method,
+                ),
+            )
+            is OfflineLookupResult.Suggestions -> TranslationResult.Suggestions(offlineResult.candidates)
+            OfflineLookupResult.NoData -> unresolvedFallback(networkResult, wasOnline, hasOfflineData = false)
+            OfflineLookupResult.Unavailable -> unresolvedFallback(networkResult, wasOnline, hasOfflineData = true)
+        }
+    }
+
+    override suspend fun syncOfflineModel(): Boolean {
+        if (!NetworkUtils.isOnline(context)) return false
+        return runCatching {
+            val categoriesResponse = supportApi.dictionaryCategories()
+            val categories = categoriesResponse.body()
+            if (!categoriesResponse.isSuccessful || categories == null) return false
+            val entries = refreshCompleteDictionary(
+                categories = categories,
+                fetchPage = { categoryKey, skip, limit ->
+                    val response = supportApi.dictionaryCategory(categoryKey, skip, limit)
+                    if (!response.isSuccessful) {
+                        throw IOException("Dictionary page failed with HTTP ${response.code()}")
+                    }
+                    response.body().orEmpty()
+                },
+                logger = { Log.d(DICTIONARY_SYNC_TAG, it) },
+                save = { downloadedEntries -> offlineDictionary.replace(downloadedEntries) },
+            )
+            if (entries.isEmpty()) return false
+            Log.i(DICTIONARY_SYNC_TAG, "Saved ${entries.size} dictionary entries locally")
+            true
+        }.getOrDefault(false)
+    }
+
+    override suspend fun loadOfflineModel() {
+        offlineDictionary.load()
+    }
+
+    private fun String.toUiLanguage(): UiLanguage = when (lowercase()) {
+        "filipino", "tagalog" -> UiLanguage.FILIPINO
+        "bulos" -> UiLanguage.BULOS
+        else -> UiLanguage.ENGLISH
+    }
+}
+
+internal fun unresolvedFallback(
+    networkResult: TranslationResult,
+    wasOnline: Boolean,
+    hasOfflineData: Boolean,
+): TranslationResult = when {
+    wasOnline || networkResult.isDeviceIdFailure() -> networkResult
+    !hasOfflineData -> TranslationResult.Failure(
+        "Offline translation data is not installed. Connect to the internet once to download it.",
+    )
+    else -> TranslationResult.Failure("Translation unavailable.")
+}
+
+private fun TranslationResult.isDeviceIdFailure(): Boolean =
+    this is TranslationResult.Failure && message == DEVICE_ID_ERROR_MESSAGE
+
+private const val DICTIONARY_PAGE_SIZE = 100
+private const val DICTIONARY_SYNC_TAG = "DictionarySync"
+
+/** Downloads all declared pages before the existing cache is replaced. */
+internal suspend fun downloadCompleteDictionary(
+    categories: List<DictionaryCategoryResponse>,
+    pageSize: Int = DICTIONARY_PAGE_SIZE,
+    fetchPage: suspend (categoryKey: String, skip: Int, limit: Int) -> List<OfflineDictionaryEntryResponse>,
+    logger: (String) -> Unit = {},
+): List<Map<String, String>> {
+    require(pageSize > 0)
+    val entries = mutableListOf<Map<String, String>>()
+
+    categories.forEach { category ->
+        var skip = 0
+        var downloaded = 0
+        logger("Category=${category.categoryKey}, declaredTotal=${category.entryCount}")
+        do {
+            val page = fetchPage(category.categoryKey, skip, pageSize)
+            logger(
+                "Category=${category.categoryKey}, declaredTotal=${category.entryCount}, " +
+                    "skip=$skip, limit=$pageSize, returned=${page.size}",
+            )
+            val remaining = if (category.entryCount > 0) {
+                (category.entryCount - downloaded).coerceAtLeast(0)
+            } else {
+                page.size
+            }
+            page.take(remaining).forEach { entry ->
+                val mapped = buildMap {
+                    put(OfflineDictionary.CATEGORY_KEY, category.categoryKey)
+                    entry.english?.takeIf(String::isNotBlank)?.let { put("English", it) }
+                    entry.filipino?.takeIf(String::isNotBlank)?.let { put("Filipino", it) }
+                    entry.bulos?.takeIf(String::isNotBlank)?.let { put("Bulos", it) }
+                }
+                if (mapped.size > 1) {
+                    entries += mapped
+                }
+            }
+            downloaded += page.size
+            skip += page.size
+        } while (page.isNotEmpty() && (category.entryCount <= 0 || downloaded < category.entryCount))
+        logger("Category=${category.categoryKey}, downloaded=$downloaded")
+    }
+    return entries
+}
+
+internal suspend fun refreshCompleteDictionary(
+    categories: List<DictionaryCategoryResponse>,
+    pageSize: Int = DICTIONARY_PAGE_SIZE,
+    fetchPage: suspend (categoryKey: String, skip: Int, limit: Int) -> List<OfflineDictionaryEntryResponse>,
+    logger: (String) -> Unit = {},
+    save: suspend (List<Map<String, String>>) -> Unit,
+): List<Map<String, String>> {
+    val entries = downloadCompleteDictionary(categories, pageSize, fetchPage, logger)
+    if (entries.isNotEmpty()) save(entries)
+    return entries
 }
 
 object TranslationServiceProvider {
@@ -144,12 +403,19 @@ object TranslationServiceProvider {
             .callTimeout(120, TimeUnit.SECONDS)
             .retryOnConnectionFailure(false)
             .build()
-        val api = Retrofit.Builder()
+        val retrofit = Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-            .create(TranslationApi::class.java)
-        return NetworkTranslationRepository(api)
+        val api = retrofit.create(TranslationApi::class.java)
+        val supportApi = retrofit.create(TranslationSupportApi::class.java)
+        val offlineDictionary = OfflineDictionaryManager(context)
+        return HybridTranslationRepository(
+            context = context,
+            supportApi = supportApi,
+            networkRepository = NetworkTranslationRepository(api),
+            offlineDictionary = offlineDictionary,
+        )
     }
 }

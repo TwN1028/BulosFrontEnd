@@ -12,13 +12,15 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -49,13 +51,19 @@ class MainActivity : ComponentActivity() {
         )
         applyWhiteStatusBarContent()
         setContent {
-            BulosFrontEndTheme(darkTheme = viewModel.selectedAppTheme == AppTheme.DARK) {
+            BulosFrontEndTheme(
+                darkTheme = viewModel.selectedAppTheme == AppTheme.DARK,
+                fontScale = viewModel.selectedFontSize.scaleFactor,
+            ) {
                 SideEffect { applyWhiteStatusBarContent() }
                 var minimumSplashDurationElapsed by remember { mutableStateOf(false) }
                 val preferenceRepository = remember { LanguagePreferenceRepository(applicationContext) }
                 val hasCompletedPreservationIntro by preferenceRepository.hasCompletedPreservationIntro
                     .collectAsState(initial = null)
                 val coroutineScope = rememberCoroutineScope()
+                LaunchedEffect(TranslationState.sourceLanguage) {
+                    viewModel.preloadOfflineSpeechModel(TranslationState.sourceLanguage)
+                }
                 LaunchedEffect(Unit) {
                     delay(3_000L)
                     minimumSplashDurationElapsed = true
@@ -64,6 +72,7 @@ class MainActivity : ComponentActivity() {
                 if (
                     !viewModel.isLanguagePreferenceLoaded ||
                     !viewModel.isThemePreferenceLoaded ||
+                    !viewModel.isFontSizePreferenceLoaded ||
                     hasCompletedPreservationIntro == null ||
                     !minimumSplashDurationElapsed
                 ) {
@@ -74,7 +83,9 @@ class MainActivity : ComponentActivity() {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
                 var resultOriginRoute by remember { mutableStateOf<String?>(null) }
-                val bottomNavigationAlpha = remember { Animatable(0f) }
+                var showFloatingNavigation by remember { mutableStateOf(false) }
+                var textScreenAllowsFloatingNavigation by remember { mutableStateOf(true) }
+                var displayedNavigationRoute by remember { mutableStateOf<String?>(null) }
                 val dictionaryFabProgress = remember { Animatable(0f) }
                 val featureRoutes = setOf(
                     AppDestinations.VOICE,
@@ -85,27 +96,42 @@ class MainActivity : ComponentActivity() {
                     AppDestinations.MORE,
                 )
                 LaunchedEffect(currentRoute) {
-                    bottomNavigationAlpha.snapTo(0f)
                     if (currentRoute in featureRoutes) {
-                        delay(300L)
-                        bottomNavigationAlpha.animateTo(
-                            targetValue = 1f,
-                            animationSpec = tween(durationMillis = 180),
-                        )
+                        displayedNavigationRoute = currentRoute
+                        if (!showFloatingNavigation) {
+                            delay(260L)
+                            showFloatingNavigation = true
+                        }
+                    } else {
+                        showFloatingNavigation = false
                     }
                 }
                 LaunchedEffect(currentRoute) {
-                    dictionaryFabProgress.snapTo(0f)
                     if (currentRoute == AppDestinations.HOME) {
-                        delay(300L)
+                        if (dictionaryFabProgress.value == 0f) delay(260L)
                         dictionaryFabProgress.animateTo(
                             targetValue = 1f,
-                            animationSpec = tween(durationMillis = 180),
+                            animationSpec = tween(
+                                durationMillis = 320,
+                                easing = FastOutSlowInEasing,
+                            ),
+                        )
+                    } else {
+                        dictionaryFabProgress.animateTo(
+                            targetValue = 0f,
+                            animationSpec = tween(
+                                durationMillis = 260,
+                                easing = FastOutSlowInEasing,
+                            ),
                         )
                     }
                 }
                 val darkTheme = LocalBulosDarkTheme.current
 
+                CompositionLocalProvider(
+                    LocalConnectionStatus provides viewModel.connectionStatus,
+                    LocalConnectionUiLanguage provides viewModel.uiLanguage,
+                ) {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     containerColor = if (darkTheme) {
@@ -114,56 +140,23 @@ class MainActivity : ComponentActivity() {
                         HomeContentCream
                     },
                     contentWindowInsets = WindowInsets(0, 0, 0, 0),
-                    bottomBar = {
-                        if (
-                            currentRoute in featureRoutes &&
-                            bottomNavigationAlpha.value > 0f
-                        ) {
-                            val activeFunctionRoute = when (currentRoute) {
-                                AppDestinations.HOME_RECORDING,
-                                AppDestinations.VOICE,
-                                -> AppDestinations.HOME_RECORDING
-
-                                AppDestinations.RESULT -> resultOriginRoute
-
-                                else -> currentRoute
-                            }
-                            AppBottomNavigation(
-                                currentRoute = currentRoute,
-                                activeFunctionRoute = activeFunctionRoute,
-                                content = viewModel.content.home,
-                                contentAlpha = bottomNavigationAlpha.value,
-                                enabled = bottomNavigationAlpha.value >= 0.99f,
-                                onNavigate = { route ->
-                                    if (route != currentRoute) {
-                                        navController.navigate(route) {
-                                            launchSingleTop = true
-                                            restoreState = true
-                                            popUpTo(AppDestinations.HOME) {
-                                                saveState = true
-                                            }
-                                        }
-                                    }
-                                },
-                            )
-                        }
-                    },
-                ) { navigationPadding ->
-                    NavHost(
+                ) {
+                    Box(Modifier.fillMaxSize()) {
+                        NavHost(
                         navController = navController,
                         startDestination = when {
                             viewModel.selectedUiLanguage == null -> AppDestinations.LANGUAGE_SELECTION
                             hasCompletedPreservationIntro == false -> AppDestinations.PRESERVATION_INTRO
                             else -> AppDestinations.HOME
                         },
-                        modifier = Modifier.fillMaxSize().padding(navigationPadding),
+                        modifier = Modifier.fillMaxSize(),
                     ) {
                         composable(AppDestinations.LANGUAGE_SELECTION) {
                             LanguageSelectionScreen(
                                 titleRes = DialogueProvider.getDialogue(UiLanguage.ENGLISH).home.selectionTitleRes,
                                 selectedLanguage = null,
                                 onLanguageSelected = { language ->
-                                    viewModel.selectUiLanguage(language)
+                                    viewModel.selectHomeUiLanguage(language)
                                     navController.navigate(AppDestinations.PRESERVATION_INTRO) {
                                         popUpTo(AppDestinations.LANGUAGE_SELECTION) { inclusive = true }
                                     }
@@ -224,16 +217,34 @@ class MainActivity : ComponentActivity() {
                                 },
                             )
                         }
-                        composable(AppDestinations.TEXT) {
+                        composable(
+                            route = AppDestinations.TEXT,
+                            enterTransition = {
+                                fadeIn(tween(300)) + scaleIn(tween(300), initialScale = 0.96f)
+                            },
+                            exitTransition = {
+                                fadeOut(tween(300)) + scaleOut(tween(300), targetScale = 0.96f)
+                            },
+                            popEnterTransition = {
+                                fadeIn(tween(300)) + scaleIn(tween(300), initialScale = 0.96f)
+                            },
+                            popExitTransition = {
+                                fadeOut(tween(300)) + scaleOut(tween(300), targetScale = 0.96f)
+                            },
+                        ) {
                             TranslateTextScreen(
-                                viewModel,
-                                onTranslate = {
-                                    resultOriginRoute = AppDestinations.TEXT
-                                    navController.navigate(AppDestinations.RESULT)
+                                viewModel = viewModel,
+                                onBack = { navController.popBackStack() },
+                                onHome = {
+                                    navController.navigate(AppDestinations.HOME) {
+                                        launchSingleTop = true
+                                        popUpTo(AppDestinations.HOME)
+                                    }
                                 },
-                            ) {
-                                navController.popBackStack()
-                            }
+                                onFloatingNavigationVisibilityChanged = {
+                                    textScreenAllowsFloatingNavigation = it
+                                },
+                            )
                         }
                         composable(AppDestinations.VOICE) {
                             TranslateVoiceScreen(
@@ -263,7 +274,7 @@ class MainActivity : ComponentActivity() {
                             SettingsScreen(viewModel) { navController.navigate(AppDestinations.LANGUAGE_SETTINGS) }
                         }
                         composable(AppDestinations.HELP) {
-                            VoiceGuidedDemoScreen(viewModel, onBack = { navController.popBackStack() })
+                            HelpOnboardingScreen(viewModel, onBack = { navController.popBackStack() })
                         }
                         composable(AppDestinations.LANGUAGE_SETTINGS) {
                             LanguageSettingsScreen(viewModel) { language ->
@@ -271,7 +282,37 @@ class MainActivity : ComponentActivity() {
                                 navController.popBackStack()
                             }
                         }
+                        }
+
+                        if (
+                            showFloatingNavigation &&
+                            (currentRoute != AppDestinations.TEXT || textScreenAllowsFloatingNavigation)
+                        ) {
+                            val activeFunctionRoute = when (displayedNavigationRoute) {
+                                AppDestinations.HOME_RECORDING,
+                                AppDestinations.VOICE,
+                                -> AppDestinations.HOME_RECORDING
+
+                                AppDestinations.RESULT -> resultOriginRoute
+                                else -> displayedNavigationRoute
+                            }
+                            AppFloatingNavigation(
+                                currentRoute = displayedNavigationRoute,
+                                activeFunctionRoute = activeFunctionRoute,
+                                content = viewModel.content.home,
+                                onNavigate = { route ->
+                                    if (route != currentRoute) {
+                                        navController.navigate(route) {
+                                            launchSingleTop = true
+                                            restoreState = true
+                                            popUpTo(AppDestinations.HOME) { saveState = true }
+                                        }
+                                    }
+                                },
+                            )
+                        }
                     }
+                }
                 }
             }
         }
@@ -280,6 +321,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         applyWhiteStatusBarContent()
+        viewModel.refreshConnectionStatus()
     }
 
     private fun applyWhiteStatusBarContent() {

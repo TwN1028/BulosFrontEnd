@@ -366,20 +366,7 @@ fun HomeRecordingScreen(
             .fillMaxSize()
             .background(speechTranslationGradientBrush()),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .safeHeaderInsets()
-                .padding(
-                    start = 4.dp,
-                    top = AppHeaderTitleTopPadding,
-                    end = 16.dp,
-                    bottom = 7.dp + (
-                        AppHeaderBottomExtension - (AppHeaderTitleTopPadding - 10.dp)
-                    ).coerceAtLeast(0.dp),
-                ),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        AdaptiveHeaderRow {
             IconButton(onClick = ::goBackOnce) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -413,6 +400,7 @@ fun HomeRecordingScreen(
                 )
             }
         }
+        Spacer(Modifier.height(AppHeaderBottomExtension))
         BoxWithConstraints(Modifier.weight(1f)) {
             val speechAuraDiameter = maxWidth * SPEECH_AURA_SCREEN_WIDTH_FRACTION
             val speechAuraMaxDiameter = maxWidth * SPEECH_AURA_MAX_SCREEN_WIDTH_FRACTION

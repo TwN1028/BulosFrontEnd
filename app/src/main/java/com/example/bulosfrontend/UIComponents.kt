@@ -2,17 +2,19 @@ package com.example.bulosfrontend
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -20,11 +22,147 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.bulosfrontend.ui.theme.Aileron
+import com.example.bulosfrontend.ui.theme.NavigationCream
+
+val LocalConnectionStatus = staticCompositionLocalOf { ConnectionStatus.OFFLINE }
+val LocalConnectionUiLanguage = staticCompositionLocalOf { UiLanguage.ENGLISH }
+
+@Composable
+fun ConnectionStatusIndicator(
+    modifier: Modifier = Modifier,
+    status: ConnectionStatus = LocalConnectionStatus.current,
+    language: UiLanguage = LocalConnectionUiLanguage.current,
+) {
+    val labelRes = when (language) {
+        UiLanguage.ENGLISH -> when (status) {
+            ConnectionStatus.ONLINE -> R.string.connection_online
+            ConnectionStatus.OFFLINE -> R.string.connection_offline
+            ConnectionStatus.WAKING_UP -> R.string.connection_waking_up
+            ConnectionStatus.SERVER_UNAVAILABLE -> R.string.connection_server_unavailable
+        }
+        UiLanguage.FILIPINO -> when (status) {
+            ConnectionStatus.ONLINE -> R.string.connection_online_fil
+            ConnectionStatus.OFFLINE -> R.string.connection_offline_fil
+            ConnectionStatus.WAKING_UP -> R.string.connection_waking_up_fil
+            ConnectionStatus.SERVER_UNAVAILABLE -> R.string.connection_server_unavailable_fil
+        }
+        UiLanguage.BULOS -> when (status) {
+            ConnectionStatus.ONLINE -> R.string.connection_online_bul
+            ConnectionStatus.OFFLINE -> R.string.connection_offline_bul
+            ConnectionStatus.WAKING_UP -> R.string.connection_waking_up_bul
+            ConnectionStatus.SERVER_UNAVAILABLE -> R.string.connection_server_unavailable_bul
+        }
+    }
+    val dotColor = when (status) {
+        ConnectionStatus.ONLINE -> Color(0xFF2E7D32)
+        ConnectionStatus.OFFLINE -> Color(0xFF757575)
+        ConnectionStatus.WAKING_UP -> Color(0xFFD08A19)
+        ConnectionStatus.SERVER_UNAVAILABLE -> Color(0xFFB5483D)
+    }
+    Surface(
+        modifier = modifier,
+        color = NavigationCream.copy(alpha = 0.94f),
+        contentColor = Color(0xFF29452E),
+        shape = RoundedCornerShape(50),
+        shadowElevation = 1.dp,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+        ) {
+            Box(Modifier.size(7.dp).background(dotColor, CircleShape))
+            Text(
+                text = stringResource(labelRes),
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 12.sp),
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+@Composable
+fun OfflineSuggestionList(
+    suggestions: List<OfflineTranslationSuggestion>,
+    onSelect: (OfflineTranslationSuggestion) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (suggestions.isEmpty()) return
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringResource(R.string.offline_suggestions_title),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF36583A),
+        )
+        suggestions.forEach { suggestion ->
+            OutlinedButton(
+                onClick = { onSelect(suggestion) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, Color(0xFF4F7045).copy(alpha = 0.35f)),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = "${suggestion.sourceText} → ${suggestion.translatedText}",
+                        modifier = Modifier.fillMaxWidth(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.offline_suggestion_metrics,
+                            (suggestion.similarity * 100).toInt(),
+                            suggestion.editDistance,
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
 
 @Composable
 internal fun Modifier.safeHeaderInsets(): Modifier = windowInsetsPadding(
-    WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+    WindowInsets.statusBars
+        .union(WindowInsets.displayCutout)
+        .only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
 )
+
+@Composable
+internal fun AdaptiveHeaderRow(
+    modifier: Modifier = Modifier,
+    content: @Composable RowScope.() -> Unit,
+) {
+    Layout(
+        modifier = modifier
+            .fillMaxWidth()
+            .safeHeaderInsets(),
+        content = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 4.dp, end = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                content = content,
+            )
+        },
+    ) { measurables, constraints ->
+        val row = measurables.single().measure(constraints.copy(minHeight = 0))
+        // Scale breathing room from the measured row instead of assigning a
+        // device-specific y-coordinate. Larger fonts therefore grow the header.
+        val verticalSpace = row.height * 7 / 12
+        layout(constraints.maxWidth, row.height + verticalSpace * 2) {
+            row.placeRelative(0, verticalSpace)
+        }
+    }
+}
 
 @Composable
 internal fun OverlappingHeaderLayout(
@@ -65,18 +203,13 @@ fun SharedTopAppBar(
     trailingContent: @Composable RowScope.() -> Unit = {},
     selectionMode: Boolean = false,
     selectionContent: @Composable RowScope.() -> Unit = {},
-) = Column(Modifier.background(appHeaderGradientBrush())) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .safeHeaderInsets()
-            .padding(start = 4.dp, top = AppHeaderTitleTopPadding, end = 16.dp, bottom = 7.dp)
-            .height(48.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+) = Box {
+    Box(Modifier.matchParentSize().background(appHeaderGradientBrush()))
+    Column {
+    AdaptiveHeaderRow {
         AnimatedContent(
             targetState = selectionMode,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxWidth(),
             transitionSpec = {
                 (fadeIn(tween(160)) togetherWith fadeOut(tween(120))).using(
                     SizeTransform(clip = false, sizeAnimationSpec = { _, _ -> snap() }),
@@ -85,7 +218,7 @@ fun SharedTopAppBar(
             label = "sharedHeaderMode",
         ) { selecting ->
             Row(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (selecting) {
@@ -119,28 +252,6 @@ fun SharedTopAppBar(
         }
     }
     Spacer(Modifier.height(AppHeaderTailHeight))
-}
-
-@Composable
-fun PoppingIconButton(onClick: () -> Unit, icon: ImageVector, contentDescription: String?, modifier: Modifier = Modifier) {
-    var isClicked by remember { mutableStateOf(value = false) }
-    val scale by animateFloatAsState(
-        targetValue = if (isClicked) 1.2f else 1f,
-        animationSpec = tween(durationMillis = 100),
-        finishedListener = { isClicked = false },
-        label = "Pop",
-    )
-    Button(
-        onClick = {
-            isClicked = true
-            onClick()
-        },
-        modifier = modifier.size(48.dp).scale(scale),
-        shape = RoundedCornerShape(12.dp),
-        contentPadding = PaddingValues(0.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F7045)),
-    ) {
-        Icon(icon, contentDescription, Modifier.size(24.dp))
     }
 }
 

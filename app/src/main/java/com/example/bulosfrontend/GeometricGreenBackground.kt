@@ -17,9 +17,8 @@ import com.example.bulosfrontend.ui.theme.PatternGreen
 import com.example.bulosfrontend.ui.theme.PrimaryGreen
 
 internal val HomeContentCream = Color(0xFFFFFBF4)
-internal val AppHeaderBottomExtension = 69.dp
-internal val AppHeaderTitleTopPadding = 28.dp
-internal val AppHeaderTailHeight = 51.dp
+internal val AppHeaderBottomExtension = 30.dp
+internal val AppHeaderTailHeight = AppHeaderBottomExtension
 internal val TranslationCardMinHeight = 348.dp
 
 @Composable

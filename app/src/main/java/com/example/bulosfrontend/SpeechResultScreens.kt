@@ -48,6 +48,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -68,6 +69,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -182,10 +184,12 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
     val shareBody = stringResource(labels.shareBodyRes, originalText, TranslationState.translatedText)
     val shareChooserTitle = stringResource(labels.shareChooserTitleRes)
     val isSaved = HistoryProvider.history.any {
-        it.sourceLang == TranslationState.sourceLanguage &&
-            it.targetLang == TranslationState.targetLanguage &&
-            it.inputText == originalText &&
-            it.translatedText == TranslationState.translatedText
+        it.matchesTranslation(
+            TranslationState.sourceLanguage,
+            TranslationState.targetLanguage,
+            originalText,
+            TranslationState.translatedText,
+        )
     }
 
     Surface(Modifier.fillMaxSize(), color = HomeContentCream) {
@@ -200,12 +204,16 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
                     iconRes = R.drawable.ic_lucide_mic,
                     trailingContent = {
                         IconButton(
-                            onClick = viewModel::saveCurrentTranslation,
+                            onClick = viewModel::toggleCurrentTranslationSaved,
                             enabled = originalText.isNotEmpty() && TranslationState.translatedText.isNotEmpty(),
                         ) {
                             Icon(
                                 imageVector = if (isSaved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                contentDescription = "Save translation",
+                                contentDescription = if (isSaved) {
+                                    "Remove from saved translations"
+                                } else {
+                                    "Save translation"
+                                },
                                 tint = WarmWhite,
                             )
                         }
@@ -240,6 +248,19 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
                                 containerColor = MaterialTheme.colorScheme.surface,
                                 modifier = Modifier.weight(1f),
                                 scrollableText = true,
+                            )
+                            if (TranslationState.translatedText.isEmpty() && viewModel.offlineTranslationMessage != null) {
+                                Text(
+                                    text = viewModel.offlineTranslationMessage.orEmpty(),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
+                            OfflineSuggestionList(
+                                suggestions = viewModel.offlineTranslationSuggestions,
+                                onSelect = viewModel::acceptOfflineSuggestion,
                             )
                         }
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -305,32 +326,17 @@ fun FeaturePatternHeader(
     onBack: () -> Unit,
     iconRes: Int,
     headerBottomExtension: Dp = AppHeaderBottomExtension,
-    titleTopPadding: Dp = AppHeaderTitleTopPadding,
     showBackButton: Boolean = true,
     trailingContent: @Composable RowScope.() -> Unit = {},
 ) {
-    val hasExtendedHeader = headerBottomExtension > 0.dp
-    val adjustedBottomExtension = (
-        headerBottomExtension - (titleTopPadding - 10.dp)
-    ).coerceAtLeast(0.dp)
     Box(
         Modifier
             .fillMaxWidth()
-            .clipToBounds()
-            .background(appHeaderGradientBrush()),
+            .clipToBounds(),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .safeHeaderInsets()
-                .padding(
-                    start = 4.dp,
-                    top = if (hasExtendedHeader) titleTopPadding else 6.dp,
-                    end = 16.dp,
-                    bottom = (if (hasExtendedHeader) 7.dp else 11.dp) + adjustedBottomExtension,
-                ),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        Box(Modifier.matchParentSize().background(appHeaderGradientBrush()))
+        Column {
+        AdaptiveHeaderRow {
             if (showBackButton) {
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = WarmWhite)
@@ -367,6 +373,8 @@ fun FeaturePatternHeader(
             }
             trailingContent()
         }
+        Spacer(Modifier.height(headerBottomExtension))
+        }
     }
 }
 
@@ -376,6 +384,10 @@ fun TranslationLanguageBar(
     modifier: Modifier = Modifier,
     useHomeCardStyle: Boolean = true,
 ) {
+    LaunchedEffect(TranslationState.sourceLanguage, TranslationState.targetLanguage) {
+        TranslationState.ensureValidLanguagePair()
+    }
+    val targetOptions = TranslationLanguageRules.targetOptions(TranslationState.sourceLanguage)
     val cardShape = RoundedCornerShape(if (useHomeCardStyle) 16.dp else 24.dp)
     val glassFill = Brush.verticalGradient(
         0.00f to Color(0xFFFFFEFD),
@@ -435,7 +447,8 @@ fun TranslationLanguageBar(
         ) {
             CompactLanguageMenu(
                 selected = TranslationState.sourceLanguage,
-                onSelected = { TranslationState.sourceLanguage = it },
+                options = TranslationLanguageRules.supportedLanguages,
+                onSelected = TranslationState::selectSourceLanguage,
                 modifier = Modifier.weight(1f),
             )
             Row(
@@ -445,48 +458,63 @@ fun TranslationLanguageBar(
             ) {
                 VerticalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 IconButton(
-                    onClick = {
-                        val source = TranslationState.sourceLanguage
-                        TranslationState.sourceLanguage = TranslationState.targetLanguage
-                        TranslationState.targetLanguage = source
-                    },
+                    onClick = TranslationState::swapLanguages,
                     modifier = Modifier.weight(1f),
                 ) {
                     Icon(Icons.Default.SwapHoriz, swapLanguagesDescription, tint = MaterialTheme.colorScheme.secondary)
                 }
                 VerticalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
             }
-            CompactLanguageMenu(
-                selected = TranslationState.targetLanguage,
-                onSelected = { TranslationState.targetLanguage = it },
-                modifier = Modifier.weight(1f),
-            )
+            if (targetOptions.size == 1) {
+                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = targetOptions.single(),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            } else {
+                CompactLanguageMenu(
+                    selected = TranslationState.targetLanguage,
+                    options = targetOptions,
+                    onSelected = TranslationState::selectTargetLanguage,
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun CompactLanguageMenu(selected: String, onSelected: (String) -> Unit, modifier: Modifier = Modifier) {
+private fun CompactLanguageMenu(
+    selected: String,
+    options: List<String>,
+    onSelected: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     var expanded by remember { mutableStateOf(false) }
-    val languages = listOf(
-        stringResource(R.string.lang_label_eng),
-        stringResource(R.string.lang_label_fil),
-        stringResource(R.string.lang_label_bul),
-    )
     Box(modifier) {
         TextButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
-            Text(selected, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                selected,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            languages.forEach { language ->
-                DropdownMenuItem(
-                    text = { Text(language) },
-                    onClick = {
-                        onSelected(language)
-                        expanded = false
-                    },
-                )
-            }
+            options
+                .filterNot { language -> language.equals(selected, ignoreCase = true) }
+                .forEach { language ->
+                    DropdownMenuItem(
+                        text = { Text(language) },
+                        onClick = {
+                            onSelected(language)
+                            expanded = false
+                        },
+                    )
+                }
         }
     }
 }
@@ -594,7 +622,7 @@ private fun LanguageDirectionPill(source: String, target: String) {
 }
 
 @Composable
-private fun ResultSecondaryAction(
+internal fun ResultSecondaryAction(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,

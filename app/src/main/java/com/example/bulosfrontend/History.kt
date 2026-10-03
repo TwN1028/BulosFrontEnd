@@ -10,6 +10,17 @@ data class HistoryItem(
     val timestamp: Long = System.currentTimeMillis()
 )
 
+fun HistoryItem.matchesTranslation(
+    sourceLang: String,
+    targetLang: String,
+    inputText: String,
+    translatedText: String,
+): Boolean =
+    this.sourceLang == sourceLang &&
+        this.targetLang == targetLang &&
+        this.inputText == inputText &&
+        this.translatedText == translatedText
+
 object HistoryProvider {
     val history = mutableStateListOf<HistoryItem>()
 

@@ -47,7 +47,8 @@ private val switchLanguageCardBrush = Brush.verticalGradient(
 @Composable
 fun HomeIdentityHeader(title: String, badge: String, modifier: Modifier = Modifier) {
     val darkTheme = LocalBulosDarkTheme.current
-    Column(modifier) {
+    Row(modifier, verticalAlignment = Alignment.Top) {
+      Column(Modifier.weight(1f)) {
         Text(
             title,
             color = if (darkTheme) DarkWarmText else WarmWhiteCard,
@@ -83,6 +84,9 @@ fun HomeIdentityHeader(title: String, badge: String, modifier: Modifier = Modifi
                 )
             }
         }
+      }
+      Spacer(Modifier.width(8.dp))
+      ConnectionStatusIndicator()
     }
 }
 

@@ -17,8 +17,8 @@ private val Context.languageDataStore by preferencesDataStore(name = LANGUAGE_PR
 
 class LanguagePreferenceRepository(private val context: Context) {
     private val languageKey = stringPreferencesKey("selected_ui_language")
-    private val themeKey = stringPreferencesKey("selected_app_theme")
     private val fontSizeKey = stringPreferencesKey("selected_font_size")
+    private val offlineModeKey = booleanPreferencesKey("offline_mode_enabled")
     private val preservationIntroCompletedKey = booleanPreferencesKey("has_completed_preservation_intro")
 
     val selectedLanguage: Flow<UiLanguage?> = context.languageDataStore.data
@@ -33,17 +33,17 @@ class LanguagePreferenceRepository(private val context: Context) {
         }
         .map { preferences: Preferences -> preferences[preservationIntroCompletedKey] ?: false }
 
-    val selectedTheme: Flow<AppTheme> = context.languageDataStore.data
-        .catch { exception ->
-            if (exception is IOException) emit(emptyPreferences()) else throw exception
-        }
-        .map { preferences: Preferences -> AppTheme.fromStoredValue(preferences[themeKey]) }
-
     val selectedFontSize: Flow<AppFontSize> = context.languageDataStore.data
         .catch { exception ->
             if (exception is IOException) emit(emptyPreferences()) else throw exception
         }
         .map { preferences: Preferences -> AppFontSize.fromStoredValue(preferences[fontSizeKey]) }
+
+    val offlineModeEnabled: Flow<Boolean> = context.languageDataStore.data
+        .catch { exception ->
+            if (exception is IOException) emit(emptyPreferences()) else throw exception
+        }
+        .map { preferences: Preferences -> preferences[offlineModeKey] ?: false }
 
     suspend fun saveLanguage(language: UiLanguage) {
         context.languageDataStore.edit { preferences ->
@@ -51,15 +51,15 @@ class LanguagePreferenceRepository(private val context: Context) {
         }
     }
 
-    suspend fun saveTheme(theme: AppTheme) {
-        context.languageDataStore.edit { preferences ->
-            preferences[themeKey] = theme.name
-        }
-    }
-
     suspend fun saveFontSize(fontSize: AppFontSize) {
         context.languageDataStore.edit { preferences ->
             preferences[fontSizeKey] = fontSize.name
+        }
+    }
+
+    suspend fun saveOfflineMode(enabled: Boolean) {
+        context.languageDataStore.edit { preferences ->
+            preferences[offlineModeKey] = enabled
         }
     }
 

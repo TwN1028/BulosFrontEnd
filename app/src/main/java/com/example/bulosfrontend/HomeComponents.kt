@@ -44,14 +44,19 @@ private val switchLanguageCardBrush = Brush.verticalGradient(
     colors = listOf(HomeRecentTranslationCard, HomeRecentTranslationCard),
 )
 
+internal val HomeCardShape = RoundedCornerShape(16.dp)
+internal val HomeSupportingCardBorder = BorderStroke(
+    width = 0.5.dp,
+    color = Color(0xFFE5DDD2).copy(alpha = 0.65f),
+)
+
 @Composable
 fun HomeIdentityHeader(title: String, badge: String, modifier: Modifier = Modifier) {
-    val darkTheme = LocalBulosDarkTheme.current
     Row(modifier, verticalAlignment = Alignment.Top) {
       Column(Modifier.weight(1f)) {
         Text(
             title,
-            color = if (darkTheme) DarkWarmText else WarmWhiteCard,
+            color = WarmWhiteCard,
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontSize = 23.sp,
                 lineHeight = 28.sp,
@@ -64,8 +69,8 @@ fun HomeIdentityHeader(title: String, badge: String, modifier: Modifier = Modifi
         Spacer(Modifier.height(6.dp))
         Surface(
             modifier = Modifier.height(26.dp),
-            color = if (darkTheme) DarkHomeHeaderMid.copy(alpha = 0.82f) else SoftGreen.copy(alpha = 0.2f),
-            contentColor = if (darkTheme) DarkWarmText else WarmWhiteCard.copy(alpha = 0.82f),
+            color = SoftGreen.copy(alpha = 0.2f),
+            contentColor = WarmWhiteCard.copy(alpha = 0.82f),
             shape = RoundedCornerShape(50),
         ) {
             Box(
@@ -114,7 +119,7 @@ fun FeatureCard(feature: HomeFeature, onClick: () -> Unit, modifier: Modifier = 
         animationSpec = tween(durationMillis = 100),
         label = "featureCardElevation",
     )
-    val cardShape = RoundedCornerShape(16.dp)
+    val cardShape = HomeCardShape
     val iconColor = when {
         isTextFeature -> Color(0xFFB66D0B)
         feature.route == AppDestinations.VOICE -> Color(0xFF2F6530)
@@ -202,7 +207,7 @@ fun SupportedLanguagesCard(
     onLanguageSelected: (UiLanguage) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val cardShape = RoundedCornerShape(16.dp)
+    val cardShape = HomeCardShape
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -216,7 +221,7 @@ fun SupportedLanguagesCard(
             ),
         shape = cardShape,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        border = BorderStroke(0.5.dp, Color(0xFFE5DDD2).copy(alpha = 0.65f)),
+        border = HomeSupportingCardBorder,
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
@@ -304,7 +309,7 @@ fun HomeDynamicContentCard(
     onHistoryClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val cardShape = RoundedCornerShape(16.dp)
+    val cardShape = HomeCardShape
 
     Card(
         modifier = modifier
@@ -319,7 +324,7 @@ fun HomeDynamicContentCard(
             ),
         shape = cardShape,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        border = BorderStroke(0.5.dp, Color(0xFFE5DDD2).copy(alpha = 0.65f)),
+        border = HomeSupportingCardBorder,
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(

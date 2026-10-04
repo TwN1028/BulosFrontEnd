@@ -37,18 +37,21 @@ fun ConnectionStatusIndicator(
         UiLanguage.ENGLISH -> when (status) {
             ConnectionStatus.ONLINE -> R.string.connection_online
             ConnectionStatus.OFFLINE -> R.string.connection_offline
+            ConnectionStatus.OFFLINE_MODE -> R.string.connection_offline_mode
             ConnectionStatus.WAKING_UP -> R.string.connection_waking_up
             ConnectionStatus.SERVER_UNAVAILABLE -> R.string.connection_server_unavailable
         }
         UiLanguage.FILIPINO -> when (status) {
             ConnectionStatus.ONLINE -> R.string.connection_online_fil
             ConnectionStatus.OFFLINE -> R.string.connection_offline_fil
+            ConnectionStatus.OFFLINE_MODE -> R.string.connection_offline_mode_fil
             ConnectionStatus.WAKING_UP -> R.string.connection_waking_up_fil
             ConnectionStatus.SERVER_UNAVAILABLE -> R.string.connection_server_unavailable_fil
         }
         UiLanguage.BULOS -> when (status) {
             ConnectionStatus.ONLINE -> R.string.connection_online_bul
             ConnectionStatus.OFFLINE -> R.string.connection_offline_bul
+            ConnectionStatus.OFFLINE_MODE -> R.string.connection_offline_mode_bul
             ConnectionStatus.WAKING_UP -> R.string.connection_waking_up_bul
             ConnectionStatus.SERVER_UNAVAILABLE -> R.string.connection_server_unavailable_bul
         }
@@ -56,6 +59,7 @@ fun ConnectionStatusIndicator(
     val dotColor = when (status) {
         ConnectionStatus.ONLINE -> Color(0xFF2E7D32)
         ConnectionStatus.OFFLINE -> Color(0xFF757575)
+        ConnectionStatus.OFFLINE_MODE -> Color(0xFF5F6F52)
         ConnectionStatus.WAKING_UP -> Color(0xFFD08A19)
         ConnectionStatus.SERVER_UNAVAILABLE -> Color(0xFFB5483D)
     }

@@ -149,6 +149,7 @@ interface TranslationRepository {
     suspend fun wakeUpServer() = Unit
     suspend fun loadOfflineModel() = Unit
     suspend fun syncOfflineModel(): Boolean = false
+    fun setOfflineModeEnabled(enabled: Boolean) = Unit
     val isServerReady: Boolean get() = true
     val isOfflineModelLoaded: Boolean get() = false
     val offlineDictionaryEntries: List<DictionaryEntry> get() = emptyList()
@@ -219,6 +220,8 @@ class HybridTranslationRepository(
     private val offlineDictionary: OfflineDictionaryManager,
 ) : TranslationRepository {
     @Volatile
+    private var offlineModeEnabled: Boolean = false
+    @Volatile
     override var isServerReady: Boolean = false
         private set
     override val isOfflineModelLoaded: Boolean
@@ -226,15 +229,20 @@ class HybridTranslationRepository(
     override val offlineDictionaryEntries: List<DictionaryEntry>
         get() = offlineDictionary.entries()
 
+    override fun setOfflineModeEnabled(enabled: Boolean) {
+        offlineModeEnabled = enabled
+        if (enabled) isServerReady = false
+    }
+
     override suspend fun wakeUpServer() {
-        if (!NetworkUtils.isOnline(context)) {
+        if (!canUseOnlineServices(NetworkUtils.isOnline(context), offlineModeEnabled)) {
             isServerReady = false
             return
         }
 
         for (retryDelayMs in BACKEND_HEALTH_RETRY_DELAYS_MS) {
             if (retryDelayMs > 0L) delay(retryDelayMs)
-            if (!NetworkUtils.isOnline(context)) {
+            if (!canUseOnlineServices(NetworkUtils.isOnline(context), offlineModeEnabled)) {
                 isServerReady = false
                 return
             }
@@ -259,7 +267,7 @@ class HybridTranslationRepository(
         targetLanguage: String,
         text: String,
     ): TranslationResult {
-        val wasOnline = NetworkUtils.isOnline(context)
+        val wasOnline = canUseOnlineServices(NetworkUtils.isOnline(context), offlineModeEnabled)
         val networkResult = if (wasOnline) {
             networkRepository.translate(sourceLanguage, targetLanguage, text)
         } else {
@@ -290,7 +298,7 @@ class HybridTranslationRepository(
     }
 
     override suspend fun syncOfflineModel(): Boolean {
-        if (!NetworkUtils.isOnline(context)) return false
+        if (!canUseOnlineServices(NetworkUtils.isOnline(context), offlineModeEnabled)) return false
         return runCatching {
             val categoriesResponse = supportApi.dictionaryCategories()
             val categories = categoriesResponse.body()
@@ -298,6 +306,7 @@ class HybridTranslationRepository(
             val entries = refreshCompleteDictionary(
                 categories = categories,
                 fetchPage = { categoryKey, skip, limit ->
+                    if (offlineModeEnabled) throw CancellationException("Offline Mode enabled")
                     val response = supportApi.dictionaryCategory(categoryKey, skip, limit)
                     if (!response.isSuccessful) {
                         throw IOException("Dictionary page failed with HTTP ${response.code()}")
@@ -323,6 +332,9 @@ class HybridTranslationRepository(
         else -> UiLanguage.ENGLISH
     }
 }
+
+internal fun canUseOnlineServices(hasInternetConnection: Boolean, offlineModeEnabled: Boolean): Boolean =
+    hasInternetConnection && !offlineModeEnabled
 
 internal fun unresolvedFallback(
     networkResult: TranslationResult,

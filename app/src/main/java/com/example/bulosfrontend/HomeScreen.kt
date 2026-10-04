@@ -61,6 +61,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -83,15 +84,18 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
@@ -139,20 +143,10 @@ private fun HomeScreenContent(
     listState: LazyListState,
     dictionaryFabProgress: Float,
 ) {
-    val darkTheme = LocalBulosDarkTheme.current
     val labels = content.home
-    val bodyBackgroundBrush = if (darkTheme) {
-        Brush.verticalGradient(
-            colors = listOf(
-                MaterialTheme.colorScheme.background,
-                MaterialTheme.colorScheme.background,
-            ),
-        )
-    } else {
-        Brush.verticalGradient(
-            colors = listOf(HomeContentCream, HomeContentCream),
-        )
-    }
+    val bodyBackgroundBrush = Brush.verticalGradient(
+        colors = listOf(HomeContentCream, HomeContentCream),
+    )
     val features = listOf(
         HomeFeature(labels.textTitleRes, labels.textSubtitleRes, painterResource(R.drawable.ic_lucide_languages), HomeTextTranslationCard, GoldenAccent, AppDestinations.TEXT),
         HomeFeature(labels.historyTitleRes, labels.historySubtitleRes, painterResource(R.drawable.ic_bookmark_outline), HomeSavedHistoryCard, MainText, AppDestinations.HISTORY),
@@ -163,7 +157,7 @@ private fun HomeScreenContent(
     Box(
         Modifier
             .fillMaxSize()
-            .background(if (darkTheme) MaterialTheme.colorScheme.background else HomeContentCream),
+            .background(HomeContentCream),
     ) {
         val firstRowCardTop = 402.dp
         val creamBackgroundTop = firstRowCardTop + 24.dp
@@ -699,7 +693,13 @@ private fun BottomSpeechMicrophoneHero(
     modifier: Modifier = Modifier,
 ) {
     val microphoneButtonSize = 104.dp
-    val microphoneBottomPadding = 24.dp
+    val idlePromptBottomPadding = 24.dp
+    val microphonePromptGap = 14.dp
+    var idlePromptHeightPx by remember { mutableIntStateOf(0) }
+    val idlePromptHeight = with(LocalDensity.current) {
+        idlePromptHeightPx.toDp()
+    }.coerceAtLeast(28.dp)
+    val microphoneBottomPadding = idlePromptBottomPadding + idlePromptHeight + microphonePromptGap
     val transition = rememberInfiniteTransition(label = "bottomSpeechGlow")
     val recordingPulse by transition.animateFloat(
         initialValue = 0f,
@@ -842,22 +842,12 @@ private fun BottomSpeechMicrophoneHero(
             }
         }
 
-        if (isProcessing || statusText.isNotEmpty()) {
-            val isIdlePrompt = !isProcessing && !isRecording && recordingSeconds == null
+        val isIdlePrompt = !isProcessing && !isRecording && recordingSeconds == null && statusText.isNotEmpty()
+        if (isProcessing || (statusText.isNotEmpty() && !isIdlePrompt)) {
             Column(
-                modifier = if (isIdlePrompt) {
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(
-                            start = 16.dp,
-                            end = 16.dp,
-                            bottom = microphoneBottomPadding + microphoneButtonSize + 16.dp,
-                        )
-                } else {
-                    Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 76.dp, start = 16.dp, end = 16.dp)
-                },
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 76.dp, start = 16.dp, end = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 if (isProcessing) {
@@ -903,6 +893,24 @@ private fun BottomSpeechMicrophoneHero(
             }
         }
 
+        if (isIdlePrompt) {
+            Text(
+                text = statusText,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(
+                        start = 16.dp,
+                        end = 16.dp,
+                        bottom = idlePromptBottomPadding,
+                    )
+                    .onSizeChanged { idlePromptHeightPx = it.height },
+                color = Color.White,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+            )
+        }
+
         Surface(
             onClick = onClick,
             enabled = enabled && !isStopped,
@@ -927,6 +935,48 @@ private fun BottomSpeechMicrophoneHero(
                     modifier = Modifier.size(38.dp),
                 )
             }
+        }
+    }
+}
+
+@Preview(name = "Speech idle - 360x640", device = "spec:width=360dp,height=640dp,dpi=420", showSystemUi = true)
+@Preview(name = "Speech idle - 360x800", device = "spec:width=360dp,height=800dp,dpi=420", showSystemUi = true)
+@Preview(name = "Speech idle - 393x852", device = "spec:width=393dp,height=852dp,dpi=440", showSystemUi = true)
+@Preview(name = "Speech idle - 412x915", device = "spec:width=412dp,height=915dp,dpi=420", showSystemUi = true)
+@Preview(name = "Speech idle - tall", device = "spec:width=480dp,height=1040dp,dpi=440", showSystemUi = true)
+@Preview(
+    name = "Speech idle - compact large text",
+    device = "spec:width=360dp,height=640dp,dpi=420",
+    fontScale = 1.3f,
+    showSystemUi = true,
+)
+@Composable
+private fun SpeechMicrophoneHeroPreview() {
+    BulosFrontEndTheme {
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(PrimaryGreen)
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+        ) {
+            val heroHeight = (maxHeight * 0.54f).coerceIn(
+                minimumValue = minOf(270.dp, maxHeight),
+                maximumValue = minOf(370.dp, maxHeight),
+            )
+            BottomSpeechMicrophoneHero(
+                statusText = "Tap to Speak",
+                isProcessing = false,
+                onClick = {},
+                enabled = true,
+                isRecording = false,
+                isStopped = false,
+                showCancelledIdleGlow = false,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(heroHeight),
+            )
         }
     }
 }

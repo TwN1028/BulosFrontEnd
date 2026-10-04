@@ -10,6 +10,7 @@ import android.os.Build
 enum class ConnectionStatus {
     ONLINE,
     OFFLINE,
+    OFFLINE_MODE,
     WAKING_UP,
     SERVER_UNAVAILABLE,
 }
@@ -18,7 +19,9 @@ internal fun resolveConnectionStatus(
     connected: Boolean,
     backendCheckInProgress: Boolean,
     backendReady: Boolean,
+    offlineModeEnabled: Boolean = false,
 ): ConnectionStatus = when {
+    offlineModeEnabled -> ConnectionStatus.OFFLINE_MODE
     !connected -> ConnectionStatus.OFFLINE
     backendCheckInProgress -> ConnectionStatus.WAKING_UP
     backendReady -> ConnectionStatus.ONLINE

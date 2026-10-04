@@ -13,6 +13,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.JsonParser
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -26,7 +27,15 @@ import org.vosk.Model
 import org.vosk.Recognizer
 import org.vosk.android.RecognitionListener as VoskRecognitionListener
 import java.io.File
+import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.seconds
+
+enum class OfflineSpeechResourceState {
+    NOT_DOWNLOADED,
+    DOWNLOADING,
+    READY,
+    FAILED,
+}
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val languagePreferences = LanguagePreferenceRepository(application)
@@ -49,13 +58,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private set
     var isLanguagePreferenceLoaded by mutableStateOf(false)
         private set
-    var selectedAppTheme by mutableStateOf(AppTheme.LIGHT)
-        private set
-    var isThemePreferenceLoaded by mutableStateOf(false)
-        private set
     var selectedFontSize by mutableStateOf(AppFontSize.MEDIUM)
         private set
     var isFontSizePreferenceLoaded by mutableStateOf(false)
+        private set
+    var offlineModeEnabled by mutableStateOf(false)
+        private set
+    var isOfflineModePreferenceLoaded by mutableStateOf(false)
         private set
     var hasCompletedPreservationIntro by mutableStateOf<Boolean?>(null)
         private set
@@ -68,8 +77,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val startupCompletedTaskCount: Int
         get() = listOf(
             isLanguagePreferenceLoaded,
-            isThemePreferenceLoaded,
             isFontSizePreferenceLoaded,
+            isOfflineModePreferenceLoaded,
             hasCompletedPreservationIntro != null,
             isHistoryLoaded,
             isOfflineDictionaryLoadComplete,
@@ -85,6 +94,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private set
     var connectionStatus by mutableStateOf(ConnectionStatus.OFFLINE)
         private set
+    val canUseOnlineServices: Boolean get() = isOnline && !offlineModeEnabled
     var isTranslating by mutableStateOf(false)
         private set
     var translationStatus by mutableStateOf("")
@@ -110,9 +120,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var voskModelLanguage: String? = null
     private var voskModelLoadJob: Job? = null
     private var voskPreloadJob: Job? = null
+    var offlineSpeechResourceStates by mutableStateOf<Map<UiLanguage, OfflineSpeechResourceState>>(emptyMap())
+        private set
     private var backendReadinessJob: Job? = null
     private var connectivityChangeJob: Job? = null
     private var savedTranslationsObservationJob: Job? = null
+    private var dictionarySyncJob: Job? = null
+    private var textTranslationJob: Job? = null
+    private var voiceTranslationJob: Job? = null
     private var offlineSyncAttemptedForConnection = false
     private val networkMonitor = NetworkMonitor(application) { connected ->
         connectivityChangeJob?.cancel()
@@ -144,7 +159,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         TranslationState.ensureValidLanguagePair()
-        networkMonitor.start()
+        refreshOfflineSpeechModelStatus()
         loadRequiredStartupData()
     }
 
@@ -173,13 +188,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             selectedUiLanguage = language
             isLanguagePreferenceLoaded = true
         }
-        if (!isThemePreferenceLoaded) load {
-            selectedAppTheme = languagePreferences.selectedTheme.first()
-            isThemePreferenceLoaded = true
-        }
         if (!isFontSizePreferenceLoaded) load {
             selectedFontSize = languagePreferences.selectedFontSize.first()
             isFontSizePreferenceLoaded = true
+        }
+        if (!isOfflineModePreferenceLoaded) load {
+            offlineModeEnabled = languagePreferences.offlineModeEnabled.first()
+            translationRepository.setOfflineModeEnabled(offlineModeEnabled)
+            isOfflineModePreferenceLoaded = true
+            networkMonitor.start()
         }
         if (hasCompletedPreservationIntro == null) load {
             hasCompletedPreservationIntro = languagePreferences.hasCompletedPreservationIntro.first() ?: false
@@ -200,6 +217,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun refreshConnectionStatus() {
+        if (!isOfflineModePreferenceLoaded) return
         viewModelScope.launch {
             handleConnectivityChange(
                 connected = NetworkUtils.isOnline(getApplication()),
@@ -210,8 +228,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun handleConnectivityChange(connected: Boolean, forceBackendCheck: Boolean) {
         val connectivityChanged = connected != isOnline
+        isOnline = connected
+        if (offlineModeEnabled) {
+            isServerReady = false
+            connectionStatus = ConnectionStatus.OFFLINE_MODE
+            offlineSyncAttemptedForConnection = false
+            backendReadinessJob?.cancel()
+            return
+        }
         if (!connected) {
-            isOnline = false
             isServerReady = false
             connectionStatus = ConnectionStatus.OFFLINE
             offlineSyncAttemptedForConnection = false
@@ -219,7 +244,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
-        isOnline = true
         if (!offlineSyncAttemptedForConnection) {
             offlineSyncAttemptedForConnection = true
             syncModel()
@@ -237,7 +261,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         connectionStatus = ConnectionStatus.WAKING_UP
         backendReadinessJob = viewModelScope.launch {
             updateBackendReadiness()
-            while (isOnline && !isServerReady) {
+            while (canUseOnlineServices && !isServerReady) {
                 delay(BACKEND_RECOVERY_INTERVAL_MS)
                 if (!NetworkUtils.isOnline(getApplication())) {
                     handleConnectivityChange(connected = false, forceBackendCheck = false)
@@ -253,11 +277,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         translationRepository.wakeUpServer()
         val stillConnected = NetworkUtils.isOnline(getApplication())
         isOnline = stillConnected
-        isServerReady = stillConnected && translationRepository.isServerReady
+        isServerReady = canUseOnlineServices && translationRepository.isServerReady
         connectionStatus = resolveConnectionStatus(
             connected = stillConnected,
             backendCheckInProgress = false,
             backendReady = isServerReady,
+            offlineModeEnabled = offlineModeEnabled,
         )
     }
 
@@ -271,20 +296,47 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         TranslationState.synchronizeSourceWithUiLanguage(language)
     }
 
-    fun selectAppTheme(theme: AppTheme) {
-        selectedAppTheme = theme
-        viewModelScope.launch { languagePreferences.saveTheme(theme) }
-    }
-
     fun selectFontSize(fontSize: AppFontSize) {
         selectedFontSize = fontSize
         viewModelScope.launch { languagePreferences.saveFontSize(fontSize) }
     }
 
+    fun selectOfflineMode(enabled: Boolean) {
+        if (offlineModeEnabled == enabled) return
+        offlineModeEnabled = enabled
+        translationRepository.setOfflineModeEnabled(enabled)
+        viewModelScope.launch { languagePreferences.saveOfflineMode(enabled) }
+        if (enabled) {
+            dictionarySyncJob?.cancel()
+            textTranslationJob?.cancel()
+            voiceTranslationJob?.cancel()
+            voskPreloadJob?.cancel()
+            isSyncing = false
+            if (textTranslationState is TextTranslationUiState.Loading) {
+                textTranslationState = TextTranslationUiState.Idle
+            }
+            isTranslating = false
+            translationStatus = ""
+            backendReadinessJob?.cancel()
+            isServerReady = false
+            connectionStatus = ConnectionStatus.OFFLINE_MODE
+        } else {
+            offlineSyncAttemptedForConnection = false
+            handleConnectivityChange(
+                connected = NetworkUtils.isOnline(getApplication()),
+                forceBackendCheck = true,
+            )
+            preloadOfflineSpeechModel(TranslationState.sourceLanguage)
+        }
+    }
+
     fun syncModel(onResult: (Boolean) -> Unit = {}) {
-        if (isSyncing) return
+        if (isSyncing || offlineModeEnabled) {
+            onResult(false)
+            return
+        }
         isSyncing = true
-        viewModelScope.launch {
+        dictionarySyncJob = viewModelScope.launch {
             val success = runCatching { translationRepository.syncOfflineModel() }
                 .getOrDefault(false)
             if (success) {
@@ -317,8 +369,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         offlineTranslationMessage = null
         textTranslationState = TextTranslationUiState.Loading
         isTranslating = true
-        translationStatus = if (isOnline && !isServerReady) "Waking up server..." else "Translating..."
-        viewModelScope.launch {
+        translationStatus = if (canUseOnlineServices && !isServerReady) "Waking up server..." else "Translating..."
+        textTranslationJob = viewModelScope.launch {
             try {
                 when (
                     val result = translationRepository.translate(
@@ -371,10 +423,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         offlineSuggestionInput = ""
         offlineTranslationMessage = null
         isTranslating = true
-        translationStatus = if (isOnline && !isServerReady) "Waking up server..." else "Translating..."
+        translationStatus = if (canUseOnlineServices && !isServerReady) "Waking up server..." else "Translating..."
         val sourceLanguage = TranslationState.sourceLanguage
         val targetLanguage = TranslationState.targetLanguage
-        viewModelScope.launch {
+        voiceTranslationJob = viewModelScope.launch {
             try {
                 when (
                     val result = translationRepository.translate(
@@ -503,9 +555,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         TranslationState.recordedAudioPath = null
         val language = TranslationState.sourceLanguage
         usesVoskRecognizer = voskModelManager.supports(language)
+        if (
+            offlineModeEnabled && usesVoskRecognizer &&
+            !voskModelManager.isInstalled(language) && !canUseOnDeviceRecognizer()
+        ) {
+            usesVoskRecognizer = false
+            speechSessionFinished = true
+            speechRecognitionError = offlineResourcesUnavailableMessage()
+            return
+        }
         if (usesVoskRecognizer && canUseOnDeviceRecognizer()) {
             startAndroidSpeechRecognition(language, preferOffline = true)
-        } else if (usesVoskRecognizer && isOnline && canUseSystemRecognizer()) {
+        } else if (usesVoskRecognizer && canUseOnlineServices && canUseSystemRecognizer()) {
             startAndroidSpeechRecognition(language, preferOffline = false)
         } else if (usesVoskRecognizer) {
             startVoskSpeechRecognition(language)
@@ -516,11 +577,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun preloadOfflineSpeechModel(language: String) {
         if (!voskModelManager.supports(language)) return
+        if (!isOfflineModePreferenceLoaded) return
+        if (offlineModeEnabled && !voskModelManager.isInstalled(language)) return
         if (voskModelLanguage == language && voskModel != null) return
+        val uiLanguage = language.toOfflineSpeechUiLanguage() ?: return
+        val needsInstallation = !voskModelManager.isInstalled(language)
         val previousPreload = voskPreloadJob
         voskPreloadJob = viewModelScope.launch {
             previousPreload?.join()
-            runCatching {
+            if (needsInstallation) updateOfflineSpeechResourceState(
+                uiLanguage,
+                OfflineSpeechResourceState.DOWNLOADING,
+            )
+            try {
                 val loadedModel = withContext(Dispatchers.IO) { voskModelManager.load(language) }
                 if (voskModelLanguage != language || voskModel == null) {
                     voskModel?.close()
@@ -529,8 +598,86 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 } else {
                     loadedModel.close()
                 }
+                refreshOfflineSpeechModelStatus()
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                if (needsInstallation) updateOfflineSpeechResourceState(
+                    uiLanguage,
+                    OfflineSpeechResourceState.FAILED,
+                )
+            } finally {
+                if (offlineSpeechResourceState(uiLanguage) == OfflineSpeechResourceState.DOWNLOADING) {
+                    refreshOfflineSpeechModelStatus()
+                }
             }
         }
+    }
+
+    fun downloadOfflineSpeechModel(language: UiLanguage) {
+        val modelLanguage = TranslationLanguageRules.languageForUi(language)
+        if (!voskModelManager.supports(modelLanguage) ||
+            offlineSpeechResourceState(language) == OfflineSpeechResourceState.READY
+        ) return
+        if (offlineSpeechResourceStates.values.any { it == OfflineSpeechResourceState.DOWNLOADING }) return
+        if (!NetworkUtils.isOnline(getApplication())) {
+            updateOfflineSpeechResourceState(language, OfflineSpeechResourceState.FAILED)
+            return
+        }
+        val previousPreload = voskPreloadJob
+        voskPreloadJob = viewModelScope.launch {
+            updateOfflineSpeechResourceState(language, OfflineSpeechResourceState.DOWNLOADING)
+            try {
+                previousPreload?.join()
+                val loadedModel = withContext(Dispatchers.IO) { voskModelManager.load(modelLanguage) }
+                if (voskModelLanguage != modelLanguage || voskModel == null) {
+                    voskModel?.close()
+                    voskModel = loadedModel
+                    voskModelLanguage = modelLanguage
+                } else {
+                    loadedModel.close()
+                }
+                refreshOfflineSpeechModelStatus()
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                updateOfflineSpeechResourceState(language, OfflineSpeechResourceState.FAILED)
+            } finally {
+                if (offlineSpeechResourceState(language) == OfflineSpeechResourceState.DOWNLOADING) {
+                    refreshOfflineSpeechModelStatus()
+                }
+            }
+        }
+    }
+
+    fun offlineSpeechModelSizeMb(language: UiLanguage): Int {
+        val bytes = voskModelManager.downloadSizeBytes(TranslationLanguageRules.languageForUi(language))
+            ?: return 0
+        return (bytes / (1024.0 * 1024.0)).roundToInt()
+    }
+
+    fun offlineSpeechResourceState(language: UiLanguage): OfflineSpeechResourceState =
+        offlineSpeechResourceStates[language] ?: OfflineSpeechResourceState.NOT_DOWNLOADED
+
+    private fun refreshOfflineSpeechModelStatus() {
+        offlineSpeechResourceStates = listOf(UiLanguage.ENGLISH, UiLanguage.FILIPINO).associateWith {
+            if (voskModelManager.isInstalled(TranslationLanguageRules.languageForUi(it))) {
+                OfflineSpeechResourceState.READY
+            } else {
+                OfflineSpeechResourceState.NOT_DOWNLOADED
+            }
+        }
+    }
+
+    private fun updateOfflineSpeechResourceState(
+        language: UiLanguage,
+        state: OfflineSpeechResourceState,
+    ) {
+        offlineSpeechResourceStates = offlineSpeechResourceStates + (language to state)
+    }
+
+    private fun String.toOfflineSpeechUiLanguage(): UiLanguage? = when {
+        equals("English", ignoreCase = true) -> UiLanguage.ENGLISH
+        equals("Filipino", ignoreCase = true) -> UiLanguage.FILIPINO
+        else -> null
     }
 
     private fun canUseSystemRecognizer(): Boolean =
@@ -613,8 +760,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun startFallbackSpeechRecognition(language: String, attemptedOffline: Boolean) {
-        if (attemptedOffline && isOnline && canUseSystemRecognizer()) {
+        if (attemptedOffline && canUseOnlineServices && canUseSystemRecognizer()) {
             startAndroidSpeechRecognition(language, preferOffline = false)
+        } else if (offlineModeEnabled && !voskModelManager.isInstalled(language)) {
+            usesVoskRecognizer = false
+            isRecorderStarting = false
+            isSpeechProcessing = false
+            speechSessionFinished = true
+            speechRecognitionError = offlineResourcesUnavailableMessage()
         } else {
             startVoskSpeechRecognition(language)
         }
@@ -796,12 +949,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun offlineModelError(language: String, error: Exception): String {
         val size = if (language.equals("Filipino", ignoreCase = true)) "314 MB" else "39 MB"
-        return if (!NetworkUtils.isOnline(getApplication())) {
+        return if (offlineModeEnabled || !NetworkUtils.isOnline(getApplication())) {
             "$language offline speech model is not installed. Connect once to download the $size model."
         } else {
             error.message?.takeIf(String::isNotBlank)
                 ?: "Could not prepare the $language offline speech model. Please try again."
         }
+    }
+
+    private fun offlineResourcesUnavailableMessage(): String {
+        val messageRes = when (uiLanguage) {
+            UiLanguage.ENGLISH -> R.string.offline_resources_unavailable
+            UiLanguage.FILIPINO -> R.string.offline_resources_unavailable_fil
+            UiLanguage.BULOS -> R.string.offline_resources_unavailable_bul
+        }
+        return getApplication<Application>().getString(messageRes)
     }
 
     private fun startAudioFileRecording() {

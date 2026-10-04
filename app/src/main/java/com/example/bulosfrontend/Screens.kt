@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -437,14 +438,19 @@ private fun TranslationOutputCard(
 fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
     val content = viewModel.content
     val historyItems = HistoryProvider.history
+    var historyFilter by rememberSaveable { mutableStateOf(HistoryFilter.ALL) }
+    val visibleHistoryItems = historyItemsForFilter(historyItems, historyFilter)
     var selectedTimestamps by remember { mutableStateOf(emptySet<Long>()) }
     var selectionMode by remember { mutableStateOf(false) }
     var showHistoryMenu by remember { mutableStateOf(false) }
-    val allItemsSelected = historyItems.isNotEmpty() && selectedTimestamps.size == historyItems.size
+    val allItemsSelected = visibleHistoryItems.isNotEmpty() &&
+        selectedTimestamps.size == visibleHistoryItems.size
 
-    LaunchedEffect(historyItems.toList()) {
-        selectedTimestamps = selectedTimestamps.intersect(historyItems.mapTo(mutableSetOf()) { it.timestamp })
-        if (historyItems.isEmpty()) selectionMode = false
+    LaunchedEffect(historyItems.toList(), historyFilter) {
+        selectedTimestamps = selectedTimestamps.intersect(
+            visibleHistoryItems.mapTo(mutableSetOf()) { it.timestamp },
+        )
+        if (visibleHistoryItems.isEmpty()) selectionMode = false
     }
 
     BackHandler(enabled = selectionMode) {
@@ -492,7 +498,7 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                                     selectionMode = true
                                     selectedTimestamps = emptySet()
                                 },
-                                enabled = historyItems.isNotEmpty(),
+                                enabled = visibleHistoryItems.isNotEmpty(),
                             )
                         }
                     }
@@ -517,7 +523,7 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                             selectedTimestamps = if (allItemsSelected) {
                                 emptySet()
                             } else {
-                                historyItems.mapTo(mutableSetOf()) { it.timestamp }
+                                visibleHistoryItems.mapTo(mutableSetOf()) { it.timestamp }
                             }
                         },
                     ) {
@@ -550,9 +556,28 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                 .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            if (historyItems.isEmpty()) {
+            HistoryFilterControl(
+                selectedFilter = historyFilter,
+                uiLanguage = viewModel.uiLanguage,
+                onFilterSelected = { selectedFilter ->
+                    historyFilter = selectedFilter
+                    selectedTimestamps = emptySet()
+                    selectionMode = false
+                },
+                modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp),
+            )
+            if (visibleHistoryItems.isEmpty()) {
                 Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    Text(stringResource(content.noHistoryRes), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.outline, textAlign = TextAlign.Center)
+                    if (historyFilter == HistoryFilter.FAVORITES) {
+                        HistoryFavoritesEmptyState(viewModel.uiLanguage)
+                    } else {
+                        Text(
+                            stringResource(content.noHistoryRes),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.outline,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
                 }
             } else {
                 LazyColumn(
@@ -560,7 +585,7 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    items(historyItems, key = { it.timestamp }) { item ->
+                    items(visibleHistoryItems, key = { it.timestamp }) { item ->
                         HistoryCard(
                             item = item,
                             selected = item.timestamp in selectedTimestamps,
@@ -591,6 +616,110 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
     }
 }
 
+internal enum class HistoryFilter { ALL, FAVORITES }
+
+internal fun historyItemsForFilter(
+    items: List<HistoryItem>,
+    filter: HistoryFilter,
+): List<HistoryItem> = when (filter) {
+    HistoryFilter.ALL -> items
+    HistoryFilter.FAVORITES -> items.filter { it.isFavorite }
+}
+
+@Composable
+private fun HistoryFilterControl(
+    selectedFilter: HistoryFilter,
+    uiLanguage: UiLanguage,
+    onFilterSelected: (HistoryFilter) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val allLabel = stringResource(
+        when (uiLanguage) {
+            UiLanguage.ENGLISH -> R.string.history_filter_all
+            UiLanguage.FILIPINO -> R.string.history_filter_all_fil
+            UiLanguage.BULOS -> R.string.history_filter_all_bul
+        },
+    )
+    val favoritesLabel = stringResource(
+        when (uiLanguage) {
+            UiLanguage.ENGLISH -> R.string.history_filter_favorites
+            UiLanguage.FILIPINO -> R.string.history_filter_favorites_fil
+            UiLanguage.BULOS -> R.string.history_filter_favorites_bul
+        },
+    )
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = InactiveButtonColor,
+        border = androidx.compose.foundation.BorderStroke(1.dp, HomeCardBorder),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            listOf(
+                HistoryFilter.ALL to allLabel,
+                HistoryFilter.FAVORITES to favoritesLabel,
+            ).forEach { (filter, label) ->
+                val selected = selectedFilter == filter
+                Surface(
+                    onClick = { onFilterSelected(filter) },
+                    modifier = Modifier.weight(1f).heightIn(min = 40.dp),
+                    shape = RoundedCornerShape(11.dp),
+                    color = if (selected) SharedActiveButtonColor else Color.Transparent,
+                    contentColor = if (selected) WarmWhite else MaterialTheme.colorScheme.onSurfaceVariant,
+                ) {
+                    Box(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 9.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HistoryFavoritesEmptyState(uiLanguage: UiLanguage) {
+    val titleRes = when (uiLanguage) {
+        UiLanguage.ENGLISH -> R.string.history_no_favorites
+        UiLanguage.FILIPINO -> R.string.history_no_favorites_fil
+        UiLanguage.BULOS -> R.string.history_no_favorites_bul
+    }
+    val descriptionRes = when (uiLanguage) {
+        UiLanguage.ENGLISH -> R.string.history_no_favorites_description
+        UiLanguage.FILIPINO -> R.string.history_no_favorites_description_fil
+        UiLanguage.BULOS -> R.string.history_no_favorites_description_bul
+    }
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringResource(titleRes),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = stringResource(descriptionRes),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
 @Composable
 fun HistoryCard(
     item: HistoryItem,
@@ -604,7 +733,7 @@ fun HistoryCard(
         onClick = { if (selectionEnabled) onSelectionChange(!selected) },
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+        colors = CardDefaults.cardColors(containerColor = SavedTranslationEntryCard),
         border = if (selected) {
             androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
         } else {

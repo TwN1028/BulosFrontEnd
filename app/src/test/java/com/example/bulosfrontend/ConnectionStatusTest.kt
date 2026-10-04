@@ -41,4 +41,25 @@ class ConnectionStatusTest {
             resolveConnectionStatus(connected = true, backendCheckInProgress = false, backendReady = false),
         )
     }
+
+    @Test
+    fun `user selected offline mode takes precedence over connectivity and backend state`() {
+        assertEquals(
+            ConnectionStatus.OFFLINE_MODE,
+            resolveConnectionStatus(
+                connected = true,
+                backendCheckInProgress = false,
+                backendReady = true,
+                offlineModeEnabled = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `online services require connectivity and offline mode disabled`() {
+        assertEquals(true, canUseOnlineServices(hasInternetConnection = true, offlineModeEnabled = false))
+        assertEquals(false, canUseOnlineServices(hasInternetConnection = false, offlineModeEnabled = false))
+        assertEquals(false, canUseOnlineServices(hasInternetConnection = true, offlineModeEnabled = true))
+        assertEquals(false, canUseOnlineServices(hasInternetConnection = false, offlineModeEnabled = true))
+    }
 }

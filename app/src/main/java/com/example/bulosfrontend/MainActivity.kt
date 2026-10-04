@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
@@ -35,7 +34,6 @@ import androidx.navigation.compose.rememberNavController
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import com.example.bulosfrontend.ui.theme.BulosFrontEndTheme
-import com.example.bulosfrontend.ui.theme.LocalBulosDarkTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -51,14 +49,19 @@ class MainActivity : ComponentActivity() {
         applyWhiteStatusBarContent()
         setContent {
             BulosFrontEndTheme(
-                darkTheme = viewModel.selectedAppTheme == AppTheme.DARK,
                 fontScale = viewModel.selectedFontSize.scaleFactor,
             ) {
                 SideEffect { applyWhiteStatusBarContent() }
                 val preferenceRepository = remember { LanguagePreferenceRepository(applicationContext) }
                 val coroutineScope = rememberCoroutineScope()
-                LaunchedEffect(TranslationState.sourceLanguage) {
-                    viewModel.preloadOfflineSpeechModel(TranslationState.sourceLanguage)
+                LaunchedEffect(
+                    TranslationState.sourceLanguage,
+                    viewModel.isOfflineModePreferenceLoaded,
+                    viewModel.offlineModeEnabled,
+                ) {
+                    if (viewModel.isOfflineModePreferenceLoaded) {
+                        viewModel.preloadOfflineSpeechModel(TranslationState.sourceLanguage)
+                    }
                 }
                 if (!viewModel.isStartupReady) {
                     BrandedSplashScreen(
@@ -116,19 +119,13 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
-                val darkTheme = LocalBulosDarkTheme.current
-
                 CompositionLocalProvider(
                     LocalConnectionStatus provides viewModel.connectionStatus,
                     LocalConnectionUiLanguage provides viewModel.uiLanguage,
                 ) {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
-                    containerColor = if (darkTheme) {
-                        MaterialTheme.colorScheme.background
-                    } else {
-                        HomeContentCream
-                    },
+                    containerColor = HomeContentCream,
                     contentWindowInsets = WindowInsets(0, 0, 0, 0),
                 ) {
                     Box(Modifier.fillMaxSize()) {

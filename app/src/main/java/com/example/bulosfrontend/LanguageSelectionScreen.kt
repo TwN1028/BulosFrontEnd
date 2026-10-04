@@ -35,23 +35,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.bulosfrontend.ui.theme.Cream
-import com.example.bulosfrontend.ui.theme.DarkStatusGreen
 import com.example.bulosfrontend.ui.theme.HomeCardBorder
 import com.example.bulosfrontend.ui.theme.HomeSpeechGreen
 import com.example.bulosfrontend.ui.theme.InactiveButtonColor
 import com.example.bulosfrontend.ui.theme.MainText
 import com.example.bulosfrontend.ui.theme.MutedText
 import com.example.bulosfrontend.ui.theme.PrimaryGreen
-import com.example.bulosfrontend.ui.theme.SoftGreen
 import com.example.bulosfrontend.ui.theme.WarmWhiteCard
 import kotlinx.coroutines.delay
 
 private val GlobeGold = Color(0xFFF5C47C)
 private val BulosSelectedMatte = Color(0xFF6B5138)
 private val FilipinoSelectedMatte = Color(0xFFA8643C)
-private val BulosLanguageName = Color(0xFF5C3D1A)
-private val FilipinoLanguageName = Color(0xFF705634)
+private val BulosLanguageName = Color(0xFF7B5E4A)
+private val FilipinoLanguageName = Color(0xFFD1B89A)
 
 private fun matteContinueColor(color: Color): Color {
     val warmBlend = 0.80f
@@ -205,7 +202,7 @@ fun LanguageSelectionScreen(
                                 )
                             }
                         }
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(8.dp))
                         RotatingLocalizedHeader(
                             englishTitleRes = titleRes,
                             color = Color.White,
@@ -256,11 +253,11 @@ private fun ReferenceLanguageCard(
             .semantics { this.selected = selected },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (selected) SoftGreen else Cream,
+            containerColor = HomeContentCream,
         ),
         border = BorderStroke(
             width = if (selected) 2.dp else 1.dp,
-            color = if (selected) DarkStatusGreen else HomeCardBorder,
+            color = HomeCardBorder,
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 1.dp,
@@ -343,7 +340,7 @@ private fun RotatingLocalizedHeader(
 
     Box(
         modifier = modifier.fillMaxWidth().heightIn(min = 72.dp),
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.TopCenter,
     ) {
         Crossfade(
             targetState = headerIndex,
@@ -356,7 +353,7 @@ private fun RotatingLocalizedHeader(
             Text(
                 text = stringResource(rotatingHeaderResources[index]),
                 modifier = Modifier.fillMaxWidth(),
-                color = color,
+                color = if (index == 0) color else MutedText,
                 style = MaterialTheme.typography.headlineSmall.copy(
                     fontSize = 20.sp,
                     lineHeight = 24.sp,
@@ -401,7 +398,7 @@ private fun ImmediateLanguageSelectionScreen(
                         tint = Color.White.copy(alpha = 0.86f),
                     )
                 }
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(8.dp))
                 RotatingLocalizedHeader(
                     englishTitleRes = titleRes,
                     color = Color.White,

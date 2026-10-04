@@ -122,8 +122,7 @@ data class HomeDialogueContent(
     @StringRes val recentDynamicTitleRes: Int, @StringRes val viewHistoryRes: Int,
     @StringRes val dictionarySearchRes: Int, @StringRes val dictionarySearchDescriptionRes: Int,
     @StringRes val dictionaryEmptyRes: Int, @StringRes val dictionaryNoResultsRes: Int,
-    @StringRes val appearanceRes: Int, @StringRes val themeRes: Int,
-    @StringRes val lightThemeRes: Int, @StringRes val darkThemeRes: Int,
+    @StringRes val offlineModeRes: Int, @StringRes val offlineModeSummaryRes: Int,
     @StringRes val fontSizeRes: Int, @StringRes val smallFontRes: Int,
     @StringRes val mediumFontRes: Int, @StringRes val largeFontRes: Int,
 )
@@ -378,8 +377,7 @@ object DialogueProvider {
             R.string.ui_recent_dynamic_title_fil, R.string.ui_view_history_fil,
             R.string.ui_dictionary_search_fil, R.string.ui_dictionary_search_description_fil,
             R.string.ui_dictionary_empty_fil, R.string.ui_dictionary_no_results_fil,
-            R.string.ui_appearance_fil, R.string.ui_theme_fil,
-            R.string.ui_theme_light_fil, R.string.ui_theme_dark_fil,
+            R.string.ui_offline_mode_fil, R.string.ui_offline_mode_summary_fil,
             R.string.ui_font_size_fil, R.string.ui_font_size_small_fil,
             R.string.ui_font_size_medium_fil, R.string.ui_font_size_large_fil,
         )
@@ -401,8 +399,7 @@ object DialogueProvider {
             R.string.ui_recent_dynamic_title_bul, R.string.ui_view_history_bul,
             R.string.ui_dictionary_search_bul, R.string.ui_dictionary_search_description_bul,
             R.string.ui_dictionary_empty_bul, R.string.ui_dictionary_no_results_bul,
-            R.string.ui_appearance_bul, R.string.ui_theme_bul,
-            R.string.ui_theme_light_bul, R.string.ui_theme_dark_bul,
+            R.string.ui_offline_mode_bul, R.string.ui_offline_mode_summary_bul,
             R.string.ui_font_size_bul, R.string.ui_font_size_small_bul,
             R.string.ui_font_size_medium_bul, R.string.ui_font_size_large_bul,
         )
@@ -424,8 +421,7 @@ object DialogueProvider {
             R.string.ui_recent_dynamic_title_eng, R.string.ui_view_history_eng,
             R.string.ui_dictionary_search_eng, R.string.ui_dictionary_search_description_eng,
             R.string.ui_dictionary_empty_eng, R.string.ui_dictionary_no_results_eng,
-            R.string.ui_appearance_eng, R.string.ui_theme_eng,
-            R.string.ui_theme_light_eng, R.string.ui_theme_dark_eng,
+            R.string.ui_offline_mode_eng, R.string.ui_offline_mode_summary_eng,
             R.string.ui_font_size_eng, R.string.ui_font_size_small_eng,
             R.string.ui_font_size_medium_eng, R.string.ui_font_size_large_eng,
         )

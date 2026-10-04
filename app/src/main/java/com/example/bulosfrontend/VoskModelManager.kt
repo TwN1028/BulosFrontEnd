@@ -19,6 +19,18 @@ class VoskModelManager(
 
     fun supports(language: String): Boolean = modelSpec(language) != null
 
+    fun isInstalled(language: String): Boolean {
+        val spec = modelSpec(language) ?: return false
+        val installedDirectory = File(modelRoot, spec.name)
+        val completionMarker = File(installedDirectory, COMPLETION_MARKER)
+        return completionMarker.isFile &&
+            runCatching { completionMarker.readText() == spec.md5 }.getOrDefault(false) &&
+            File(installedDirectory, "conf").isDirectory &&
+            File(installedDirectory, "am").isDirectory
+    }
+
+    fun downloadSizeBytes(language: String): Long? = modelSpec(language)?.size
+
     fun load(language: String): Model {
         val spec = modelSpec(language)
             ?: throw IllegalArgumentException("No offline speech model is available for $language.")

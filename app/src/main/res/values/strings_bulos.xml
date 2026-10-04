@@ -58,7 +58,7 @@
     <string name="ui_dictionary_no_results_bul">[BULOS: No dictionary entries match your search.]</string>
     <string name="ui_language_bul">[BULOS: Language]</string>
     <string name="ui_language_summary_bul">[BULOS: Change the application interface language]</string>
-    <string name="ui_language_screen_title_bul">[BULOS: Interface Language]</string>
+    <string name="ui_language_screen_title_bul">Piling ang Lengguwahe</string>
     <string name="ui_current_language_bul">[BULOS: Current language: %1$s]</string>
     <string name="ui_app_logo_description_bul">[BULOS: App logo]</string>
     <string name="ui_home_badge_bul">[BULOS: Interface]</string>

@@ -1,12 +1,15 @@
 package com.example.bulosfrontend
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -21,7 +24,10 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -30,11 +36,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.bulosfrontend.ui.theme.ForestGreen
+import com.example.bulosfrontend.ui.theme.HomeCardBorder
+import com.example.bulosfrontend.ui.theme.WarmWhiteCard
 
 internal fun DictionaryEntry.value(language: UiLanguage): String = when (language) {
     UiLanguage.BULOS -> bulos
@@ -113,68 +121,82 @@ fun DictionaryScreen(viewModel: MainViewModel) {
         DictionaryEntryDetail(entry = entry, onDismiss = { selectedEntry = null })
     }
 
-    Scaffold(
-        containerColor = HomeContentCream,
-        topBar = {
-            SharedTopAppBar(
-                title = stringResource(home.dictionaryTitleRes),
-                logoDescriptionRes = home.appLogoDescriptionRes,
-                iconRes = R.drawable.ic_dictionary_book,
-            )
-        },
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
+    Surface(Modifier.fillMaxSize(), color = HomeContentCream) {
+        OverlappingHeaderLayout(
+            // Raise the search controls farther into the green header while
+            // retaining the same responsive shared-header layout.
+            overlap = 48.dp,
+            modifier = Modifier.fillMaxSize(),
+            header = {
+                SharedTopAppBar(
+                    title = stringResource(home.dictionaryTitleRes),
+                    logoDescriptionRes = home.appLogoDescriptionRes,
+                    iconRes = R.drawable.ic_dictionary_book,
+                    subtitle = stringResource(home.dictionarySubtitleRes),
+                )
+            },
         ) {
             Column(
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.fillMaxSize(),
             ) {
-                DictionaryLanguageSelector(
-                    label = stringResource(R.string.dictionary_search_in),
-                    selected = sourceLanguage,
-                    options = UiLanguage.entries,
-                    onSelected = { selectedSource ->
-                        if (sourceLanguage == UiLanguage.BULOS && targetLanguage in dictionaryTargetOptions(sourceLanguage)) {
-                            lastBulosTarget = targetLanguage
-                        }
-                        sourceLanguage = selectedSource
-                        val targets = dictionaryTargetOptions(selectedSource)
-                        targetLanguage = targetLanguage.takeIf { it in targets }
-                            ?: lastBulosTarget.takeIf { it in targets }
-                            ?: targets.first()
-                    },
-                )
-                DictionaryLanguageSelector(
-                    label = stringResource(R.string.dictionary_show_translation_in),
-                    selected = targetLanguage,
-                    options = dictionaryTargetOptions(sourceLanguage),
-                    onSelected = {
-                        targetLanguage = it
-                        if (sourceLanguage == UiLanguage.BULOS) lastBulosTarget = it
-                    },
-                )
-            }
-
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                placeholder = { Text(stringResource(home.dictionarySearchRes)) },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = stringResource(home.dictionarySearchDescriptionRes),
+                Column(
+                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        modifier = Modifier.fillMaxWidth().height(58.dp),
+                        placeholder = { Text(stringResource(home.dictionarySearchRes)) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = stringResource(home.dictionarySearchDescriptionRes),
+                            )
+                        },
+                        shape = RoundedCornerShape(20.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = WarmWhiteCard,
+                            unfocusedContainerColor = WarmWhiteCard,
+                            focusedBorderColor = ForestGreen,
+                            unfocusedBorderColor = HomeCardBorder,
+                        ),
+                        singleLine = true,
                     )
-                },
-                singleLine = true,
-            )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        DictionaryLanguageSelector(
+                            label = stringResource(R.string.dictionary_search_in),
+                            selected = sourceLanguage,
+                            options = UiLanguage.entries,
+                            onSelected = { selectedSource ->
+                                if (sourceLanguage == UiLanguage.BULOS && targetLanguage in dictionaryTargetOptions(sourceLanguage)) {
+                                    lastBulosTarget = targetLanguage
+                                }
+                                sourceLanguage = selectedSource
+                                val targets = dictionaryTargetOptions(selectedSource)
+                                targetLanguage = targetLanguage.takeIf { it in targets }
+                                    ?: lastBulosTarget.takeIf { it in targets }
+                                    ?: targets.first()
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                        DictionaryLanguageSelector(
+                            label = stringResource(R.string.dictionary_show_translation_in),
+                            selected = targetLanguage,
+                            options = dictionaryTargetOptions(sourceLanguage),
+                            onSelected = {
+                                targetLanguage = it
+                                if (sourceLanguage == UiLanguage.BULOS) lastBulosTarget = it
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
 
-            if (filteredEntries.isEmpty()) {
+                if (filteredEntries.isEmpty()) {
                 Text(
                     text = stringResource(
                         if (query.isBlank()) home.dictionaryEmptyRes else home.dictionaryNoResultsRes,
@@ -183,7 +205,7 @@ fun DictionaryScreen(viewModel: MainViewModel) {
                     color = MaterialTheme.colorScheme.secondary,
                     style = MaterialTheme.typography.bodyLarge,
                 )
-            } else {
+                } else {
                 LazyColumn(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -197,6 +219,7 @@ fun DictionaryScreen(viewModel: MainViewModel) {
                         )
                     }
                 }
+                }
             }
         }
     }
@@ -208,17 +231,28 @@ private fun DictionaryLanguageSelector(
     selected: UiLanguage,
     options: List<UiLanguage>,
     onSelected: (UiLanguage) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+    Column(modifier = modifier) {
         Text(
             text = label,
-            modifier = Modifier.padding(vertical = 12.dp),
+            modifier = Modifier.heightIn(min = 20.dp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.labelLarge,
         )
-        Column {
-            TextButton(onClick = { expanded = true }) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(
+                onClick = { expanded = true },
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, HomeCardBorder),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = WarmWhiteCard,
+                    contentColor = ForestGreen,
+                ),
+                contentPadding = PaddingValues(horizontal = 12.dp),
+            ) {
                 Text(stringResource(selected.displayNameRes), fontWeight = FontWeight.SemiBold)
                 Icon(Icons.Default.ArrowDropDown, contentDescription = null)
             }

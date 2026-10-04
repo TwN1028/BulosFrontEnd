@@ -7,7 +7,8 @@ data class HistoryItem(
     val targetLang: String,
     val inputText: String,
     val translatedText: String,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val isFavorite: Boolean = false,
 )
 
 fun HistoryItem.matchesTranslation(

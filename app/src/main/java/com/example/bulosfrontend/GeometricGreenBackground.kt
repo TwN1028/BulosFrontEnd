@@ -9,6 +9,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
@@ -56,6 +57,27 @@ fun speechTranslationGradientBrush(): Brush =
         0.70f to Color(0xFFEAEBD9),
         1.00f to Color(0xFFF7F8F2),
     )
+
+fun Modifier.speechTranslationBackground(): Modifier =
+    background(speechTranslationGradientBrush())
+        .drawBehind {
+            val center = Offset(size.width / 2f, size.height * 0.58f)
+            val radius = size.width * 0.86f
+            drawCircle(
+                brush = Brush.radialGradient(
+                    0.00f to Color(0xFFEAEBD9).copy(alpha = 0.30f),
+                    0.32f to Color(0xFFEAEBD9).copy(alpha = 0.23f),
+                    0.58f to Color(0xFFEAEBD9).copy(alpha = 0.13f),
+                    0.78f to Color(0xFFEAEBD9).copy(alpha = 0.055f),
+                    0.94f to Color(0xFFEAEBD9).copy(alpha = 0.012f),
+                    1.00f to Color.Transparent,
+                    center = center,
+                    radius = radius,
+                ),
+                center = center,
+                radius = radius,
+            )
+        }
 
 fun homeHeaderGradientStops(includeCreamTail: Boolean = true): Array<Pair<Float, Color>> =
     buildList {

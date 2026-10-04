@@ -74,7 +74,7 @@ fun AppFloatingNavigation(
     val items = listOf(
         FloatingNavigationItem(content.navSpeechRes, painterResource(R.drawable.ic_lucide_mic), AppDestinations.HOME_RECORDING),
         FloatingNavigationItem(content.navTranslateRes, painterResource(R.drawable.ic_lucide_languages), AppDestinations.TEXT),
-        FloatingNavigationItem(content.historyTitleRes, painterResource(R.drawable.ic_saved_history_reference), AppDestinations.HISTORY),
+        FloatingNavigationItem(content.historyTitleRes, painterResource(R.drawable.ic_bookmark_outline), AppDestinations.HISTORY),
         FloatingNavigationItem(content.navDictionaryRes, painterResource(R.drawable.ic_dictionary_book), AppDestinations.DICTIONARY),
         FloatingNavigationItem(content.settingsTitleRes, painterResource(R.drawable.ic_lucide_settings), AppDestinations.MORE),
     )

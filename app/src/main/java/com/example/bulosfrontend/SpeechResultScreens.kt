@@ -30,8 +30,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Button
@@ -77,6 +75,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.os.ConfigurationCompat
 import com.example.bulosfrontend.ui.theme.ForestGreen
 import com.example.bulosfrontend.ui.theme.PrimaryGreen
+import com.example.bulosfrontend.ui.theme.SharedActiveButtonColor
 import com.example.bulosfrontend.ui.theme.SoftGreen
 import com.example.bulosfrontend.ui.theme.WarmWhite
 import kotlinx.coroutines.launch
@@ -114,6 +113,7 @@ fun TranslateVoiceScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBa
                     Spacer(Modifier.height(24.dp))
                     TranslationLanguageBar(
                         swapLanguagesDescription = stringResource(labels.swapLanguagesDescriptionRes),
+                        uiLanguage = viewModel.uiLanguage,
                         modifier = Modifier
                             .padding(horizontal = contentHorizontalPadding)
                             .height(50.dp),
@@ -208,7 +208,9 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
                             enabled = originalText.isNotEmpty() && TranslationState.translatedText.isNotEmpty(),
                         ) {
                             Icon(
-                                imageVector = if (isSaved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                painter = painterResource(
+                                    if (isSaved) R.drawable.ic_bookmark_filled else R.drawable.ic_bookmark_outline,
+                                ),
                                 contentDescription = if (isSaved) {
                                     "Remove from saved translations"
                                 } else {
@@ -306,7 +308,7 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
                                 .fillMaxWidth()
                                 .height(56.dp),
                             shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F7045), contentColor = WarmWhite),
+                            colors = ButtonDefaults.buttonColors(containerColor = SharedActiveButtonColor, contentColor = WarmWhite),
                         ) {
                             Text(stringResource(labels.translateAgainRes), fontWeight = FontWeight.Bold)
                         }
@@ -381,6 +383,7 @@ fun FeaturePatternHeader(
 @Composable
 fun TranslationLanguageBar(
     swapLanguagesDescription: String,
+    uiLanguage: UiLanguage,
     modifier: Modifier = Modifier,
     useHomeCardStyle: Boolean = true,
 ) {
@@ -448,7 +451,7 @@ fun TranslationLanguageBar(
             CompactLanguageMenu(
                 selected = TranslationState.sourceLanguage,
                 options = TranslationLanguageRules.supportedLanguages,
-                onSelected = TranslationState::selectSourceLanguage,
+                onSelected = { TranslationState.selectSourceLanguage(it, uiLanguage) },
                 modifier = Modifier.weight(1f),
             )
             Row(
@@ -636,7 +639,7 @@ internal fun ResultSecondaryAction(
         modifier = modifier.height(52.dp),
         shape = RoundedCornerShape(18.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (emphasized) Color(0xFF4F7045) else Color(0xFFFFFEFA),
+            containerColor = if (emphasized) SharedActiveButtonColor else Color(0xFFFFFEFA),
             contentColor = if (emphasized) Color(0xFFFFFBF4) else PrimaryGreen,
         ),
         border = if (emphasized) {

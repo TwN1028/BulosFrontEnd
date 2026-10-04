@@ -18,6 +18,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.bulosfrontend.ui.theme.ForestGreen
 import com.example.bulosfrontend.ui.theme.HomeHelpCard
+import com.example.bulosfrontend.ui.theme.SharedActiveButtonColor
 import com.example.bulosfrontend.ui.theme.SoftGreen
 import com.example.bulosfrontend.ui.theme.WarmWhiteCard
 
@@ -109,7 +110,7 @@ fun HelpOnboardingScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                 item {
                     HelpOnboardingStep(
                         number = 3,
-                        iconRes = R.drawable.ic_saved_history_reference,
+                        iconRes = R.drawable.ic_bookmark_outline,
                         title = stringResource(help.resultStepTitleRes),
                         body = stringResource(help.resultStepBodyRes),
                     )
@@ -142,7 +143,7 @@ fun HelpOnboardingScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                         modifier = Modifier.fillMaxWidth().height(54.dp),
                         shape = RoundedCornerShape(17.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF4F7045),
+                            containerColor = SharedActiveButtonColor,
                             contentColor = WarmWhiteCard,
                         ),
                     ) {

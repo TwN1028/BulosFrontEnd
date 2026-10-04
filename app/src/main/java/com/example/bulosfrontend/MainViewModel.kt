@@ -16,7 +16,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.vosk.Model
@@ -54,6 +57,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private set
     var isFontSizePreferenceLoaded by mutableStateOf(false)
         private set
+    var hasCompletedPreservationIntro by mutableStateOf<Boolean?>(null)
+        private set
+    var isHistoryLoaded by mutableStateOf(false)
+        private set
+    var isOfflineDictionaryLoadComplete by mutableStateOf(false)
+        private set
+    var startupError by mutableStateOf<String?>(null)
+        private set
+    val startupCompletedTaskCount: Int
+        get() = listOf(
+            isLanguagePreferenceLoaded,
+            isThemePreferenceLoaded,
+            isFontSizePreferenceLoaded,
+            hasCompletedPreservationIntro != null,
+            isHistoryLoaded,
+            isOfflineDictionaryLoadComplete,
+        ).count { it }
+    val startupTaskCount: Int get() = 6
+    val isStartupReady: Boolean get() = startupCompletedTaskCount == startupTaskCount && startupError == null
     val uiLanguage: UiLanguage get() = selectedUiLanguage ?: UiLanguage.ENGLISH
     val content: DialogueContent get() = DialogueProvider.getDialogue(uiLanguage)
 
@@ -89,9 +111,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var voskModelLoadJob: Job? = null
     private var voskPreloadJob: Job? = null
     private var backendReadinessJob: Job? = null
+    private var connectivityChangeJob: Job? = null
+    private var savedTranslationsObservationJob: Job? = null
     private var offlineSyncAttemptedForConnection = false
     private val networkMonitor = NetworkMonitor(application) { connected ->
-        viewModelScope.launch { handleConnectivityChange(connected, forceBackendCheck = false) }
+        connectivityChangeJob?.cancel()
+        connectivityChangeJob = viewModelScope.launch {
+            handleConnectivityChange(
+                connected = connected && NetworkUtils.isOnline(getApplication()),
+                forceBackendCheck = false,
+            )
+        }
     }
     private var onDeviceSpeechRecognizer: SpeechRecognizer? = null
     private var usesVoskRecognizer = false
@@ -114,37 +144,57 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         TranslationState.ensureValidLanguagePair()
-        viewModelScope.launch {
+        networkMonitor.start()
+        loadRequiredStartupData()
+    }
+
+    fun retryStartup() {
+        startupError = null
+        loadRequiredStartupData()
+    }
+
+    private fun loadRequiredStartupData() {
+        fun load(task: suspend () -> Unit) {
+            viewModelScope.launch {
+                runCatching { task() }.onFailure {
+                    startupError = "Unable to prepare the app. Check local storage and try again."
+                }
+            }
+        }
+        if (!isOfflineDictionaryLoadComplete) load {
             translationRepository.loadOfflineModel()
             isDictionaryLoaded = translationRepository.isOfflineModelLoaded
             dictionaryEntries = translationRepository.offlineDictionaryEntries
+            isOfflineDictionaryLoadComplete = true
         }
-        networkMonitor.start()
-        viewModelScope.launch {
-            languagePreferences.selectedLanguage.collect { language ->
-                if (!isLanguagePreferenceLoaded && language != null) {
-                    TranslationState.synchronizeSourceWithUiLanguage(language)
-                }
-                selectedUiLanguage = language
-                isLanguagePreferenceLoaded = true
-            }
+        if (!isLanguagePreferenceLoaded) load {
+            val language = languagePreferences.selectedLanguage.first()
+            if (language != null) TranslationState.synchronizeSourceWithUiLanguage(language)
+            selectedUiLanguage = language
+            isLanguagePreferenceLoaded = true
         }
-        viewModelScope.launch {
-            languagePreferences.selectedTheme.collect { theme ->
-                selectedAppTheme = theme
-                isThemePreferenceLoaded = true
-            }
+        if (!isThemePreferenceLoaded) load {
+            selectedAppTheme = languagePreferences.selectedTheme.first()
+            isThemePreferenceLoaded = true
         }
-        viewModelScope.launch {
-            languagePreferences.selectedFontSize.collect { fontSize ->
-                selectedFontSize = fontSize
-                isFontSizePreferenceLoaded = true
-            }
+        if (!isFontSizePreferenceLoaded) load {
+            selectedFontSize = languagePreferences.selectedFontSize.first()
+            isFontSizePreferenceLoaded = true
         }
-        viewModelScope.launch {
-            savedTranslationRepository.entries.collect { entries ->
-                HistoryProvider.history.clear()
-                HistoryProvider.history.addAll(entries)
+        if (hasCompletedPreservationIntro == null) load {
+            hasCompletedPreservationIntro = languagePreferences.hasCompletedPreservationIntro.first() ?: false
+        }
+        if (!isHistoryLoaded && savedTranslationsObservationJob?.isActive != true) {
+            savedTranslationsObservationJob = viewModelScope.launch {
+                savedTranslationRepository.entries
+                    .catch {
+                        startupError = "Unable to prepare the app. Check local storage and try again."
+                    }
+                    .collect { entries ->
+                        HistoryProvider.history.clear()
+                        HistoryProvider.history.addAll(entries)
+                        isHistoryLoaded = true
+                    }
             }
         }
     }
@@ -174,23 +224,41 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             offlineSyncAttemptedForConnection = true
             syncModel()
         }
-        if (connectivityChanged || forceBackendCheck) checkBackendReadiness()
+        if (connectivityChanged || forceBackendCheck) {
+            checkBackendReadiness(force = forceBackendCheck)
+        }
     }
 
-    private fun checkBackendReadiness() {
-        if (backendReadinessJob?.isActive == true) return
+    private fun checkBackendReadiness(force: Boolean) {
+        if (backendReadinessJob?.isActive == true) {
+            if (!force) return
+            backendReadinessJob?.cancel()
+        }
         connectionStatus = ConnectionStatus.WAKING_UP
         backendReadinessJob = viewModelScope.launch {
-            translationRepository.wakeUpServer()
-            val stillConnected = NetworkUtils.isOnline(getApplication())
-            isOnline = stillConnected
-            isServerReady = stillConnected && translationRepository.isServerReady
-            connectionStatus = resolveConnectionStatus(
-                connected = stillConnected,
-                backendCheckInProgress = false,
-                backendReady = isServerReady,
-            )
+            updateBackendReadiness()
+            while (isOnline && !isServerReady) {
+                delay(BACKEND_RECOVERY_INTERVAL_MS)
+                if (!NetworkUtils.isOnline(getApplication())) {
+                    handleConnectivityChange(connected = false, forceBackendCheck = false)
+                    return@launch
+                }
+                // Keep showing "Service unavailable" during background recovery probes.
+                updateBackendReadiness()
+            }
         }
+    }
+
+    private suspend fun updateBackendReadiness() {
+        translationRepository.wakeUpServer()
+        val stillConnected = NetworkUtils.isOnline(getApplication())
+        isOnline = stillConnected
+        isServerReady = stillConnected && translationRepository.isServerReady
+        connectionStatus = resolveConnectionStatus(
+            connected = stillConnected,
+            backendCheckInProgress = false,
+            backendReady = isServerReady,
+        )
     }
 
     fun selectUiLanguage(language: UiLanguage) {
@@ -414,6 +482,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { savedTranslationRepository.delete(timestamps) }
     }
 
+    fun toggleSavedTranslationFavorite(timestamp: Long) {
+        viewModelScope.launch { savedTranslationRepository.toggleFavorite(timestamp) }
+    }
+
     fun clearSavedTranslations() {
         viewModelScope.launch { savedTranslationRepository.clear() }
     }
@@ -478,7 +550,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         usesOnDeviceRecognizer = true
         TranslationState.textToTranslate = ""
         val recognizer = runCatching {
-            if (preferOffline) {
+            if (preferOffline && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
             } else {
                 SpeechRecognizer.createSpeechRecognizer(context)
@@ -882,6 +954,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     override fun onCleared() {
         networkMonitor.stop()
         backendReadinessJob?.cancel()
+        connectivityChangeJob?.cancel()
+        savedTranslationsObservationJob?.cancel()
         speechSessionId++
         recordingTimerJob?.cancel()
         recordingTimerJob = null
@@ -904,6 +978,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private companion object {
         const val VOSK_SAMPLE_RATE = 16_000f
+        const val BACKEND_RECOVERY_INTERVAL_MS = 30_000L
     }
 }
 

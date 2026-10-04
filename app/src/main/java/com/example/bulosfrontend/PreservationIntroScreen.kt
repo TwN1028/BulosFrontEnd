@@ -41,6 +41,7 @@ import com.example.bulosfrontend.ui.theme.Cream
 import com.example.bulosfrontend.ui.theme.DeepForestGreen
 import com.example.bulosfrontend.ui.theme.ForestGreen
 import com.example.bulosfrontend.ui.theme.HomeSpeechGreen
+import com.example.bulosfrontend.ui.theme.SharedActiveButtonColor
 import com.example.bulosfrontend.ui.theme.SoftGreen
 import com.example.bulosfrontend.ui.theme.WarmWhiteCard
 
@@ -275,7 +276,7 @@ fun PreservationIntroScreen(
                                 .graphicsLayer { alpha = buttonAlpha },
                             shape = RoundedCornerShape(16.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF4F7045),
+                                containerColor = SharedActiveButtonColor,
                                 contentColor = WarmWhiteCard,
                             ),
                         ) {

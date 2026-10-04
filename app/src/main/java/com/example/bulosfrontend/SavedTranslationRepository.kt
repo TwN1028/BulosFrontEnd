@@ -54,6 +54,21 @@ class SavedTranslationRepository(private val context: Context) {
         }
     }
 
+    suspend fun toggleFavorite(timestamp: Long) {
+        context.savedTranslationsDataStore.edit { preferences ->
+            val current = decodeList(preferences[entriesKey].orEmpty())
+            preferences[entriesKey] = encodeList(
+                current.map { entry ->
+                    if (entry.timestamp == timestamp) {
+                        entry.copy(isFavorite = !entry.isFavorite)
+                    } else {
+                        entry
+                    }
+                },
+            )
+        }
+    }
+
     suspend fun clear() {
         context.savedTranslationsDataStore.edit { preferences -> preferences.remove(entriesKey) }
     }
@@ -66,6 +81,7 @@ class SavedTranslationRepository(private val context: Context) {
                 appendField(entry.inputText)
                 appendField(entry.translatedText)
                 appendField(entry.timestamp.toString())
+                appendField(entry.isFavorite.toString())
             }
             appendField(encoded)
         }
@@ -75,9 +91,16 @@ class SavedTranslationRepository(private val context: Context) {
         val records = readFields(encoded)
         records.mapNotNull { record ->
             val fields = readFields(record)
-            if (fields.size != 5) return@mapNotNull null
+            if (fields.size !in 5..6) return@mapNotNull null
             val timestamp = fields[4].toLongOrNull() ?: return@mapNotNull null
-            HistoryItem(fields[0], fields[1], fields[2], fields[3], timestamp)
+            HistoryItem(
+                sourceLang = fields[0],
+                targetLang = fields[1],
+                inputText = fields[2],
+                translatedText = fields[3],
+                timestamp = timestamp,
+                isFavorite = fields.getOrNull(5) == "true",
+            )
         }
     }.getOrDefault(emptyList())
 

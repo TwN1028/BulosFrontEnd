@@ -18,8 +18,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,35 +47,48 @@ private val SplashForest = Color(0xFF173819)
 private val SplashSage = Color(0xFF819976)
 private val SplashGold = Color(0xFFE7B861)
 
+fun splashGradientBrush(): Brush =
+    Brush.verticalGradient(
+        0.00f to SplashForest,
+        0.25f to Color(0xFF355B35),
+        0.55f to SplashSage,
+        0.78f to Color(0xFFC5CEB6),
+        1.00f to SplashCream,
+    )
+
+fun Modifier.splashGradientBackground(): Modifier =
+    background(splashGradientBrush()).drawBehind {
+        val glowCenter = Offset(size.width / 2f, size.height * 0.34f)
+        drawCircle(
+            brush = Brush.radialGradient(
+                0.00f to Color(0xFFFFF4B8).copy(alpha = 0.72f),
+                0.28f to Color(0xFFF2EDB9).copy(alpha = 0.46f),
+                0.58f to Color(0xFFD9DEB4).copy(alpha = 0.18f),
+                1.00f to Color.Transparent,
+                center = glowCenter,
+                radius = size.width * 0.64f,
+            ),
+            center = glowCenter,
+            radius = size.width * 0.64f,
+        )
+    }
+
 @Composable
-fun BrandedSplashScreen(modifier: Modifier = Modifier) {
+fun BrandedSplashScreen(
+    progress: Float = 0f,
+    errorMessage: String? = null,
+    onRetry: () -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress.coerceIn(0f, 1f),
+        animationSpec = tween(220),
+        label = "startupProgress",
+    )
     Box(
         modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    0.00f to SplashForest,
-                    0.25f to Color(0xFF355B35),
-                    0.55f to SplashSage,
-                    0.78f to Color(0xFFC5CEB6),
-                    1.00f to SplashCream,
-                ),
-            )
-            .drawBehind {
-                val glowCenter = Offset(size.width / 2f, size.height * 0.34f)
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        0.00f to Color(0xFFFFF4B8).copy(alpha = 0.72f),
-                        0.28f to Color(0xFFF2EDB9).copy(alpha = 0.46f),
-                        0.58f to Color(0xFFD9DEB4).copy(alpha = 0.18f),
-                        1.00f to Color.Transparent,
-                        center = glowCenter,
-                        radius = size.width * 0.64f,
-                    ),
-                    center = glowCenter,
-                    radius = size.width * 0.64f,
-                )
-            },
+            .splashGradientBackground(),
     ) {
         BoxWithConstraints(
             modifier = Modifier
@@ -146,21 +163,31 @@ fun BrandedSplashScreen(modifier: Modifier = Modifier) {
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 LinearProgressIndicator(
+                    progress = { animatedProgress },
                     modifier = Modifier
                         .width(progressWidth)
                         .height(4.dp)
                         .clip(RoundedCornerShape(50)),
                     color = SplashGold,
-                    trackColor = Color.White.copy(alpha = 0.62f),
+                    trackColor = SplashCream.copy(alpha = 0.62f),
                 )
                 Text(
-                    text = stringResource(R.string.splash_preparing),
+                    text = if (errorMessage == null) {
+                        stringResource(R.string.splash_preparing_with_progress, (progress * 100).toInt())
+                    } else {
+                        errorMessage
+                    },
                     modifier = Modifier.padding(top = 18.dp),
                     color = Color(0xFF294E2C),
                     fontSize = 14.sp,
                     lineHeight = 18.sp,
                     textAlign = TextAlign.Center,
                 )
+                if (errorMessage != null) {
+                    TextButton(onClick = onRetry) {
+                        Text(stringResource(R.string.splash_retry), color = SplashForest)
+                    }
+                }
             }
         }
     }

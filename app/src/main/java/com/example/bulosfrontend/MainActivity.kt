@@ -22,7 +22,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,29 +55,20 @@ class MainActivity : ComponentActivity() {
                 fontScale = viewModel.selectedFontSize.scaleFactor,
             ) {
                 SideEffect { applyWhiteStatusBarContent() }
-                var minimumSplashDurationElapsed by remember { mutableStateOf(false) }
                 val preferenceRepository = remember { LanguagePreferenceRepository(applicationContext) }
-                val hasCompletedPreservationIntro by preferenceRepository.hasCompletedPreservationIntro
-                    .collectAsState(initial = null)
                 val coroutineScope = rememberCoroutineScope()
                 LaunchedEffect(TranslationState.sourceLanguage) {
                     viewModel.preloadOfflineSpeechModel(TranslationState.sourceLanguage)
                 }
-                LaunchedEffect(Unit) {
-                    delay(3_000L)
-                    minimumSplashDurationElapsed = true
-                }
-
-                if (
-                    !viewModel.isLanguagePreferenceLoaded ||
-                    !viewModel.isThemePreferenceLoaded ||
-                    !viewModel.isFontSizePreferenceLoaded ||
-                    hasCompletedPreservationIntro == null ||
-                    !minimumSplashDurationElapsed
-                ) {
-                    BrandedSplashScreen()
+                if (!viewModel.isStartupReady) {
+                    BrandedSplashScreen(
+                        progress = viewModel.startupCompletedTaskCount.toFloat() / viewModel.startupTaskCount,
+                        errorMessage = viewModel.startupError,
+                        onRetry = viewModel::retryStartup,
+                    )
                     return@BulosFrontEndTheme
                 }
+                val hasCompletedPreservationIntro = viewModel.hasCompletedPreservationIntro == true
                 val navController = rememberNavController()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route

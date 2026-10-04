@@ -54,6 +54,34 @@ class TranslationLanguageRulesTest {
     }
 
     @Test
+    fun sourceChangePrefersDifferentCurrentUiLanguageAsTarget() {
+        assertEquals(
+            TranslationLanguagePair("Bulos", "Filipino"),
+            TranslationLanguageRules.selectSource(
+                current = TranslationLanguagePair("English", "Bulos"),
+                selected = "Bulos",
+                preferredTarget = "Filipino",
+            ),
+        )
+        assertEquals(
+            TranslationLanguagePair("Bulos", "English"),
+            TranslationLanguageRules.selectSource(
+                current = TranslationLanguagePair("Filipino", "Bulos"),
+                selected = "Bulos",
+                preferredTarget = "English",
+            ),
+        )
+        assertEquals(
+            TranslationLanguagePair("English", "Bulos"),
+            TranslationLanguageRules.selectSource(
+                current = TranslationLanguagePair("Bulos", "Filipino"),
+                selected = "English",
+                preferredTarget = "English",
+            ),
+        )
+    }
+
+    @Test
     fun restoredUnsupportedPairsAreNormalized() {
         assertEquals(
             TranslationLanguagePair("English", "Bulos"),

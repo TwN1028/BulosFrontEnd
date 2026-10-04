@@ -88,7 +88,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.BaselineShift
@@ -156,7 +155,7 @@ private fun HomeScreenContent(
     }
     val features = listOf(
         HomeFeature(labels.textTitleRes, labels.textSubtitleRes, painterResource(R.drawable.ic_lucide_languages), HomeTextTranslationCard, GoldenAccent, AppDestinations.TEXT),
-        HomeFeature(labels.historyTitleRes, labels.historySubtitleRes, painterResource(R.drawable.ic_saved_history_reference), HomeSavedHistoryCard, MainText, AppDestinations.HISTORY),
+        HomeFeature(labels.historyTitleRes, labels.historySubtitleRes, painterResource(R.drawable.ic_bookmark_outline), HomeSavedHistoryCard, MainText, AppDestinations.HISTORY),
         HomeFeature(labels.settingsTitleRes, labels.settingsSubtitleRes, painterResource(R.drawable.ic_lucide_settings), HomeSettingsCard, PrimaryGreen, AppDestinations.MORE),
         HomeFeature(content.help.cardTitleRes, content.help.cardSubtitleRes, painterResource(R.drawable.ic_help_reference), HomeHelpCard, PrimaryGreen, AppDestinations.HELP),
     )
@@ -399,25 +398,7 @@ fun HomeRecordingScreen(
     Column(
         Modifier
             .fillMaxSize()
-            .background(speechTranslationGradientBrush())
-            .drawBehind {
-                val center = Offset(size.width / 2f, size.height * 0.58f)
-                val radius = size.width * 0.86f
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        0.00f to Color(0xFFEAEBD9).copy(alpha = 0.30f),
-                        0.32f to Color(0xFFEAEBD9).copy(alpha = 0.23f),
-                        0.58f to Color(0xFFEAEBD9).copy(alpha = 0.13f),
-                        0.78f to Color(0xFFEAEBD9).copy(alpha = 0.055f),
-                        0.94f to Color(0xFFEAEBD9).copy(alpha = 0.012f),
-                        1.00f to Color.Transparent,
-                        center = center,
-                        radius = radius,
-                    ),
-                    center = center,
-                    radius = radius,
-                )
-            },
+            .speechTranslationBackground(),
     ) {
         AdaptiveHeaderRow {
             IconButton(onClick = ::goBackOnce) {
@@ -476,6 +457,7 @@ fun HomeRecordingScreen(
                     swapLanguagesDescription = stringResource(
                         viewModel.content.speechResult.swapLanguagesDescriptionRes,
                     ),
+                    uiLanguage = viewModel.uiLanguage,
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .fillMaxWidth()
@@ -574,7 +556,7 @@ fun HomeRecordingScreen(
                                 modifier = Modifier.fillMaxWidth().height(52.dp),
                                 shape = RoundedCornerShape(18.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF4F7045),
+                                    containerColor = SharedActiveButtonColor,
                                     contentColor = Color(0xFFFFFBF4),
                                 ),
                             ) {
@@ -902,9 +884,7 @@ private fun BottomSpeechMicrophoneHero(
                         text = "${boundedSeconds / 60}:${(boundedSeconds % 60).toString().padStart(2, '0')} / 1:00",
                         modifier = Modifier.width(108.dp),
                         color = Color.White.copy(alpha = 0.92f),
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontFamily = FontFamily.Monospace,
-                        ),
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         textAlign = TextAlign.Center,
                     )

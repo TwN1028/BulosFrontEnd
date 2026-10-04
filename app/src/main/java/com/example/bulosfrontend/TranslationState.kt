@@ -46,8 +46,14 @@ object TranslationLanguageRules {
         current: TranslationLanguagePair,
         selected: String,
         preferredBulosTarget: String = "English",
+        preferredTarget: String? = null,
     ): TranslationLanguagePair {
         require(selected in supportedLanguages)
+        val validPreferredTarget = preferredTarget
+            ?.takeIf { it != selected && it in targetOptions(selected) }
+        if (validPreferredTarget != null) {
+            return TranslationLanguagePair(selected, validPreferredTarget)
+        }
         return when (selected) {
             "Bulos" -> TranslationLanguagePair(
                 "Bulos",
@@ -90,12 +96,17 @@ object TranslationState {
     var recordedAudioPath by mutableStateOf<String?>(null)
     private var lastBulosTarget = "English"
 
-    fun selectSourceLanguage(language: String) {
+    fun selectSourceLanguage(language: String, preferredTargetLanguage: UiLanguage? = null) {
         if (sourceLanguage == "Bulos" && targetLanguage in TranslationLanguageRules.targetOptions("Bulos")) {
             lastBulosTarget = targetLanguage
         }
         applyLanguagePair(
-            TranslationLanguageRules.selectSource(currentLanguagePair(), language, lastBulosTarget),
+            TranslationLanguageRules.selectSource(
+                current = currentLanguagePair(),
+                selected = language,
+                preferredBulosTarget = lastBulosTarget,
+                preferredTarget = preferredTargetLanguage?.let(TranslationLanguageRules::languageForUi),
+            ),
         )
     }
 

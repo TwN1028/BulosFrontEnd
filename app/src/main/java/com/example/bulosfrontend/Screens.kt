@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.res.stringResource
@@ -148,6 +149,7 @@ fun TranslateTextScreen(
             ) {
                 TranslationLanguageBar(
                     swapLanguagesDescription = stringResource(content.speechResult.swapLanguagesDescriptionRes),
+                    uiLanguage = viewModel.uiLanguage,
                     modifier = Modifier.offset(y = (-8).dp).height(50.dp),
                     useHomeCardStyle = true,
                 )
@@ -232,9 +234,9 @@ fun TranslateTextScreen(
                             .height(56.dp),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF4F7045),
+                            containerColor = SharedActiveButtonColor,
                             contentColor = WarmWhite,
-                            disabledContainerColor = Sand.copy(alpha = 0.50f),
+                            disabledContainerColor = InactiveButtonColor,
                             disabledContentColor = MutedText,
                         ),
                         elevation = ButtonDefaults.buttonElevation(disabledElevation = 0.dp),
@@ -334,7 +336,7 @@ fun TranslateTextScreen(
                             .height(56.dp),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF4F7045),
+                            containerColor = SharedActiveButtonColor,
                             contentColor = WarmWhite,
                         ),
                     ) {
@@ -402,9 +404,11 @@ private fun TranslationOutputCard(
                     fontWeight = FontWeight.Bold,
                 )
                 if (!translatedText.isNullOrBlank()) {
-                    IconButton(onClick = onToggleSaved, modifier = Modifier.size(32.dp)) {
+                    IconButton(onClick = onToggleSaved, modifier = Modifier.size(48.dp)) {
                         Icon(
-                            imageVector = if (isSaved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            painter = painterResource(
+                                if (isSaved) R.drawable.ic_bookmark_filled else R.drawable.ic_bookmark_outline,
+                            ),
                             contentDescription = if (isSaved) {
                                 "Remove from saved translations"
                             } else {
@@ -457,7 +461,7 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
             SharedTopAppBar(
                 title = stringResource(content.historyHeaderRes),
                 logoDescriptionRes = content.home.appLogoDescriptionRes,
-                iconRes = R.drawable.ic_saved_history_reference,
+                iconRes = R.drawable.ic_bookmark_outline,
                 subtitle = stringResource(content.home.historySubtitleRes),
                 trailingContent = {
                     Box {
@@ -571,6 +575,9 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                             onDelete = {
                                 viewModel.deleteSavedTranslations(setOf(item.timestamp))
                             },
+                            onToggleFavorite = {
+                                viewModel.toggleSavedTranslationFavorite(item.timestamp)
+                            },
                         )
                     }
                 }
@@ -591,6 +598,7 @@ fun HistoryCard(
     selectionEnabled: Boolean = false,
     onSelectionChange: (Boolean) -> Unit = {},
     onDelete: () -> Unit = {},
+    onToggleFavorite: () -> Unit = {},
 ) {
     Card(
         onClick = { if (selectionEnabled) onSelectionChange(!selected) },
@@ -614,6 +622,18 @@ fun HistoryCard(
                     Checkbox(
                         checked = selected,
                         onCheckedChange = onSelectionChange,
+                    )
+                }
+                IconButton(
+                    onClick = onToggleFavorite,
+                    modifier = Modifier.size(48.dp),
+                ) {
+                    Icon(
+                        imageVector = if (item.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = stringResource(
+                            if (item.isFavorite) R.string.unfavorite_translation else R.string.favorite_translation,
+                        ),
+                        tint = MaterialTheme.colorScheme.primary,
                     )
                 }
                 IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {

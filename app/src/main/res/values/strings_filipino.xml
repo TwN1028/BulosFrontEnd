@@ -58,7 +58,7 @@
     <string name="ui_dictionary_no_results_fil">Walang salitang tumutugma sa iyong paghahanap.</string>
     <string name="ui_language_fil">Wika</string>
     <string name="ui_language_summary_fil">Palitan ang wika ng interface ng application</string>
-    <string name="ui_language_screen_title_fil">Wika ng Interface</string>
+    <string name="ui_language_screen_title_fil">Piliin ang iyong wika</string>
     <string name="ui_current_language_fil">Kasalukuyang wika: %1$s</string>
     <string name="ui_app_logo_description_fil">Logo ng app</string>
     <string name="ui_home_badge_fil">Interface sa Filipino</string>

@@ -4,6 +4,8 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
+import android.net.NetworkRequest
+import android.os.Build
 
 enum class ConnectionStatus {
     ONLINE,
@@ -50,7 +52,16 @@ class NetworkMonitor(
     fun start() {
         if (registered) return
         registered = runCatching {
-            connectivityManager.registerDefaultNetworkCallback(callback)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                connectivityManager.registerDefaultNetworkCallback(callback)
+            } else {
+                connectivityManager.registerNetworkCallback(
+                    NetworkRequest.Builder()
+                        .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                        .build(),
+                    callback,
+                )
+            }
             true
         }.getOrDefault(false)
         dispatchCurrentState()

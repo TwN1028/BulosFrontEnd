@@ -13,4 +13,9 @@ class HistoryItemTest {
         assertFalse(item.matchesTranslation("English", "Bulos", "head", "uloan"))
         assertFalse(item.matchesTranslation("Bulos", "English", "head", "ulù"))
     }
+
+    @Test
+    fun favoriteStateDoesNotChangeSavedTranslationIdentity() {
+        assertTrue(item.copy(isFavorite = true).matchesTranslation("English", "Bulos", "head", "ulù"))
+    }
 }

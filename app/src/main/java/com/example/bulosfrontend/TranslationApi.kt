@@ -17,6 +17,10 @@ import java.io.IOException
 import java.net.SocketTimeoutException
 import java.util.UUID
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
+
+internal val BACKEND_HEALTH_RETRY_DELAYS_MS = longArrayOf(0L, 2_000L, 4_000L)
 
 data class TranslationRequest(
     @SerializedName("source_language") val sourceLanguage: String,
@@ -210,6 +214,7 @@ private fun HttpException.isDeviceIdError(): Boolean {
 class HybridTranslationRepository(
     private val context: Context,
     private val supportApi: TranslationSupportApi,
+    private val healthApi: TranslationSupportApi,
     private val networkRepository: NetworkTranslationRepository,
     private val offlineDictionary: OfflineDictionaryManager,
 ) : TranslationRepository {
@@ -226,16 +231,25 @@ class HybridTranslationRepository(
             isServerReady = false
             return
         }
-        repeat(20) {
-            val awake = runCatching {
-                val response = supportApi.healthCheck()
-                response.isSuccessful
-            }.getOrDefault(false)
-            if (awake) {
+
+        for (retryDelayMs in BACKEND_HEALTH_RETRY_DELAYS_MS) {
+            if (retryDelayMs > 0L) delay(retryDelayMs)
+            if (!NetworkUtils.isOnline(context)) {
+                isServerReady = false
+                return
+            }
+
+            val ready = try {
+                healthApi.healthCheck().isSuccessful
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                false
+            }
+            if (ready) {
                 isServerReady = true
                 return
             }
-            kotlinx.coroutines.delay(3_000L)
         }
         isServerReady = false
     }
@@ -408,12 +422,22 @@ object TranslationServiceProvider {
             .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
+        val healthClient = client.newBuilder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .callTimeout(25, TimeUnit.SECONDS)
+            .build()
+        val healthRetrofit = retrofit.newBuilder()
+            .client(healthClient)
+            .build()
         val api = retrofit.create(TranslationApi::class.java)
         val supportApi = retrofit.create(TranslationSupportApi::class.java)
+        val healthApi = healthRetrofit.create(TranslationSupportApi::class.java)
         val offlineDictionary = OfflineDictionaryManager(context)
         return HybridTranslationRepository(
             context = context,
             supportApi = supportApi,
+            healthApi = healthApi,
             networkRepository = NetworkTranslationRepository(api),
             offlineDictionary = offlineDictionary,
         )

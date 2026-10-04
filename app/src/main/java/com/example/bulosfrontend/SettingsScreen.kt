@@ -21,6 +21,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.bulosfrontend.ui.theme.InactiveButtonColor
+import com.example.bulosfrontend.ui.theme.SharedActiveButtonColor
 
 @Composable
 fun SettingsScreen(viewModel: MainViewModel, onLanguageClick: () -> Unit) {
@@ -264,7 +266,7 @@ private fun ThemeOption(
     Surface(
         modifier = modifier.fillMaxHeight().clickable(onClick = onClick),
         shape = RoundedCornerShape(10.dp),
-        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+        color = if (selected) SharedActiveButtonColor else InactiveButtonColor,
         contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
     ) {
         Box(contentAlignment = Alignment.Center) {

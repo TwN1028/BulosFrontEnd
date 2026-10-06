@@ -1,5 +1,6 @@
 package com.example.bulosfrontend
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.util.Log
 import com.google.gson.annotations.SerializedName
@@ -91,6 +92,7 @@ private class SharedPreferencesInstallationIdStore(context: Context) : Installat
 
     override fun read(): String? = preferences.getString("installation_uuid", null)
 
+    @SuppressLint("UseKtx")
     override fun write(value: String): Boolean =
         preferences.edit().putString("installation_uuid", value).commit()
 }

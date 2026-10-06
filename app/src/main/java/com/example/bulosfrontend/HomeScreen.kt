@@ -67,6 +67,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -88,8 +89,8 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -102,6 +103,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.bulosfrontend.ui.theme.*
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.ln
@@ -233,7 +235,7 @@ private fun HomeScreenContent(
                         titleRes = labels.recentDynamicTitleRes,
                         emptyRes = labels.noRecentRes,
                         historyActionRes = labels.viewHistoryRes,
-                        onHistoryClick = { onNavigate(AppDestinations.HISTORY) },
+                        onHistoryClick = { onNavigate(AppDestinations.RECENT) },
                     )
                 }
                 item {
@@ -307,14 +309,19 @@ fun HomeRecordingScreen(
 ) {
     val context = LocalContext.current
     val labels = viewModel.content.speechResult
+    val scope = rememberCoroutineScope()
     var actionHandled by remember { mutableStateOf(false) }
     var finishRequested by remember { mutableStateOf(false) }
+    var recordingStartRequestId by remember { mutableIntStateOf(0) }
+    var isRecordingStartPending by remember { mutableStateOf(false) }
     val recognitionFailed = viewModel.speechSessionFinished &&
         !viewModel.voiceInputReady &&
         !viewModel.isSpeechProcessing &&
         !viewModel.isRecording
 
     fun cancelOnce() {
+        recordingStartRequestId++
+        isRecordingStartPending = false
         actionHandled = true
         finishRequested = false
         viewModel.cancelRecording()
@@ -322,15 +329,26 @@ fun HomeRecordingScreen(
     }
 
     fun goBackOnce() {
+        recordingStartRequestId++
+        isRecordingStartPending = false
         actionHandled = true
         viewModel.cancelRecording()
         onBack()
     }
 
     fun startRecordingOnce() {
-        if (actionHandled || viewModel.isRecording) return
+        if (actionHandled || viewModel.isRecording || isRecordingStartPending) return
         viewModel.clearVoiceDraft()
-        viewModel.startRecording()
+        val requestId = ++recordingStartRequestId
+        isRecordingStartPending = true
+        val cuePlayed = playRecordingStartCue(context)
+        scope.launch {
+            if (cuePlayed) delay(RECORDING_START_CUE_LEAD_MS)
+            if (recordingStartRequestId == requestId && !actionHandled && !viewModel.isRecording) {
+                viewModel.startRecording()
+            }
+            if (recordingStartRequestId == requestId) isRecordingStartPending = false
+        }
     }
 
     fun completeRecordingOnce() {
@@ -482,7 +500,7 @@ fun HomeRecordingScreen(
                         .height(bottomHeroHeight),
                 )
 
-                val liveTranscript = TranslationState.textToTranslate
+                val liveTranscript = TranslationState.sttTranscript
                     .takeIf { viewModel.supportsLiveSpeechRecognition && it.isNotBlank() }
                 if (liveTranscript != null) {
                     val transcriptBottomPadding = minOf(
@@ -511,18 +529,41 @@ fun HomeRecordingScreen(
                         .padding(bottom = (bottomHeroHeight - 20.dp).coerceAtLeast(0.dp)),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text(
-                        text = when {
-                            recognitionFailed -> viewModel.speechRecognitionError
-                                ?: stringResource(labels.noSpeechRecognizedRes)
-                            viewModel.voiceInputReady -> "Speech captured. Tap Finish to continue."
-                            else -> ""
-                        },
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    if (recognitionFailed || viewModel.voiceInputReady) {
+                    if (recognitionFailed) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .offset(y = (-12).dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            val recognitionError = viewModel.speechRecognitionError
+                            val showNoSpeechMessage = viewModel.isNoSpeechDetected || recognitionError == null
+                            Text(
+                                text = if (showNoSpeechMessage) {
+                                    stringResource(labels.noSpeechRecognizedRes)
+                                } else {
+                                    recognitionError.orEmpty()
+                                },
+                                color = Color.White,
+                                style = if (showNoSpeechMessage) {
+                                    MaterialTheme.typography.titleLarge
+                                } else {
+                                    MaterialTheme.typography.titleMedium
+                                },
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            if (showNoSpeechMessage) {
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = stringResource(labels.noSpeechRetryRes),
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
+                        }
+                    }
+                    if (recognitionFailed) {
                         Spacer(Modifier.height(12.dp))
                     }
                     when {
@@ -532,15 +573,32 @@ fun HomeRecordingScreen(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
                                 ResultSecondaryAction(
-                                    text = stringResource(labels.cancelRecordingRes),
+                                    text = stringResource(
+                                        if (viewModel.voiceInputReady) {
+                                            labels.retryAgainRes
+                                        } else {
+                                            labels.cancelRecordingRes
+                                        },
+                                    ),
                                     onClick = ::cancelOnce,
                                     modifier = Modifier.weight(1f),
                                 )
                                 ResultSecondaryAction(
-                                    text = stringResource(labels.doneRecordingRes),
+                                    text = stringResource(
+                                        if (viewModel.voiceInputReady) labels.translateRes else labels.doneRecordingRes,
+                                    ),
                                     onClick = ::completeRecordingOnce,
                                     modifier = Modifier.weight(1f),
                                     emphasized = true,
+                                )
+                            }
+                            if (viewModel.voiceInputReady) {
+                                Spacer(Modifier.height(12.dp))
+                                Text(
+                                    text = "Speech captured. Tap Finish to continue.",
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
                                 )
                             }
                         }
@@ -601,7 +659,7 @@ private fun LiveSpeechTranscript(
     val scrollState = rememberScrollState()
     val revealProgress = remember { Animatable(1f) }
     var previousText by remember { mutableStateOf("") }
-    var animatedStart by remember { mutableStateOf(0) }
+    var animatedStart by remember { mutableIntStateOf(0) }
     var followNewestText by remember { mutableStateOf(true) }
 
     LaunchedEffect(text) {
@@ -689,12 +747,12 @@ private fun BottomSpeechMicrophoneHero(
     isRecording: Boolean,
     isStopped: Boolean,
     showCancelledIdleGlow: Boolean,
-    recordingSeconds: Long? = null,
     modifier: Modifier = Modifier,
+    recordingSeconds: Long? = null,
 ) {
     val microphoneButtonSize = 104.dp
-    val idlePromptBottomPadding = 24.dp
-    val microphonePromptGap = 14.dp
+    val idlePromptBottomPadding = 12.dp
+    val microphonePromptGap = 22.dp
     var idlePromptHeightPx by remember { mutableIntStateOf(0) }
     val idlePromptHeight = with(LocalDensity.current) {
         idlePromptHeightPx.toDp()
@@ -745,8 +803,17 @@ private fun BottomSpeechMicrophoneHero(
             val glowRadius = size.width * (
                 0.46f + pulse * 0.008f + creamPreparationPulse * 0.006f
             )
-            val glowCore = lerp(SpeechGlowConcentrated, RecordingRed, idleToCancelled)
-            val glowOuter = lerp(SpeechGlowOuter, OuterVoiceRing, idleToCancelled)
+            val isIdleGlow = !isRecording && !showCancelledIdleGlow
+            val glowCore = lerp(
+                if (isIdleGlow) IdleSpeechGlowCore else SpeechGlowConcentrated,
+                RecordingRed,
+                idleToCancelled,
+            )
+            val glowOuter = lerp(
+                if (isIdleGlow) IdleSpeechGlowInner else SpeechGlowOuter,
+                OuterVoiceRing,
+                idleToCancelled,
+            )
 
             drawCircle(
                 brush = Brush.radialGradient(
@@ -904,7 +971,7 @@ private fun BottomSpeechMicrophoneHero(
                         bottom = idlePromptBottomPadding,
                     )
                     .onSizeChanged { idlePromptHeightPx = it.height },
-                color = Color.White,
+                color = WarmBrown,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
@@ -982,6 +1049,8 @@ private fun SpeechMicrophoneHeroPreview() {
 }
 
 private val CreamAura = Color(0xFFFFF3DA)
+private val IdleSpeechGlowCore = Color(0xFFE3B978)
+private val IdleSpeechGlowInner = Color(0xFFF0D6AA)
 private val SpeechGlowConcentrated = Color(0xFFF3E7AC)
 private val SpeechGlowOuter = Color(0xFFF7F3DE)
 private val HomeReferenceGlowCore = Color(0xFFE8E1C7)
@@ -1029,9 +1098,10 @@ private fun HomeVoiceHero(
     speechAuraDiameter: Dp = 280.dp,
     speechAuraMaxDiameter: Dp = 280.dp,
 ) {
-    val homeReferenceAuraDiameter = (
-        LocalConfiguration.current.screenWidthDp.dp * 0.90f
-    ).coerceIn(300.dp, 380.dp)
+    val windowWidth = with(LocalDensity.current) {
+        LocalWindowInfo.current.containerSize.width.toDp()
+    }
+    val homeReferenceAuraDiameter = (windowWidth * 0.90f).coerceIn(300.dp, 380.dp)
     var visualEnvelope by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(isRecording) {
         visualEnvelope = 0f

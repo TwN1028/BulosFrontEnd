@@ -21,6 +21,12 @@
     <string name="history_filter_favorites_bul">[BULOS: Favorites]</string>
     <string name="history_no_favorites_bul">[BULOS: No favorites yet]</string>
     <string name="history_no_favorites_description_bul">[BULOS: Translations you mark with the heart icon will appear here.]</string>
+    <string name="recent_no_translation">No Recent Translations yet</string>
+    <string name="recent_no_translation_description">Your recent translations will appear here.</string>
+    <string name="recent_no_translation_fil">Wala pang Kamakailang Salin</string>
+    <string name="recent_no_translation_description_fil">Lilitaw rito ang iyong mga kamakailang salin.</string>
+    <string name="recent_no_translation_bul">[BULOS: No Recent Translations yet]</string>
+    <string name="recent_no_translation_description_bul">[BULOS: Your recent translations will appear here.]</string>
     <string name="saved_history_options">Saved history options</string>
     <string name="open_navigation_menu">Open navigation menu</string>
     <string name="close_navigation_menu">Close navigation menu</string>
@@ -48,6 +54,9 @@
     <string name="select_all">Select All</string>
     <string name="deselect_all">Deselect All</string>
     <string name="cancel_selection">Cancel</string>
+    <string name="add_to_favorites">Add to Favorites</string>
+    <string name="add_to_favorites_fil">Idagdag sa Mga Paborito</string>
+    <string name="add_to_favorites_bul">[BULOS: Add to Favorites]</string>
     <string name="app_name">BulosFrontEnd</string>
     <!-- Strings used for fragments for navigation -->
     <string name="first_fragment_label">First Fragment</string>

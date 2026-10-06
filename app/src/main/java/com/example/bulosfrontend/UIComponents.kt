@@ -279,11 +279,3 @@ fun TopToastNotification(visible: Boolean, message: String, innerPadding: Paddin
         }
     }
 }
-
-@Composable
-fun StandardFooter(textRes: Int) = Text(
-    text = stringResource(textRes),
-    modifier = Modifier.padding(bottom = 16.dp).alpha(0.7f),
-    textAlign = TextAlign.Center,
-    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Light, fontFamily = Aileron),
-)

@@ -3,6 +3,7 @@ package com.example.bulosfrontend
 import android.content.ClipData
 import android.content.Intent
 import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.LazyColumn
@@ -58,6 +59,8 @@ fun TranslateTextScreen(
     val content = viewModel.content
     val labels = content.textTranslation
     val resultLabels = content.speechResult
+    val tttTextColor = Color(0xFF736E68)
+    val shareChooserTitle = stringResource(resultLabels.shareChooserTitleRes)
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
     val coroutineScope = rememberCoroutineScope()
@@ -81,7 +84,7 @@ fun TranslateTextScreen(
     val successfulTranslation = successfulResponse?.translatedText
     val hasSuccessfulResult = successfulTranslation != null
     val isSaved = hasSuccessfulResult && HistoryProvider.history.any {
-        it.matchesTranslation(
+        it.isSaved && it.matchesTranslation(
             TranslationState.sourceLanguage,
             TranslationState.targetLanguage,
             TranslationState.textToTranslate,
@@ -164,7 +167,7 @@ fun TranslateTextScreen(
                     Text(
                         text = stringResource(labels.translateFromRes),
                         modifier = Modifier.weight(1f),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = tttTextColor,
                         style = MaterialTheme.typography.labelSmall,
                         textAlign = TextAlign.Center,
                     )
@@ -172,7 +175,7 @@ fun TranslateTextScreen(
                     Text(
                         text = stringResource(labels.translateToLabelRes),
                         modifier = Modifier.weight(1f),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = tttTextColor,
                         style = MaterialTheme.typography.labelSmall,
                         textAlign = TextAlign.Center,
                     )
@@ -182,7 +185,8 @@ fun TranslateTextScreen(
                     label = TranslationState.sourceLanguage.uppercase(currentLocale),
                     value = text,
                     placeholder = stringResource(labels.inputPlaceholderRes, TranslationState.sourceLanguage),
-                    onValueChange = { if (it.length <= 100) text = it },
+                    onValueChange = { if (it.length <= 300) text = it },
+                    textColor = tttTextColor,
                     minimumHeight = translationCardHeight,
                     textFieldHeight = inputFieldHeight,
                     headerAction = if (text.isNotEmpty()) {
@@ -205,7 +209,7 @@ fun TranslateTextScreen(
                     },
                     footer = {
                         Text(
-                            stringResource(content.characterCountRes, text.length, 100),
+                            stringResource(content.characterCountRes, text.length, 300),
                             modifier = Modifier.padding(start = 2.dp, bottom = 2.dp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.labelMedium,
@@ -320,7 +324,7 @@ fun TranslateTextScreen(
                                 context.startActivity(
                                     Intent.createChooser(
                                         intent,
-                                        context.getString(resultLabels.shareChooserTitleRes),
+                                        shareChooserTitle,
                                     ),
                                 )
                             },
@@ -386,13 +390,19 @@ private fun TranslationOutputCard(
     onToggleSaved: () -> Unit,
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth().heightIn(min = minimumHeight),
-        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = minimumHeight)
+            .shadow(
+                elevation = 4.dp,
+                shape = HomeCardShape,
+                clip = false,
+                ambientColor = Color.Black.copy(alpha = 0.08f),
+                spotColor = Color.Black.copy(alpha = 0.08f),
+            ),
+        shape = HomeCardShape,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = androidx.compose.foundation.BorderStroke(
-            TranslationInputBorderWidth,
-            TranslationInputBorderColor,
-        ),
+        border = HomeSupportingCardBorder,
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) {
@@ -424,7 +434,7 @@ private fun TranslationOutputCard(
             Text(
                 text = translatedText?.takeIf { it.isNotBlank() } ?: placeholder,
                 color = if (translatedText.isNullOrBlank()) {
-                    MaterialTheme.colorScheme.onSurfaceVariant
+                    Color(0xFF736E68)
                 } else {
                     MaterialTheme.colorScheme.onSurface
                 },
@@ -437,11 +447,11 @@ private fun TranslationOutputCard(
 @Composable
 fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
     val content = viewModel.content
-    val historyItems = HistoryProvider.history
+    val historyItems = HistoryProvider.history.filter { it.isSaved }
     var historyFilter by rememberSaveable { mutableStateOf(HistoryFilter.ALL) }
     val visibleHistoryItems = historyItemsForFilter(historyItems, historyFilter)
-    var selectedTimestamps by remember { mutableStateOf(emptySet<Long>()) }
-    var selectionMode by remember { mutableStateOf(false) }
+    var selectedTimestamps by rememberSaveable { mutableStateOf(emptyList<Long>()) }
+    var selectionMode by rememberSaveable { mutableStateOf(false) }
     var showHistoryMenu by remember { mutableStateOf(false) }
     val allItemsSelected = visibleHistoryItems.isNotEmpty() &&
         selectedTimestamps.size == visibleHistoryItems.size
@@ -449,12 +459,12 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
     LaunchedEffect(historyItems.toList(), historyFilter) {
         selectedTimestamps = selectedTimestamps.intersect(
             visibleHistoryItems.mapTo(mutableSetOf()) { it.timestamp },
-        )
+        ).toList()
         if (visibleHistoryItems.isEmpty()) selectionMode = false
     }
 
     BackHandler(enabled = selectionMode) {
-        selectedTimestamps = emptySet()
+        selectedTimestamps = emptyList()
         selectionMode = false
     }
 
@@ -486,20 +496,22 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                                 text = { Text(stringResource(R.string.clear_all)) },
                                 onClick = {
                                     showHistoryMenu = false
-                                    selectedTimestamps = emptySet()
+                                    selectedTimestamps = emptyList()
                                     viewModel.clearSavedTranslations()
                                 },
                                 enabled = historyItems.isNotEmpty(),
                             )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.select_multiple)) },
-                                onClick = {
-                                    showHistoryMenu = false
-                                    selectionMode = true
-                                    selectedTimestamps = emptySet()
-                                },
-                                enabled = visibleHistoryItems.isNotEmpty(),
-                            )
+                            if (historyFilter == HistoryFilter.ALL) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.select_multiple)) },
+                                    onClick = {
+                                        showHistoryMenu = false
+                                        selectionMode = true
+                                        selectedTimestamps = emptyList()
+                                    },
+                                    enabled = visibleHistoryItems.isNotEmpty(),
+                                )
+                            }
                         }
                     }
                 },
@@ -507,7 +519,7 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                 selectionContent = {
                     IconButton(
                         onClick = {
-                            selectedTimestamps = emptySet()
+                            selectedTimestamps = emptyList()
                             selectionMode = false
                         },
                     ) {
@@ -521,9 +533,9 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                     TextButton(
                         onClick = {
                             selectedTimestamps = if (allItemsSelected) {
-                                emptySet()
+                                emptyList()
                             } else {
-                                visibleHistoryItems.mapTo(mutableSetOf()) { it.timestamp }
+                                visibleHistoryItems.map { it.timestamp }
                             }
                         },
                     ) {
@@ -533,10 +545,30 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                             style = MaterialTheme.typography.labelMedium,
                         )
                     }
+                    TextButton(
+                        onClick = {
+                            viewModel.addSavedTranslationsToFavorites(selectedTimestamps.toSet())
+                            selectedTimestamps = emptyList()
+                            selectionMode = false
+                        },
+                        enabled = selectedTimestamps.isNotEmpty(),
+                    ) {
+                        Text(
+                            text = stringResource(
+                                when (viewModel.uiLanguage) {
+                                    UiLanguage.ENGLISH -> R.string.add_to_favorites
+                                    UiLanguage.FILIPINO -> R.string.add_to_favorites_fil
+                                    UiLanguage.BULOS -> R.string.add_to_favorites_bul
+                                },
+                            ),
+                            color = WarmWhite,
+                            style = MaterialTheme.typography.labelMedium,
+                        )
+                    }
                     IconButton(
                         onClick = {
-                            viewModel.deleteSavedTranslations(selectedTimestamps)
-                            selectedTimestamps = emptySet()
+                            viewModel.deleteSavedTranslations(selectedTimestamps.toSet())
+                            selectedTimestamps = emptyList()
                             selectionMode = false
                         },
                         enabled = selectedTimestamps.isNotEmpty(),
@@ -561,7 +593,7 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                 uiLanguage = viewModel.uiLanguage,
                 onFilterSelected = { selectedFilter ->
                     historyFilter = selectedFilter
-                    selectedTimestamps = emptySet()
+                    selectedTimestamps = emptyList()
                     selectionMode = false
                 },
                 modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp),
@@ -571,12 +603,7 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                     if (historyFilter == HistoryFilter.FAVORITES) {
                         HistoryFavoritesEmptyState(viewModel.uiLanguage)
                     } else {
-                        Text(
-                            stringResource(content.noHistoryRes),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.outline,
-                            textAlign = TextAlign.Center,
-                        )
+                        HistorySavedEmptyState(content.noHistoryRes, viewModel.uiLanguage)
                     }
                 }
             } else {
@@ -591,9 +618,9 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                             selected = item.timestamp in selectedTimestamps,
                             selectionEnabled = selectionMode,
                             onSelectionChange = { selected ->
-                                selectedTimestamps = if (selected) {
-                                    selectedTimestamps + item.timestamp
-                                } else {
+                            selectedTimestamps = if (selected) {
+                                selectedTimestamps + item.timestamp
+                            } else {
                                     selectedTimestamps - item.timestamp
                                 }
                             },
@@ -607,11 +634,78 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                     }
                 }
             }
-            TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth().padding(16.dp).height(48.dp)) {
-                Text(stringResource(content.goBackRes), style = MaterialTheme.typography.titleMedium)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 12.dp),
+            ) {
+                TextButton(
+                    onClick = onBack,
+                    modifier = Modifier.align(Alignment.Center).height(48.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                ) {
+                    Text(
+                        text = stringResource(content.textTranslation.backRes),
+                        color = Color(0xFF36583A),
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
             }
-            StandardFooter(content.footerRes)
         }
+        }
+    }
+}
+
+@Composable
+fun RecentTranslationScreen(viewModel: MainViewModel, onBack: () -> Unit) {
+    val content = viewModel.content
+    val recentItems = recentHistoryItems(HistoryProvider.history)
+
+    Surface(Modifier.fillMaxSize(), color = Color(0xFFFFFBF4)) {
+        OverlappingHeaderLayout(
+            overlap = 40.dp,
+            modifier = Modifier.fillMaxSize(),
+            header = {
+                SharedTopAppBar(
+                    title = stringResource(content.home.recentDynamicTitleRes),
+                    logoDescriptionRes = content.home.appLogoDescriptionRes,
+                    iconRes = R.drawable.ic_bookmark_outline,
+                    subtitle = stringResource(content.home.historySubtitleRes),
+                )
+            },
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                if (recentItems.isEmpty()) {
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        RecentTranslationEmptyState(viewModel.uiLanguage)
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        items(recentItems, key = { it.timestamp }) { item ->
+                            HistoryCard(
+                                item = item,
+                                showFavorite = item.isSaved,
+                                onDelete = {
+                                    viewModel.deleteRecentTranslations(setOf(item.timestamp))
+                                },
+                                onToggleFavorite = {
+                                    viewModel.toggleSavedTranslationFavorite(item.timestamp)
+                                },
+                            )
+                        }
+                    }
+                }
+                TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth().padding(16.dp).height(48.dp)) {
+                    Text(stringResource(content.goBackRes), style = MaterialTheme.typography.titleMedium)
+                }
+            }
         }
     }
 }
@@ -647,14 +741,27 @@ private fun HistoryFilterControl(
             UiLanguage.BULOS -> R.string.history_filter_favorites_bul
         },
     )
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        color = InactiveButtonColor,
-        border = androidx.compose.foundation.BorderStroke(1.dp, HomeCardBorder),
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(50.dp)
+            .shadow(
+                elevation = 8.dp,
+                shape = LanguageSelectorCardShape,
+                clip = false,
+                ambientColor = Color.Black.copy(alpha = 0.12f),
+                spotColor = Color.Black.copy(alpha = 0.16f),
+            ),
+        shape = LanguageSelectorCardShape,
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        border = androidx.compose.foundation.BorderStroke(1.dp, LanguageSelectorCardBorder),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(4.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(LanguageSelectorCardFill)
+                .padding(4.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             listOf(
@@ -665,7 +772,7 @@ private fun HistoryFilterControl(
                 Surface(
                     onClick = { onFilterSelected(filter) },
                     modifier = Modifier.weight(1f).heightIn(min = 40.dp),
-                    shape = RoundedCornerShape(11.dp),
+                    shape = RoundedCornerShape(16.dp),
                     color = if (selected) SharedActiveButtonColor else Color.Transparent,
                     contentColor = if (selected) WarmWhite else MaterialTheme.colorScheme.onSurfaceVariant,
                 ) {
@@ -684,6 +791,67 @@ private fun HistoryFilterControl(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun RecentTranslationEmptyState(uiLanguage: UiLanguage) {
+    val titleRes = when (uiLanguage) {
+        UiLanguage.ENGLISH -> R.string.recent_no_translation
+        UiLanguage.FILIPINO -> R.string.recent_no_translation_fil
+        UiLanguage.BULOS -> R.string.recent_no_translation_bul
+    }
+    val descriptionRes = when (uiLanguage) {
+        UiLanguage.ENGLISH -> R.string.recent_no_translation_description
+        UiLanguage.FILIPINO -> R.string.recent_no_translation_description_fil
+        UiLanguage.BULOS -> R.string.recent_no_translation_description_bul
+    }
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringResource(titleRes),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = stringResource(descriptionRes),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+private fun HistorySavedEmptyState(@StringRes titleRes: Int, uiLanguage: UiLanguage) {
+    val descriptionRes = when (uiLanguage) {
+        UiLanguage.ENGLISH -> R.string.ui_no_history_description_eng
+        UiLanguage.FILIPINO -> R.string.ui_no_history_description_fil
+        UiLanguage.BULOS -> R.string.ui_no_history_description_bul
+    }
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringResource(titleRes),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = stringResource(descriptionRes),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -725,20 +893,26 @@ fun HistoryCard(
     item: HistoryItem,
     selected: Boolean = false,
     selectionEnabled: Boolean = false,
+    showFavorite: Boolean = true,
     onSelectionChange: (Boolean) -> Unit = {},
     onDelete: () -> Unit = {},
     onToggleFavorite: () -> Unit = {},
 ) {
     Card(
         onClick = { if (selectionEnabled) onSelectionChange(!selected) },
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = SavedTranslationEntryCard),
-        border = if (selected) {
-            androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
-        } else {
-            null
-        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 4.dp,
+                shape = HomeCardShape,
+                clip = false,
+                ambientColor = Color.Black.copy(alpha = 0.08f),
+                spotColor = Color.Black.copy(alpha = 0.08f),
+            ),
+        shape = HomeCardShape,
+        colors = CardDefaults.cardColors(containerColor = HomeContentCream),
+        border = HomeSupportingCardBorder,
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -753,17 +927,19 @@ fun HistoryCard(
                         onCheckedChange = onSelectionChange,
                     )
                 }
-                IconButton(
-                    onClick = onToggleFavorite,
-                    modifier = Modifier.size(48.dp),
-                ) {
-                    Icon(
-                        imageVector = if (item.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = stringResource(
-                            if (item.isFavorite) R.string.unfavorite_translation else R.string.favorite_translation,
-                        ),
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
+                if (showFavorite) {
+                    IconButton(
+                        onClick = onToggleFavorite,
+                        modifier = Modifier.size(48.dp),
+                    ) {
+                        Icon(
+                            imageVector = if (item.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = stringResource(
+                                if (item.isFavorite) R.string.unfavorite_translation else R.string.favorite_translation,
+                            ),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
                 }
                 IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
                     Icon(

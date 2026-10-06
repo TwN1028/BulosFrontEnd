@@ -9,6 +9,7 @@ object AppDestinations {
     const val VOICE = "voice"
     const val RESULT = "result"
     const val HISTORY = "history"
+    const val RECENT = "recent"
     const val DICTIONARY = "dictionary"
     const val MORE = "more"
     const val HELP = "help"

@@ -115,6 +115,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var audioFile: File? = null
     private var isRecorderStarting = false
     private var recordingTimerJob: Job? = null
+    private var cancelledGlowResetJob: Job? = null
     private var voskSpeechService: LowLatencyVoskSpeechService? = null
     private var voskModel: Model? = null
     private var voskModelLanguage: String? = null
@@ -151,6 +152,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var speechSessionFinished by mutableStateOf(false)
         private set
     var speechRecognitionError by mutableStateOf<String?>(null)
+        private set
+    var isNoSpeechDetected by mutableStateOf(false)
         private set
     var wasRecordingCancelled by mutableStateOf(false)
         private set
@@ -203,6 +206,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         if (!isHistoryLoaded && savedTranslationsObservationJob?.isActive != true) {
             savedTranslationsObservationJob = viewModelScope.launch {
+                savedTranslationRepository.pruneExpiredUnsavedEntries()
                 savedTranslationRepository.entries
                     .catch {
                         startupError = "Unable to prepare the app. Check local storage and try again."
@@ -382,6 +386,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     is TranslationResult.Success -> {
                         offlineTranslationMessage = null
                         val displayResponse = result.response.copy(originalText = text)
+                        savedTranslationRepository.record(
+                            sourceLang = sourceLanguage,
+                            targetLang = targetLanguage,
+                            inputText = text,
+                            translatedText = displayResponse.translatedText,
+                        )
                         TranslationState.textToTranslate = text
                         TranslationState.translatedText = displayResponse.translatedText
                         textTranslationState = TextTranslationUiState.Success(displayResponse)
@@ -437,6 +447,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 ) {
                     is TranslationResult.Success -> {
                         offlineTranslationMessage = null
+                        savedTranslationRepository.record(
+                            sourceLang = sourceLanguage,
+                            targetLang = targetLanguage,
+                            inputText = displayText,
+                            translatedText = result.response.translatedText,
+                        )
                         TranslationState.textToTranslate = displayText
                         TranslationState.translatedText = result.response.translatedText
                     }
@@ -471,6 +487,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         )
         TranslationState.textToTranslate = input
         TranslationState.translatedText = suggestion.translatedText
+        viewModelScope.launch {
+            savedTranslationRepository.record(
+                sourceLang = TranslationState.sourceLanguage,
+                targetLang = TranslationState.targetLanguage,
+                inputText = input,
+                translatedText = suggestion.translatedText,
+            )
+        }
         offlineTranslationSuggestions = emptyList()
         offlineSuggestionInput = ""
         offlineTranslationMessage = null
@@ -478,12 +502,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun clearVoiceDraft() {
-        TranslationState.textToTranslate = ""
-        TranslationState.translatedText = ""
+        TranslationState.sttTranscript = ""
         TranslationState.recordedAudioPath = null
         voiceInputReady = false
         speechSessionFinished = false
         speechRecognitionError = null
+        isNoSpeechDetected = false
         isSpeechProcessing = false
         offlineTranslationSuggestions = emptyList()
         offlineSuggestionInput = ""
@@ -493,15 +517,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun saveCurrentTranslation() {
         val inputText = TranslationState.textToTranslate
         val translatedText = TranslationState.translatedText
-        val alreadySaved = HistoryProvider.history.any {
-            it.sourceLang == TranslationState.sourceLanguage &&
-                it.targetLang == TranslationState.targetLanguage &&
-                it.inputText == inputText &&
-                it.translatedText == translatedText
-        }
-        if (inputText.isNotEmpty() && translatedText.isNotEmpty() && !alreadySaved) {
+        if (inputText.isNotEmpty() && translatedText.isNotEmpty()) {
             viewModelScope.launch {
-                savedTranslationRepository.save(
+                savedTranslationRepository.ensureSaved(
                     sourceLang = TranslationState.sourceLanguage,
                     targetLang = TranslationState.targetLanguage,
                     inputText = inputText,
@@ -515,22 +533,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val inputText = TranslationState.textToTranslate
         val translatedText = TranslationState.translatedText
         if (inputText.isEmpty() || translatedText.isEmpty()) return
-        val saved = HistoryProvider.history.firstOrNull {
-            it.matchesTranslation(
+        viewModelScope.launch {
+            savedTranslationRepository.toggleSaved(
                 sourceLang = TranslationState.sourceLanguage,
                 targetLang = TranslationState.targetLanguage,
                 inputText = inputText,
                 translatedText = translatedText,
             )
         }
-        if (saved != null) {
-            deleteSavedTranslations(setOf(saved.timestamp))
-        } else {
-            saveCurrentTranslation()
-        }
     }
 
     fun deleteSavedTranslations(timestamps: Set<Long>) {
+        viewModelScope.launch { savedTranslationRepository.removeSaved(timestamps) }
+    }
+
+    fun deleteRecentTranslations(timestamps: Set<Long>) {
         viewModelScope.launch { savedTranslationRepository.delete(timestamps) }
     }
 
@@ -538,8 +555,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { savedTranslationRepository.toggleFavorite(timestamp) }
     }
 
+    fun addSavedTranslationsToFavorites(timestamps: Set<Long>) {
+        viewModelScope.launch { savedTranslationRepository.addFavorites(timestamps) }
+    }
+
     fun clearSavedTranslations() {
-        viewModelScope.launch { savedTranslationRepository.clear() }
+        viewModelScope.launch { savedTranslationRepository.clearSaved() }
     }
 
     fun startRecording() {
@@ -547,10 +568,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             isRecording || recorder != null || voskSpeechService != null ||
             onDeviceSpeechRecognizer != null || isRecorderStarting
         ) return
+        cancelledGlowResetJob?.cancel()
+        cancelledGlowResetJob = null
         wasRecordingCancelled = false
         voiceInputReady = false
         speechSessionFinished = false
         speechRecognitionError = null
+        isNoSpeechDetected = false
         isSpeechProcessing = false
         TranslationState.recordedAudioPath = null
         val language = TranslationState.sourceLanguage
@@ -695,7 +719,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         isRecorderStarting = true
         isSpeechProcessing = true
         usesOnDeviceRecognizer = true
-        TranslationState.textToTranslate = ""
+        TranslationState.sttTranscript = ""
         val recognizer = runCatching {
             if (preferOffline && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
@@ -737,6 +761,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     finishOnDeviceRecognition(markFinished = false)
                     startFallbackSpeechRecognition(language, preferOffline)
                 } else {
+                    isNoSpeechDetected = error == SpeechRecognizer.ERROR_NO_MATCH ||
+                        error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT
                     speechRecognitionError = onDeviceRecognitionError(error)
                     finishOnDeviceRecognition(markFinished = true)
                 }
@@ -794,15 +820,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             ?.firstOrNull()
             ?.let(TextNormalizer::cleanForDisplay)
             ?.takeIf(String::isNotEmpty)
-            ?.let { TranslationState.textToTranslate = it }
+            ?.let { TranslationState.sttTranscript = it }
     }
 
-    private fun shouldFallbackFromOnDevice(error: Int): Boolean =
-        error == SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED ||
-            error == SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE ||
+    private fun shouldFallbackFromOnDevice(error: Int): Boolean {
+        val isApi31RecognitionError = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && (
+            error == SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED ||
+                error == SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE ||
+                error == SpeechRecognizer.ERROR_SERVER_DISCONNECTED
+            )
+        return isApi31RecognitionError ||
             error == SpeechRecognizer.ERROR_SERVER ||
-            error == SpeechRecognizer.ERROR_SERVER_DISCONNECTED ||
             error == SpeechRecognizer.ERROR_CLIENT
+    }
 
     private fun onDeviceRecognitionError(error: Int): String = when (error) {
         SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Microphone permission is required."
@@ -823,7 +853,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         isRecording = false
         isSpeechProcessing = false
         if (markFinished) {
-            voiceInputReady = TranslationState.textToTranslate.isNotBlank()
+            voiceInputReady = TranslationState.sttTranscript.isNotBlank()
+            isNoSpeechDetected = !voiceInputReady &&
+                (isNoSpeechDetected || speechRecognitionError == null)
             speechSessionFinished = true
         }
     }
@@ -833,7 +865,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         isSpeechProcessing = true
         val sessionId = ++speechSessionId
         voskCommittedText = ""
-        TranslationState.textToTranslate = ""
+        TranslationState.sttTranscript = ""
         voskModelLoadJob = viewModelScope.launch {
             try {
                 voskPreloadJob?.join()
@@ -879,7 +911,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val partial = parseVoskText(hypothesis, "partial")
             viewModelScope.launch {
                 if (sessionId == speechSessionId && isRecording) {
-                    TranslationState.textToTranslate = joinSpeechText(voskCommittedText, partial)
+                    TranslationState.sttTranscript = joinSpeechText(voskCommittedText, partial)
                 }
             }
         }
@@ -889,7 +921,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             viewModelScope.launch {
                 if (sessionId == speechSessionId && result.isNotEmpty()) {
                     voskCommittedText = joinSpeechText(voskCommittedText, result)
-                    TranslationState.textToTranslate = voskCommittedText
+                    TranslationState.sttTranscript = voskCommittedText
                 }
             }
         }
@@ -900,7 +932,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (sessionId != speechSessionId) return@launch
                 if (result.isNotEmpty()) {
                     voskCommittedText = joinSpeechText(voskCommittedText, result)
-                    TranslationState.textToTranslate = voskCommittedText
+                    TranslationState.sttTranscript = voskCommittedText
                 }
                 finishVoskRecognition()
             }
@@ -943,7 +975,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         isRecorderStarting = false
         isRecording = false
         isSpeechProcessing = false
-        voiceInputReady = TranslationState.textToTranslate.isNotBlank()
+        voiceInputReady = TranslationState.sttTranscript.isNotBlank()
+        isNoSpeechDetected = !voiceInputReady && speechRecognitionError == null
         speechSessionFinished = true
     }
 
@@ -1100,16 +1133,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             recordingTime = 0L
             audioFile?.delete()
             audioFile = null
-            TranslationState.textToTranslate = ""
-            TranslationState.translatedText = ""
+            TranslationState.sttTranscript = ""
             TranslationState.recordedAudioPath = null
             voiceInputReady = false
             speechSessionFinished = false
             speechRecognitionError = null
+            isNoSpeechDetected = false
             isSpeechProcessing = false
             usesVoskRecognizer = false
             usesOnDeviceRecognizer = false
             wasRecordingCancelled = true
+            cancelledGlowResetJob?.cancel()
+            cancelledGlowResetJob = viewModelScope.launch {
+                delay(CANCELLED_GLOW_DURATION_MS)
+                wasRecordingCancelled = false
+            }
         }
     }
 
@@ -1121,6 +1159,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         speechSessionId++
         recordingTimerJob?.cancel()
         recordingTimerJob = null
+        cancelledGlowResetJob?.cancel()
+        cancelledGlowResetJob = null
         voskModelLoadJob?.cancel()
         voskModelLoadJob = null
         voskPreloadJob?.cancel()
@@ -1135,12 +1175,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         voskModel = null
         recorder?.release()
         recorder = null
-        super.onCleared()
     }
 
     private companion object {
         const val VOSK_SAMPLE_RATE = 16_000f
         const val BACKEND_RECOVERY_INTERVAL_MS = 30_000L
+        const val CANCELLED_GLOW_DURATION_MS = 300L
     }
 }
 

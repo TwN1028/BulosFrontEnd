@@ -16,6 +16,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.LaunchedEffect
@@ -127,8 +128,12 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     containerColor = HomeContentCream,
                     contentWindowInsets = WindowInsets(0, 0, 0, 0),
-                ) {
-                    Box(Modifier.fillMaxSize()) {
+                ) { contentPadding ->
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .padding(contentPadding),
+                    ) {
                         NavHost(
                         navController = navController,
                         startDestination = when {
@@ -241,6 +246,7 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate(AppDestinations.RESULT)
                                 },
                             ) {
+                                viewModel.clearVoiceDraft()
                                 navController.popBackStack()
                             }
                         }
@@ -254,11 +260,23 @@ class MainActivity : ComponentActivity() {
                         composable(AppDestinations.HISTORY) {
                             HistoryScreen(viewModel) { navController.popBackStack() }
                         }
+                        composable(AppDestinations.RECENT) {
+                            RecentTranslationScreen(viewModel) { navController.popBackStack() }
+                        }
                         composable(AppDestinations.DICTIONARY) {
                             DictionaryScreen(viewModel)
                         }
                         composable(AppDestinations.MORE) {
-                            SettingsScreen(viewModel) { navController.navigate(AppDestinations.LANGUAGE_SETTINGS) }
+                            SettingsScreen(
+                                viewModel = viewModel,
+                                onLanguageClick = {
+                                    navController.navigate(AppDestinations.LANGUAGE_SETTINGS)
+                                },
+                                onHelpClick = {
+                                    navController.navigate(AppDestinations.HELP)
+                                },
+                                onBack = { navController.popBackStack() },
+                            )
                         }
                         composable(AppDestinations.HELP) {
                             HelpOnboardingScreen(viewModel, onBack = { navController.popBackStack() })

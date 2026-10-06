@@ -30,4 +30,26 @@ class HistoryItemTest {
         assertEquals(listOf(favorite), historyItemsForFilter(history, HistoryFilter.FAVORITES))
         assertEquals(emptyList<HistoryItem>(), historyItemsForFilter(history.map { it.copy(isFavorite = false) }, HistoryFilter.FAVORITES))
     }
+
+    @Test
+    fun mostRecentItemUsesTheLatestTimestampFromTheExistingSavedList() {
+        val older = item.copy(timestamp = 1L)
+        val newer = item.copy(timestamp = 2L, inputText = "hand")
+
+        assertEquals(newer, mostRecentHistoryItem(listOf(older, newer)))
+        assertEquals(null, mostRecentHistoryItem(emptyList()))
+    }
+
+    @Test
+    fun recentItemsExpireAfterSevenDaysRegardlessOfSavedState() {
+        val now = RECENT_TRANSLATION_RETENTION_MILLIS + 1_000L
+        val expiredUnsaved = item.copy(timestamp = 0L, isSaved = false)
+        val expiredSaved = item.copy(timestamp = 0L, inputText = "saved", isSaved = true)
+        val recentUnsaved = item.copy(timestamp = now - 1L, inputText = "recent", isSaved = false)
+
+        assertEquals(
+            listOf(recentUnsaved),
+            recentHistoryItems(listOf(expiredUnsaved, expiredSaved, recentUnsaved), now),
+        )
+    }
 }

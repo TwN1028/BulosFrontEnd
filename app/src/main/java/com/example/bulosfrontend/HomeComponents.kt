@@ -27,6 +27,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.bulosfrontend.ui.theme.*
@@ -44,10 +45,27 @@ private val switchLanguageCardBrush = Brush.verticalGradient(
     colors = listOf(HomeRecentTranslationCard, HomeRecentTranslationCard),
 )
 
+internal val HomeFeatureIconTint = Color(0xFF315F32)
+private val HomeFeatureIconContainerColor = Color(0xFFFFFEFA)
+private val HomeFeatureIconBorder = BorderStroke(0.75.dp, Color(0xFFE8E2D8))
+private val HomeFeatureIconContainerSize = 40.dp
+private val HomeFeatureIconGlyphSize = 24.dp
+
 internal val HomeCardShape = RoundedCornerShape(16.dp)
 internal val HomeSupportingCardBorder = BorderStroke(
     width = 0.5.dp,
     color = Color(0xFFE5DDD2).copy(alpha = 0.65f),
+)
+internal val LanguageSelectorCardShape = RoundedCornerShape(16.dp)
+internal val LanguageSelectorCardFill = Brush.verticalGradient(
+    0.00f to Color(0xFFFFFEFD),
+    0.42f to Color(0xFFFFFDF9),
+    1.00f to HomeContentCream,
+)
+internal val LanguageSelectorCardBorder = Brush.verticalGradient(
+    0.00f to Color.White,
+    0.48f to Color(0xFFFFFDF9),
+    1.00f to Color(0xFFDBD9D2),
 )
 
 @Composable
@@ -107,7 +125,6 @@ fun FeatureCard(feature: HomeFeature, onClick: () -> Unit, modifier: Modifier = 
     }
     val iconGlyphSize = when {
         isHelpFeature -> 27.dp
-        isHistoryFeature -> 28.dp
         else -> 24.dp
     }
     val cardBorderColor = Color(0xFFFFFBF4)
@@ -123,7 +140,7 @@ fun FeatureCard(feature: HomeFeature, onClick: () -> Unit, modifier: Modifier = 
     val iconColor = when {
         isTextFeature -> Color(0xFFB66D0B)
         feature.route == AppDestinations.VOICE -> Color(0xFF2F6530)
-        else -> Color(0xFF315F32)
+        else -> HomeFeatureIconTint
     }
     Card(
         onClick = onClick,
@@ -153,22 +170,12 @@ fun FeatureCard(feature: HomeFeature, onClick: () -> Unit, modifier: Modifier = 
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 14.dp),
         ) {
-            Surface(
-                modifier = Modifier.size(iconContainerSize),
-                shape = CircleShape,
-                color = Color(0xFFFFFEFA),
-                border = BorderStroke(0.75.dp, Color(0xFFE8E2D8)),
-                shadowElevation = 2.dp,
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        painter = feature.icon,
-                        contentDescription = null,
-                        tint = iconColor,
-                        modifier = Modifier.size(iconGlyphSize),
-                    )
-                }
-            }
+            HomeFeatureIcon(
+                painter = feature.icon,
+                tint = iconColor,
+                containerSize = iconContainerSize,
+                glyphSize = iconGlyphSize,
+            )
             Spacer(Modifier.height(14.dp))
             Text(
                 stringResource(feature.titleRes),
@@ -194,6 +201,32 @@ fun FeatureCard(feature: HomeFeature, onClick: () -> Unit, modifier: Modifier = 
                 fontWeight = FontWeight.Normal,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+internal fun HomeFeatureIcon(
+    painter: Painter,
+    modifier: Modifier = Modifier,
+    tint: Color = HomeFeatureIconTint,
+    containerSize: Dp = HomeFeatureIconContainerSize,
+    glyphSize: Dp = HomeFeatureIconGlyphSize,
+) {
+    Surface(
+        modifier = modifier.size(containerSize),
+        shape = CircleShape,
+        color = HomeFeatureIconContainerColor,
+        border = HomeFeatureIconBorder,
+        shadowElevation = 2.dp,
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                painter = painter,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(glyphSize),
             )
         }
     }

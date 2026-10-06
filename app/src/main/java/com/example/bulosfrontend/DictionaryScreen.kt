@@ -1,7 +1,7 @@
 package com.example.bulosfrontend
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -25,8 +25,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -35,14 +33,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.bulosfrontend.ui.theme.ForestGreen
-import com.example.bulosfrontend.ui.theme.HomeCardBorder
-import com.example.bulosfrontend.ui.theme.WarmWhiteCard
 
 internal fun DictionaryEntry.value(language: UiLanguage): String = when (language) {
     UiLanguage.BULOS -> bulos
@@ -143,26 +141,45 @@ fun DictionaryScreen(viewModel: MainViewModel) {
                     modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    OutlinedTextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        modifier = Modifier.fillMaxWidth().height(58.dp),
-                        placeholder = { Text(stringResource(home.dictionarySearchRes)) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = stringResource(home.dictionarySearchDescriptionRes),
-                            )
-                        },
-                        shape = RoundedCornerShape(20.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = WarmWhiteCard,
-                            unfocusedContainerColor = WarmWhiteCard,
-                            focusedBorderColor = ForestGreen,
-                            unfocusedBorderColor = HomeCardBorder,
-                        ),
-                        singleLine = true,
-                    )
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                            .shadow(
+                                elevation = 8.dp,
+                                shape = LanguageSelectorCardShape,
+                                clip = false,
+                                ambientColor = Color.Black.copy(alpha = 0.12f),
+                                spotColor = Color.Black.copy(alpha = 0.16f),
+                            ),
+                        shape = LanguageSelectorCardShape,
+                        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, LanguageSelectorCardBorder),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    ) {
+                        OutlinedTextField(
+                            value = query,
+                            onValueChange = { query = it },
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(LanguageSelectorCardFill),
+                            placeholder = { Text(stringResource(home.dictionarySearchRes)) },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = stringResource(home.dictionarySearchDescriptionRes),
+                                )
+                            },
+                            shape = LanguageSelectorCardShape,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedBorderColor = Color.Transparent,
+                                unfocusedBorderColor = Color.Transparent,
+                            ),
+                            singleLine = true,
+                        )
+                    }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -242,19 +259,42 @@ private fun DictionaryLanguageSelector(
             style = MaterialTheme.typography.labelLarge,
         )
         Column(modifier = Modifier.fillMaxWidth()) {
-            OutlinedButton(
+            Card(
                 onClick = { expanded = true },
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                shape = RoundedCornerShape(20.dp),
-                border = BorderStroke(1.dp, HomeCardBorder),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = WarmWhiteCard,
-                    contentColor = ForestGreen,
-                ),
-                contentPadding = PaddingValues(horizontal = 12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+                    .shadow(
+                        elevation = 8.dp,
+                        shape = LanguageSelectorCardShape,
+                        clip = false,
+                        ambientColor = Color.Black.copy(alpha = 0.12f),
+                        spotColor = Color.Black.copy(alpha = 0.16f),
+                    ),
+                shape = LanguageSelectorCardShape,
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                border = androidx.compose.foundation.BorderStroke(1.dp, LanguageSelectorCardBorder),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             ) {
-                Text(stringResource(selected.displayNameRes), fontWeight = FontWeight.SemiBold)
-                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(LanguageSelectorCardFill)
+                        .padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    Text(
+                        text = stringResource(selected.displayNameRes),
+                        color = ForestGreen,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Icon(
+                        Icons.Default.ArrowDropDown,
+                        contentDescription = null,
+                        tint = ForestGreen,
+                    )
+                }
             }
             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 options.forEach { language ->
@@ -286,14 +326,26 @@ private fun DictionaryEntryCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            LabeledDictionaryValue(source, entry.value(source), primary = true)
-            LabeledDictionaryValue(target, entry.value(target), primary = false)
+            LabeledDictionaryValue(source, entry.value(source), primary = false)
+            LabeledDictionaryValue(
+                language = target,
+                value = entry.value(target),
+                primary = true,
+                valueColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                valueFontWeight = FontWeight.SemiBold,
+            )
         }
     }
 }
 
 @Composable
-private fun LabeledDictionaryValue(language: UiLanguage, value: String, primary: Boolean) {
+private fun LabeledDictionaryValue(
+    language: UiLanguage,
+    value: String,
+    primary: Boolean,
+    valueColor: Color? = null,
+    valueFontWeight: FontWeight? = null,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(
             text = stringResource(language.displayNameRes),
@@ -303,7 +355,9 @@ private fun LabeledDictionaryValue(language: UiLanguage, value: String, primary:
         )
         Text(
             text = value.ifBlank { stringResource(R.string.dictionary_translation_unavailable) },
+            color = valueColor ?: MaterialTheme.colorScheme.onSurface,
             style = if (primary) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge,
+            fontWeight = valueFontWeight,
         )
     }
 }

@@ -19,6 +19,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -325,7 +326,7 @@ private fun RotatingLocalizedHeader(
             ) > 0f
         }
     }
-    var headerIndex by rememberSaveable { mutableStateOf(0) }
+    var headerIndex by rememberSaveable { mutableIntStateOf(0) }
 
     LaunchedEffect(animationsEnabled) {
         if (!animationsEnabled) {
@@ -353,7 +354,7 @@ private fun RotatingLocalizedHeader(
             Text(
                 text = stringResource(rotatingHeaderResources[index]),
                 modifier = Modifier.fillMaxWidth(),
-                color = if (index == 0) color else MutedText,
+                color = color,
                 style = MaterialTheme.typography.headlineSmall.copy(
                     fontSize = 20.sp,
                     lineHeight = 24.sp,

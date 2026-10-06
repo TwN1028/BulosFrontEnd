@@ -2,6 +2,7 @@ package com.example.bulosfrontend
 
 import android.content.ClipData
 import android.content.Intent
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -86,9 +87,11 @@ fun TranslateVoiceScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBa
     val contentHorizontalPadding = 20.dp
     val content = viewModel.content
     val labels = content.speechResult
-    var recognizedText by rememberSaveable { mutableStateOf(TranslationState.textToTranslate) }
+    var recognizedText by rememberSaveable { mutableStateOf(TranslationState.sttTranscript) }
     var isEditing by rememberSaveable { mutableStateOf(true) }
-    val hasRecording = TranslationState.recordedAudioPath != null || TranslationState.textToTranslate.isNotBlank()
+    val hasRecording = TranslationState.recordedAudioPath != null || TranslationState.sttTranscript.isNotBlank()
+
+    BackHandler(onBack = onBack)
 
     Surface(Modifier.fillMaxSize(), color = HomeContentCream) {
         Column(Modifier.fillMaxSize()) {
@@ -184,7 +187,7 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
     val shareBody = stringResource(labels.shareBodyRes, originalText, TranslationState.translatedText)
     val shareChooserTitle = stringResource(labels.shareChooserTitleRes)
     val isSaved = HistoryProvider.history.any {
-        it.matchesTranslation(
+        it.isSaved && it.matchesTranslation(
             TranslationState.sourceLanguage,
             TranslationState.targetLanguage,
             originalText,
@@ -239,7 +242,6 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
                             TranslationTextCard(
                                 label = "${TranslationState.sourceLanguage.uppercase(currentLocale)} · ${stringResource(labels.originalRes)}",
                                 text = originalText,
-                                containerColor = MaterialTheme.colorScheme.surface,
                                 modifier = Modifier.weight(1f),
                                 scrollableText = true,
                             )
@@ -247,7 +249,6 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
                             TranslationTextCard(
                                 label = "${TranslationState.targetLanguage.uppercase(currentLocale)} · ${stringResource(labels.translationRes)}",
                                 text = translatedText,
-                                containerColor = MaterialTheme.colorScheme.surface,
                                 modifier = Modifier.weight(1f),
                                 scrollableText = true,
                             )
@@ -391,17 +392,7 @@ fun TranslationLanguageBar(
         TranslationState.ensureValidLanguagePair()
     }
     val targetOptions = TranslationLanguageRules.targetOptions(TranslationState.sourceLanguage)
-    val cardShape = RoundedCornerShape(if (useHomeCardStyle) 16.dp else 24.dp)
-    val glassFill = Brush.verticalGradient(
-        0.00f to Color(0xFFFFFEFD),
-        0.42f to Color(0xFFFFFDF9),
-        1.00f to HomeContentCream,
-    )
-    val glassRim = Brush.verticalGradient(
-        0.00f to Color.White,
-        0.48f to Color(0xFFFFFDF9),
-        1.00f to Color(0xFFDBD9D2),
-    )
+    val cardShape = if (useHomeCardStyle) LanguageSelectorCardShape else RoundedCornerShape(24.dp)
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -427,7 +418,7 @@ fun TranslationLanguageBar(
         ),
         border = BorderStroke(
             1.dp,
-            if (useHomeCardStyle) glassRim else Brush.linearGradient(
+            if (useHomeCardStyle) LanguageSelectorCardBorder else Brush.linearGradient(
                 colors = listOf(
                     MaterialTheme.colorScheme.outlineVariant,
                     MaterialTheme.colorScheme.outlineVariant,
@@ -441,7 +432,7 @@ fun TranslationLanguageBar(
                 .fillMaxSize()
                 .then(
                     if (useHomeCardStyle) {
-                        Modifier.background(glassFill)
+                        Modifier.background(LanguageSelectorCardFill)
                     } else {
                         Modifier
                     },
@@ -565,7 +556,6 @@ private fun RecognizedTextCard(
 private fun TranslationTextCard(
     label: String,
     text: String,
-    containerColor: Color,
     modifier: Modifier = Modifier,
     scrollableText: Boolean = false,
 ) {
@@ -574,14 +564,14 @@ private fun TranslationTextCard(
             .fillMaxWidth()
             .shadow(
                 elevation = 4.dp,
-                shape = RoundedCornerShape(16.dp),
+                shape = HomeCardShape,
                 clip = false,
                 ambientColor = Color.Black.copy(alpha = 0.08f),
                 spotColor = Color.Black.copy(alpha = 0.08f),
             ),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        border = BorderStroke(TranslationInputBorderWidth, TranslationInputBorderColor),
+        shape = HomeCardShape,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = HomeSupportingCardBorder,
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(

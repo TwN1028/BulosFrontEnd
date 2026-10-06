@@ -11,10 +11,10 @@
         android:fillColor="#FF1E3F20"
         android:pathData="M20,45H25V48C25,55 29.5,61 35,61C40.5,61 45,55 45,48V45H50V48C50,56.8 44.5,64.2 37.5,65.8V74H32.5V65.8C25.5,64.2 20,56.8 20,48Z" />
     <path
-        android:fillColor="@color/splash_gold"
+        android:fillColor="#FFE7B861"
         android:fillType="evenOdd"
         android:pathData="M68,30A18,18 0,1 0,68 66A18,18 0,1 0,68 30M68,35A13,13 0,1 1,68 61A13,13 0,1 1,68 35" />
     <path
-        android:fillColor="@color/splash_gold"
+        android:fillColor="#FFE7B861"
         android:pathData="M65.5,32H70.5V64H65.5ZM52,45.5H84V50.5H52Z" />
 </vector>

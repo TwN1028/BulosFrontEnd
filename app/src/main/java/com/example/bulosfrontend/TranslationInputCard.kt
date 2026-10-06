@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -40,6 +41,7 @@ internal fun TranslationInputCard(
     value: String,
     placeholder: String,
     onValueChange: (String) -> Unit,
+    textColor: Color? = null,
     modifier: Modifier = Modifier,
     editingEnabled: Boolean = true,
     minimumHeight: Dp = TranslationCardMinHeight,
@@ -50,6 +52,8 @@ internal fun TranslationInputCard(
     onFocusChanged: (Boolean) -> Unit = {},
 ) {
     val shape = RoundedCornerShape(16.dp)
+    val resolvedTextColor = textColor ?: MaterialTheme.colorScheme.onSurface
+    val resolvedPlaceholderColor = textColor ?: MaterialTheme.colorScheme.onSurfaceVariant
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -78,7 +82,11 @@ internal fun TranslationInputCard(
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                 )
-                headerAction?.invoke()
+                headerAction?.let { action ->
+                    Box(Modifier.offset(x = 6.dp)) {
+                        action()
+                    }
+                }
             }
             Spacer(Modifier.height(12.dp))
             BasicTextField(
@@ -90,7 +98,7 @@ internal fun TranslationInputCard(
                     .onFocusChanged { onFocusChanged(it.isFocused) },
                 enabled = editingEnabled,
                 textStyle = MaterialTheme.typography.bodyLarge.copy(
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = resolvedTextColor,
                     fontFamily = Aileron,
                 ),
                 keyboardOptions = KeyboardOptions(
@@ -105,7 +113,7 @@ internal fun TranslationInputCard(
                         if (value.isEmpty()) {
                             Text(
                                 text = placeholder,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = resolvedPlaceholderColor,
                                 style = MaterialTheme.typography.bodyLarge.copy(fontFamily = Aileron),
                             )
                         }

@@ -17,6 +17,7 @@
     <string name="ui_copy_description_fil">Kopyahin ang isinaling teksto</string>
     <string name="ui_result_placeholder_fil">Resulta…</string>
     <string name="ui_no_history_fil">Wala pang nakaraang salin</string>
+    <string name="ui_no_history_description_fil">Lilitaw rito ang iyong naka-save na salin.</string>
     <string name="ui_voice_result_fil">Placeholder ng pagsasalin ng boses</string>
     <string name="ui_voice_recording_fil">Recording ng Boses</string>
     <string name="ui_character_count_fil">%1$d / %2$d</string>
@@ -95,10 +96,14 @@
     <string name="ui_help_tip_one_fil">Tiyaking tama ang pinagmulan at target na wika bago magsalin.</string>
     <string name="ui_help_tip_two_fil">Pumunta sa tahimik na lugar at magsalita sa pantay na bilis para sa mas malinaw na pagkilala.</string>
     <string name="ui_help_tip_three_fil">Suriin at itama ang nakilalang teksto bago i-tap ang Translate.</string>
+    <string name="ui_network_fil">Network</string>
     <string name="ui_font_size_fil">Laki ng Font</string>
     <string name="ui_font_size_small_fil">Maliit</string>
     <string name="ui_font_size_medium_fil">Katamtaman</string>
     <string name="ui_font_size_large_fil">Malaki</string>
+    <string name="ui_about_fil">Tungkol sa App</string>
+    <string name="ui_version_fil">Bersyon %1$s</string>
+    <string name="ui_help_support_fil">Tulong at Suporta</string>
     <string name="ui_supported_languages_fil">Palitan ang Wika</string>
     <string name="ui_supported_languages_description_fil">Magsalin sa pagitan ng Bulos, Filipino, at English.</string>
     <string name="ui_recent_dynamic_title_fil">Kamakailang Salin</string>
@@ -114,10 +119,12 @@
     <string name="ui_speech_subtitle_fil">Magsalita nang malinaw, I-edit ang nakilalang teksto, Isalin</string>
     <string name="ui_speech_idle_fil">Pindutin upang magsimulang mag-record</string>
     <string name="ui_speech_listening_fil">Nakikinig…</string>
-    <string name="ui_no_speech_recognized_fil">Walang nakilalang pananalita. Subukan muli.</string>
+    <string name="ui_no_speech_recognized_fil">Walang natukoy na pananalita</string>
+    <string name="ui_no_speech_retry_fil">Subukang magsalita nang mas malapit sa mikropono.</string>
     <string name="ui_done_recording_fil">Tapusin</string>
     <string name="ui_cancel_recording_fil">Kanselahin</string>
     <string name="ui_try_again_fil">Subukan Muli</string>
+    <string name="ui_retry_again_fil">Subukang Muli</string>
     <string name="ui_speech_review_fil">Tapos na ang recording. Ayusin ang teksto kung kailangan</string>
     <string name="ui_transcribing_fil">Isinusulat</string>
     <string name="ui_recognized_text_label_fil">Nakilalang Teksto · %1$s</string>

@@ -82,9 +82,11 @@ data class SpeechResultDialogueContent(
     @StringRes val idleStatusRes: Int,
     @StringRes val listeningStatusRes: Int,
     @StringRes val noSpeechRecognizedRes: Int,
+    @StringRes val noSpeechRetryRes: Int,
     @StringRes val doneRecordingRes: Int,
     @StringRes val cancelRecordingRes: Int,
     @StringRes val tryAgainRes: Int,
+    @StringRes val retryAgainRes: Int,
     @StringRes val reviewStatusRes: Int,
     @StringRes val transcribingRes: Int,
     @StringRes val recognizedTextLabelRes: Int,
@@ -123,8 +125,11 @@ data class HomeDialogueContent(
     @StringRes val dictionarySearchRes: Int, @StringRes val dictionarySearchDescriptionRes: Int,
     @StringRes val dictionaryEmptyRes: Int, @StringRes val dictionaryNoResultsRes: Int,
     @StringRes val offlineModeRes: Int, @StringRes val offlineModeSummaryRes: Int,
+    @StringRes val networkRes: Int,
     @StringRes val fontSizeRes: Int, @StringRes val smallFontRes: Int,
     @StringRes val mediumFontRes: Int, @StringRes val largeFontRes: Int,
+    @StringRes val aboutRes: Int, @StringRes val versionRes: Int,
+    @StringRes val helpSupportRes: Int,
 )
 
 object DialogueProvider {
@@ -320,8 +325,9 @@ object DialogueProvider {
         "fil" -> SpeechResultDialogueContent(
             R.string.ui_speech_subtitle_fil, R.string.ui_speech_idle_fil,
             R.string.ui_speech_listening_fil,
-            R.string.ui_no_speech_recognized_fil, R.string.ui_done_recording_fil,
-            R.string.ui_cancel_recording_fil, R.string.ui_try_again_fil,
+            R.string.ui_no_speech_recognized_fil, R.string.ui_no_speech_retry_fil,
+            R.string.ui_done_recording_fil,
+            R.string.ui_cancel_recording_fil, R.string.ui_try_again_fil, R.string.ui_retry_again_fil,
             R.string.ui_speech_review_fil, R.string.ui_transcribing_fil,
             R.string.ui_recognized_text_label_fil, R.string.ui_recognized_text_placeholder_fil,
             R.string.ui_edit_fil, R.string.ui_done_editing_fil, R.string.ui_translate_voice_fil,
@@ -333,8 +339,9 @@ object DialogueProvider {
         "bul" -> SpeechResultDialogueContent(
             R.string.ui_speech_subtitle_bul, R.string.ui_speech_idle_bul,
             R.string.ui_speech_listening_bul,
-            R.string.ui_no_speech_recognized_bul, R.string.ui_done_recording_bul,
-            R.string.ui_cancel_recording_bul, R.string.ui_try_again_bul,
+            R.string.ui_no_speech_recognized_bul, R.string.ui_no_speech_retry_bul,
+            R.string.ui_done_recording_bul,
+            R.string.ui_cancel_recording_bul, R.string.ui_try_again_bul, R.string.ui_retry_again_bul,
             R.string.ui_speech_review_bul, R.string.ui_transcribing_bul,
             R.string.ui_recognized_text_label_bul, R.string.ui_recognized_text_placeholder_bul,
             R.string.ui_edit_bul, R.string.ui_done_editing_bul, R.string.ui_translate_voice_bul,
@@ -346,8 +353,9 @@ object DialogueProvider {
         else -> SpeechResultDialogueContent(
             R.string.ui_speech_subtitle_eng, R.string.ui_speech_idle_eng,
             R.string.ui_speech_listening_eng,
-            R.string.ui_no_speech_recognized_eng, R.string.ui_done_recording_eng,
-            R.string.ui_cancel_recording_eng, R.string.ui_try_again_eng,
+            R.string.ui_no_speech_recognized_eng, R.string.ui_no_speech_retry_eng,
+            R.string.ui_done_recording_eng,
+            R.string.ui_cancel_recording_eng, R.string.ui_try_again_eng, R.string.ui_retry_again_eng,
             R.string.ui_speech_review_eng, R.string.ui_transcribing_eng,
             R.string.ui_recognized_text_label_eng, R.string.ui_recognized_text_placeholder_eng,
             R.string.ui_edit_eng, R.string.ui_done_editing_eng, R.string.ui_translate_voice_eng,
@@ -378,8 +386,11 @@ object DialogueProvider {
             R.string.ui_dictionary_search_fil, R.string.ui_dictionary_search_description_fil,
             R.string.ui_dictionary_empty_fil, R.string.ui_dictionary_no_results_fil,
             R.string.ui_offline_mode_fil, R.string.ui_offline_mode_summary_fil,
+            R.string.ui_network_fil,
             R.string.ui_font_size_fil, R.string.ui_font_size_small_fil,
             R.string.ui_font_size_medium_fil, R.string.ui_font_size_large_fil,
+            R.string.ui_about_fil, R.string.ui_version_fil,
+            R.string.ui_help_support_fil,
         )
         "bul" -> HomeDialogueContent(
             R.string.ui_selection_title_bul,
@@ -400,8 +411,11 @@ object DialogueProvider {
             R.string.ui_dictionary_search_bul, R.string.ui_dictionary_search_description_bul,
             R.string.ui_dictionary_empty_bul, R.string.ui_dictionary_no_results_bul,
             R.string.ui_offline_mode_bul, R.string.ui_offline_mode_summary_bul,
+            R.string.ui_network_bul,
             R.string.ui_font_size_bul, R.string.ui_font_size_small_bul,
             R.string.ui_font_size_medium_bul, R.string.ui_font_size_large_bul,
+            R.string.ui_about_bul, R.string.ui_version_bul,
+            R.string.ui_help_support_bul,
         )
         else -> HomeDialogueContent(
             R.string.ui_selection_title_eng,
@@ -422,8 +436,11 @@ object DialogueProvider {
             R.string.ui_dictionary_search_eng, R.string.ui_dictionary_search_description_eng,
             R.string.ui_dictionary_empty_eng, R.string.ui_dictionary_no_results_eng,
             R.string.ui_offline_mode_eng, R.string.ui_offline_mode_summary_eng,
+            R.string.ui_network_eng,
             R.string.ui_font_size_eng, R.string.ui_font_size_small_eng,
             R.string.ui_font_size_medium_eng, R.string.ui_font_size_large_eng,
+            R.string.ui_about_eng, R.string.ui_version_eng,
+            R.string.ui_help_support_eng,
         )
     }
 }

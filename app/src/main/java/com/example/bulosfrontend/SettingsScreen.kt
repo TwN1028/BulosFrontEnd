@@ -8,15 +8,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.FormatSize
-import androidx.compose.material.icons.filled.CloudOff
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.annotation.DrawableRes
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -25,7 +23,12 @@ import com.example.bulosfrontend.ui.theme.InactiveButtonColor
 import com.example.bulosfrontend.ui.theme.SharedActiveButtonColor
 
 @Composable
-fun SettingsScreen(viewModel: MainViewModel, onLanguageClick: () -> Unit) {
+fun SettingsScreen(
+    viewModel: MainViewModel,
+    onLanguageClick: () -> Unit,
+    onHelpClick: () -> Unit,
+    onBack: () -> Unit,
+) {
     val content = viewModel.content
     val home = content.home
     Surface(Modifier.fillMaxSize(), color = Color(0xFFFFFBF4)) {
@@ -60,8 +63,10 @@ fun SettingsScreen(viewModel: MainViewModel, onLanguageClick: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().padding(18.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(Icons.Default.Language, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.width(16.dp))
+                    HomeFeatureIcon(
+                        painter = painterResource(R.drawable.ic_lucide_language),
+                    )
+                    Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(stringResource(home.languageRes), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         Spacer(Modifier.height(3.dp))
@@ -78,18 +83,11 @@ fun SettingsScreen(viewModel: MainViewModel, onLanguageClick: () -> Unit) {
                 }
             }
             Spacer(Modifier.height(24.dp))
+            SettingsSectionHeader(stringResource(home.networkRes))
+            Spacer(Modifier.height(10.dp))
             OfflineModeCard(viewModel)
             Spacer(Modifier.height(24.dp))
-            Text(
-                text = stringResource(home.fontSizeRes).uppercase(),
-                modifier = Modifier.padding(horizontal = 4.dp),
-                color = MaterialTheme.colorScheme.secondary,
-                style = MaterialTheme.typography.labelLarge.copy(
-                    fontSize = 10.sp,
-                    letterSpacing = 1.35.sp,
-                ),
-                fontWeight = FontWeight.Bold,
-            )
+            SettingsSectionHeader(stringResource(home.fontSizeRes))
             Spacer(Modifier.height(10.dp))
             Card(
                 modifier = Modifier.fillMaxWidth().heightIn(min = 104.dp),
@@ -100,20 +98,7 @@ fun SettingsScreen(viewModel: MainViewModel, onLanguageClick: () -> Unit) {
             ) {
                 Column(Modifier.fillMaxWidth().padding(18.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            modifier = Modifier.size(36.dp),
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.primary,
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.FormatSize,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(19.dp),
-                                )
-                            }
-                        }
+                        SettingsIcon(R.drawable.ic_lucide_type)
                         Spacer(Modifier.width(12.dp))
                         Text(
                             text = stringResource(home.fontSizeRes),
@@ -131,9 +116,137 @@ fun SettingsScreen(viewModel: MainViewModel, onLanguageClick: () -> Unit) {
                     )
                 }
             }
+            Spacer(Modifier.height(24.dp))
+            SettingsSectionHeader(stringResource(home.aboutRes))
+            Spacer(Modifier.height(10.dp))
+            AboutSettingsCard(
+                aboutTitle = stringResource(home.aboutRes),
+                version = stringResource(home.versionRes, BuildConfig.VERSION_NAME),
+                helpTitle = stringResource(home.helpSupportRes),
+                helpSubtitle = stringResource(content.help.cardSubtitleRes),
+                onHelpClick = onHelpClick,
+            )
+            Spacer(Modifier.height(12.dp))
+            Box(Modifier.fillMaxWidth()) {
+                TextButton(
+                    onClick = onBack,
+                    modifier = Modifier.align(Alignment.Center).height(48.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                ) {
+                    Text(
+                        text = stringResource(content.textTranslation.backRes),
+                        color = Color(0xFF36583A),
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
         }
         }
     }
+}
+
+@Composable
+private fun AboutSettingsCard(
+    aboutTitle: String,
+    version: String,
+    helpTitle: String,
+    helpSubtitle: String,
+    onHelpClick: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = HomeCardShape,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = HomeSupportingCardBorder,
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+    ) {
+        Column(Modifier.fillMaxWidth()) {
+            SettingsInfoRow(
+                iconRes = R.drawable.ic_lucide_info,
+                title = aboutTitle,
+                subtitle = version,
+            )
+            HorizontalDivider(
+                modifier = Modifier.padding(start = 66.dp),
+                thickness = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant,
+            )
+            SettingsInfoRow(
+                iconRes = R.drawable.ic_help_reference,
+                title = helpTitle,
+                subtitle = helpSubtitle,
+                onClick = onHelpClick,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsInfoRow(
+    @DrawableRes iconRes: Int,
+    title: String,
+    subtitle: String,
+    onClick: (() -> Unit)? = null,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(18.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SettingsIcon(iconRes)
+        Spacer(Modifier.width(12.dp))
+        SettingsTitleAndSubtitle(title, subtitle, Modifier.weight(1f))
+        if (onClick != null) {
+            Spacer(Modifier.width(12.dp))
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.secondary,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsIcon(@DrawableRes iconRes: Int) {
+    HomeFeatureIcon(painter = painterResource(iconRes))
+}
+
+@Composable
+private fun SettingsTitleAndSubtitle(
+    title: String,
+    subtitle: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(Modifier.height(3.dp))
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.secondary,
+        )
+    }
+}
+
+@Composable
+private fun SettingsSectionHeader(text: String) {
+    Text(
+        text = text.uppercase(),
+        modifier = Modifier.padding(horizontal = 4.dp),
+        color = MaterialTheme.colorScheme.secondary,
+        style = MaterialTheme.typography.labelLarge.copy(
+            fontSize = 10.sp,
+            letterSpacing = 1.35.sp,
+        ),
+        fontWeight = FontWeight.Bold,
+    )
 }
 
 @Composable
@@ -155,36 +268,23 @@ private fun OfflineModeCard(viewModel: MainViewModel) {
     ) {
         Column(Modifier.fillMaxWidth().padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    modifier = Modifier.size(36.dp),
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.primary,
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.CloudOff, contentDescription = null, modifier = Modifier.size(19.dp))
-                    }
-                }
+                SettingsIcon(R.drawable.ic_lucide_cloud_off)
                 Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        stringResource(viewModel.content.home.offlineModeRes),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Spacer(Modifier.height(3.dp))
-                    Text(
-                        stringResource(
-                            if (viewModel.offlineModeEnabled) strings.activeRes else strings.automaticRes,
-                        ),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.secondary,
-                    )
-                }
+                SettingsTitleAndSubtitle(
+                    title = stringResource(viewModel.content.home.offlineModeRes),
+                    subtitle = stringResource(
+                        if (viewModel.offlineModeEnabled) strings.activeRes else strings.automaticRes,
+                    ),
+                    modifier = Modifier.weight(1f),
+                )
                 Spacer(Modifier.width(12.dp))
                 Switch(
                     checked = viewModel.offlineModeEnabled,
                     onCheckedChange = viewModel::selectOfflineMode,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = HomeFeatureIconTint,
+                        uncheckedThumbColor = HomeFeatureIconTint,
+                    ),
                 )
             }
             if (viewModel.offlineModeEnabled) {
@@ -313,7 +413,11 @@ private fun OfflineSpeechModelRow(
                 onClick = onDownload,
                 enabled = downloadsEnabled,
             ) {
-                Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                Icon(
+                    painter = painterResource(R.drawable.ic_lucide_download),
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                )
                 Spacer(Modifier.width(6.dp))
                 Text(
                     stringResource(

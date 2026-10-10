@@ -52,6 +52,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private set
     var offlineTranslationMessage by mutableStateOf<String?>(null)
         private set
+    var directBulosUnavailableNoticeId by mutableIntStateOf(0)
+        private set
     val textTranslationEvents = textTranslationEventsChannel.receiveAsFlow()
 
     var selectedUiLanguage by mutableStateOf<UiLanguage?>(null)
@@ -360,9 +362,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val targetLanguage = TranslationState.targetLanguage
         if (!TranslationLanguageRules.isValidPair(sourceLanguage, targetLanguage)) {
             val message = "This language pair is not supported."
+            offlineTranslationMessage = message
             textTranslationState = TextTranslationUiState.Error(message)
             viewModelScope.launch {
-                textTranslationEventsChannel.send(TextTranslationEvent.ShowError(message))
+                textTranslationEventsChannel.send(
+                    TextTranslationEvent.ShowError(translationFailurePresentation(message).title),
+                )
             }
             return
         }
@@ -406,7 +411,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     is TranslationResult.Failure -> {
                         offlineTranslationMessage = result.message
                         textTranslationState = TextTranslationUiState.Error(result.message)
-                        textTranslationEventsChannel.send(TextTranslationEvent.ShowError(result.message))
+                        if (isDirectBulosTranslationUnavailable(result.message)) {
+                            directBulosUnavailableNoticeId++
+                        } else {
+                            textTranslationEventsChannel.send(
+                                TextTranslationEvent.ShowError(
+                                    translationFailurePresentation(result.message).title,
+                                ),
+                            )
+                        }
                     }
                 }
             } finally {
@@ -463,7 +476,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     is TranslationResult.Failure -> {
                         offlineTranslationMessage = result.message
-                        textTranslationEventsChannel.send(TextTranslationEvent.ShowError(result.message))
+                        if (isDirectBulosTranslationUnavailable(result.message)) {
+                            directBulosUnavailableNoticeId++
+                        } else {
+                            textTranslationEventsChannel.send(
+                                TextTranslationEvent.ShowError(
+                                    translationFailurePresentation(result.message).title,
+                                ),
+                            )
+                        }
                     }
                 }
             } finally {
@@ -551,12 +572,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { savedTranslationRepository.delete(timestamps) }
     }
 
+    fun toggleRecentTranslationSaved(timestamp: Long) {
+        viewModelScope.launch { savedTranslationRepository.toggleSaved(timestamp) }
+    }
+
     fun toggleSavedTranslationFavorite(timestamp: Long) {
         viewModelScope.launch { savedTranslationRepository.toggleFavorite(timestamp) }
     }
 
     fun addSavedTranslationsToFavorites(timestamps: Set<Long>) {
         viewModelScope.launch { savedTranslationRepository.addFavorites(timestamps) }
+    }
+
+    fun addRecentTranslationsToSaved(timestamps: Set<Long>) {
+        viewModelScope.launch { savedTranslationRepository.addToSaved(timestamps) }
     }
 
     fun clearSavedTranslations() {
@@ -700,7 +729,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun String.toOfflineSpeechUiLanguage(): UiLanguage? = when {
         equals("English", ignoreCase = true) -> UiLanguage.ENGLISH
-        equals("Filipino", ignoreCase = true) -> UiLanguage.FILIPINO
+        equals("Filipino", ignoreCase = true) || equals("Bulos", ignoreCase = true) -> UiLanguage.FILIPINO
         else -> null
     }
 
@@ -805,7 +834,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         preferOffline: Boolean,
     ) =
         Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            val tag = if (language.equals("Filipino", ignoreCase = true)) "fil-PH" else "en-PH"
+            val tag = if (
+                language.equals("Filipino", ignoreCase = true) ||
+                language.equals("Bulos", ignoreCase = true)
+            ) {
+                "fil-PH"
+            } else {
+                "en-PH"
+            }
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, tag)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, tag)
@@ -981,7 +1017,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun offlineModelError(language: String, error: Exception): String {
-        val size = if (language.equals("Filipino", ignoreCase = true)) "314 MB" else "39 MB"
+        val size = if (
+            language.equals("Filipino", ignoreCase = true) ||
+            language.equals("Bulos", ignoreCase = true)
+        ) {
+            "314 MB"
+        } else {
+            "39 MB"
+        }
         return if (offlineModeEnabled || !NetworkUtils.isOnline(getApplication())) {
             "$language offline speech model is not installed. Connect once to download the $size model."
         } else {

@@ -1,12 +1,14 @@
 <resources>
     <string name="dictionary_search_in">Search in</string>
     <string name="dictionary_show_translation_in">Show translation in</string>
-    <string name="dictionary_translation_unavailable">Translation unavailable</string>
+    <string name="dictionary_translation_unavailable">No direct Bulos equivalent found</string>
     <string name="dictionary_entry_details">Dictionary entry</string>
     <string name="dictionary_close">Close</string>
     <string name="clear_all">Clear All</string>
     <string name="delete_selected">Delete Selected</string>
     <string name="delete_translation">Delete saved translation</string>
+    <string name="save_translation">Save translation</string>
+    <string name="remove_saved_translation">Remove saved translation</string>
     <string name="favorite_translation">Add translation to Favorites</string>
     <string name="unfavorite_translation">Remove translation from Favorites</string>
     <string name="history_filter_all">All</string>
@@ -57,6 +59,10 @@
     <string name="add_to_favorites">Add to Favorites</string>
     <string name="add_to_favorites_fil">Idagdag sa Mga Paborito</string>
     <string name="add_to_favorites_bul">[BULOS: Add to Favorites]</string>
+    <string name="add_to_saved_translation">Add to Saved Translation</string>
+    <string name="add_to_saved_translation_fil">Idagdag sa Naka-save na Salin</string>
+    <string name="add_to_saved_translation_bul">[BULOS: Add to Saved Translation]</string>
+    <string name="recent_translation_options">Recent translation options</string>
     <string name="app_name">BulosFrontEnd</string>
     <!-- Strings used for fragments for navigation -->
     <string name="first_fragment_label">First Fragment</string>
@@ -226,8 +232,8 @@
     <string name="language_selection_globe_description">Language selection</string>
     <string name="splash_logo_content_description">Bulos Translator app icon</string>
     <string name="splash_title">Dumagat Speech\nTranslator</string>
-    <string name="splash_subtitle">Bridging languages, connecting people through Bulos…</string>
-    <string name="splash_preparing">Preparing your translator…</string>
+    <string name="splash_subtitle">Preserving Indigenous Language\nThrough Technology</string>
+    <string name="splash_preparing">Setting up the translator…</string>
     <string name="splash_preparing_with_progress">Preparing your translator… %1$d%%</string>
     <string name="splash_retry">Retry</string>
     <string name="splash_initiative">Dumagat Speech Translator v2.0 · Interactive Prototype</string>

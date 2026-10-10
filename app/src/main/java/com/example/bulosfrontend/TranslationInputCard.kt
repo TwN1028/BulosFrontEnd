@@ -34,6 +34,7 @@ import com.example.bulosfrontend.ui.theme.Aileron
 
 internal val TranslationInputBorderColor = Color(0xFFE5DDD2).copy(alpha = 0.65f)
 internal val TranslationInputBorderWidth = 0.5.dp
+internal val TranslationInputTextColor = Color(0xFF736E68)
 
 @Composable
 internal fun TranslationInputCard(
@@ -48,6 +49,7 @@ internal fun TranslationInputCard(
     textFieldHeight: Dp = 252.dp,
     headerAction: (@Composable () -> Unit)? = null,
     footer: (@Composable () -> Unit)? = null,
+    footerAtBottom: Boolean = false,
     onSubmit: (() -> Unit)? = null,
     onFocusChanged: (Boolean) -> Unit = {},
 ) {
@@ -59,71 +61,88 @@ internal fun TranslationInputCard(
             .fillMaxWidth()
             .heightIn(min = minimumHeight)
             .shadow(
-                elevation = 4.dp,
+                elevation = 8.dp,
                 shape = shape,
                 clip = false,
-                ambientColor = Color.Black.copy(alpha = 0.08f),
-                spotColor = Color.Black.copy(alpha = 0.08f),
+                ambientColor = Color.Black.copy(alpha = 0.12f),
+                spotColor = Color.Black.copy(alpha = 0.16f),
             ),
         shape = shape,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(TranslationInputBorderWidth, TranslationInputBorderColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
-        Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = label,
-                    modifier = Modifier.weight(1f),
-                    color = MaterialTheme.colorScheme.secondary,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = minimumHeight)
+                .padding(horizontal = 18.dp, vertical = 16.dp),
+        ) {
+            Column(Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = label,
+                        modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.secondary,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    headerAction?.let { action ->
+                        Box(Modifier.offset(x = 6.dp)) {
+                            action()
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                BasicTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(textFieldHeight)
+                        .onFocusChanged { onFocusChanged(it.isFocused) },
+                    enabled = editingEnabled,
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                        color = resolvedTextColor,
+                        fontFamily = Aileron,
+                        fontWeight = FontWeight.SemiBold,
+                    ),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        imeAction = if (onSubmit == null) ImeAction.Default else ImeAction.Done,
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = { onSubmit?.invoke() },
+                    ),
+                    decorationBox = { innerTextField ->
+                        Box(Modifier.fillMaxSize()) {
+                            if (value.isEmpty()) {
+                                Text(
+                                    text = placeholder,
+                                    color = resolvedPlaceholderColor,
+                                    style = MaterialTheme.typography.bodyLarge.copy(fontFamily = Aileron),
+                                )
+                            }
+                            innerTextField()
+                        }
+                    },
                 )
-                headerAction?.let { action ->
-                    Box(Modifier.offset(x = 6.dp)) {
-                        action()
+                if (!footerAtBottom) {
+                    footer?.let {
+                        Spacer(Modifier.height(8.dp))
+                        it()
                     }
                 }
             }
-            Spacer(Modifier.height(12.dp))
-            BasicTextField(
-                value = value,
-                onValueChange = onValueChange,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(textFieldHeight)
-                    .onFocusChanged { onFocusChanged(it.isFocused) },
-                enabled = editingEnabled,
-                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                    color = resolvedTextColor,
-                    fontFamily = Aileron,
-                ),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Text,
-                    imeAction = if (onSubmit == null) ImeAction.Default else ImeAction.Done,
-                ),
-                keyboardActions = KeyboardActions(
-                    onDone = { onSubmit?.invoke() },
-                ),
-                decorationBox = { innerTextField ->
-                    Box(Modifier.fillMaxSize()) {
-                        if (value.isEmpty()) {
-                            Text(
-                                text = placeholder,
-                                color = resolvedPlaceholderColor,
-                                style = MaterialTheme.typography.bodyLarge.copy(fontFamily = Aileron),
-                            )
-                        }
-                        innerTextField()
+            if (footerAtBottom) {
+                footer?.let { footerContent ->
+                    Box(Modifier.align(Alignment.BottomStart)) {
+                        footerContent()
                     }
-                },
-            )
-            footer?.let {
-                Spacer(Modifier.height(8.dp))
-                it()
+                }
             }
         }
     }

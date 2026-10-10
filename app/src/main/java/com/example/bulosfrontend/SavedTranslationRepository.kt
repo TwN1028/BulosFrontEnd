@@ -64,6 +64,23 @@ class SavedTranslationRepository(private val context: Context) {
         }
     }
 
+    suspend fun toggleSaved(timestamp: Long) {
+        context.savedTranslationsDataStore.edit { preferences ->
+            val current = decodeList(preferences[entriesKey].orEmpty())
+            val updated = current.map { entry ->
+                if (entry.timestamp == timestamp) {
+                    entry.copy(
+                        isSaved = !entry.isSaved,
+                        isFavorite = if (entry.isSaved) false else entry.isFavorite,
+                    )
+                } else {
+                    entry
+                }
+            }
+            preferences[entriesKey] = encodeList(pruneExpiredUnsaved(updated))
+        }
+    }
+
     suspend fun ensureSaved(
         sourceLang: String,
         targetLang: String,
@@ -111,6 +128,18 @@ class SavedTranslationRepository(private val context: Context) {
 
     suspend fun addFavorites(timestamps: Set<Long>) {
         updateFavorites(timestamps) { true }
+    }
+
+    suspend fun addToSaved(timestamps: Set<Long>) {
+        if (timestamps.isEmpty()) return
+        context.savedTranslationsDataStore.edit { preferences ->
+            val current = decodeList(preferences[entriesKey].orEmpty())
+            preferences[entriesKey] = encodeList(
+                current.map { entry ->
+                    if (entry.timestamp in timestamps) entry.copy(isSaved = true) else entry
+                },
+            )
+        }
     }
 
     private suspend fun updateFavorites(

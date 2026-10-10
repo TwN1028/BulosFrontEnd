@@ -3,6 +3,8 @@ package com.example.bulosfrontend
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -10,7 +12,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
@@ -36,9 +40,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.bulosfrontend.ui.theme.ForestGreen
 
@@ -88,7 +94,7 @@ internal fun dictionaryResults(
 }
 
 @Composable
-fun DictionaryScreen(viewModel: MainViewModel) {
+fun DictionaryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
     val home = viewModel.content.home
     val entries = viewModel.dictionaryEntries
     val initialSource = remember {
@@ -114,6 +120,8 @@ fun DictionaryScreen(viewModel: MainViewModel) {
     val filteredEntries = remember(query, entries, sourceLanguage, targetLanguage) {
         dictionaryResults(entries, sourceLanguage, query)
     }
+    val noDirectBulosTranslation = query.isNotBlank() && filteredEntries.isEmpty() &&
+        (sourceLanguage == UiLanguage.BULOS || targetLanguage == UiLanguage.BULOS)
 
     selectedEntry?.let { entry ->
         DictionaryEntryDetail(entry = entry, onDismiss = { selectedEntry = null })
@@ -131,6 +139,7 @@ fun DictionaryScreen(viewModel: MainViewModel) {
                     logoDescriptionRes = home.appLogoDescriptionRes,
                     iconRes = R.drawable.ic_dictionary_book,
                     subtitle = stringResource(home.dictionarySubtitleRes),
+                    onBack = onBack,
                 )
             },
         ) {
@@ -163,7 +172,12 @@ fun DictionaryScreen(viewModel: MainViewModel) {
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(LanguageSelectorCardFill),
-                            placeholder = { Text(stringResource(home.dictionarySearchRes)) },
+                            placeholder = {
+                                Text(
+                                    text = stringResource(home.dictionarySearchRes),
+                                    color = TranslationInputTextColor,
+                                )
+                            },
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Default.Search,
@@ -176,6 +190,9 @@ fun DictionaryScreen(viewModel: MainViewModel) {
                                 unfocusedContainerColor = Color.Transparent,
                                 focusedBorderColor = Color.Transparent,
                                 unfocusedBorderColor = Color.Transparent,
+                            ),
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                color = TranslationInputTextColor,
                             ),
                             singleLine = true,
                         )
@@ -214,14 +231,33 @@ fun DictionaryScreen(viewModel: MainViewModel) {
                 }
 
                 if (filteredEntries.isEmpty()) {
-                Text(
-                    text = stringResource(
-                        if (query.isBlank()) home.dictionaryEmptyRes else home.dictionaryNoResultsRes,
-                    ),
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 32.dp),
-                    color = MaterialTheme.colorScheme.secondary,
-                    style = MaterialTheme.typography.bodyLarge,
-                )
+                    Box(
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        when {
+                            noDirectBulosTranslation -> {
+                                DirectBulosTranslationUnavailableNotice(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .offset(y = (-48).dp)
+                                        .padding(horizontal = 24.dp),
+                                    showDictionaryIcon = true,
+                                )
+                            }
+                            else -> {
+                                Text(
+                                    text = stringResource(
+                                        if (query.isBlank()) home.dictionaryEmptyRes else home.dictionaryNoResultsRes,
+                                    ),
+                                    modifier = Modifier.padding(horizontal = 24.dp),
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
+                        }
+                    }
                 } else {
                 LazyColumn(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
@@ -255,10 +291,10 @@ private fun DictionaryLanguageSelector(
         Text(
             text = label,
             modifier = Modifier.heightIn(min = 20.dp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = TranslationInputTextColor,
             style = MaterialTheme.typography.labelLarge,
         )
-        Column(modifier = Modifier.fillMaxWidth()) {
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             Card(
                 onClick = { expanded = true },
                 modifier = Modifier
@@ -296,7 +332,20 @@ private fun DictionaryLanguageSelector(
                     )
                 }
             }
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier
+                    .width(maxWidth)
+                    .clip(LanguageSelectorCardShape)
+                    .background(LanguageSelectorCardFill)
+                    .padding(vertical = 6.dp),
+                shape = LanguageSelectorCardShape,
+                containerColor = Color.Transparent,
+                tonalElevation = 0.dp,
+                shadowElevation = 8.dp,
+                border = androidx.compose.foundation.BorderStroke(1.dp, LanguageSelectorCardBorder),
+            ) {
                 options.forEach { language ->
                     DropdownMenuItem(
                         text = { Text(stringResource(language.displayNameRes)) },

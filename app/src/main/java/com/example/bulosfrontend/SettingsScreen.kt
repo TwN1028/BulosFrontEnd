@@ -42,6 +42,7 @@ fun SettingsScreen(
                 home.appLogoDescriptionRes,
                 R.drawable.ic_lucide_settings,
                 subtitle = stringResource(home.settingsSubtitleRes),
+                onBack = onBack,
             )
             },
         ) {
@@ -126,20 +127,6 @@ fun SettingsScreen(
                 helpSubtitle = stringResource(content.help.cardSubtitleRes),
                 onHelpClick = onHelpClick,
             )
-            Spacer(Modifier.height(12.dp))
-            Box(Modifier.fillMaxWidth()) {
-                TextButton(
-                    onClick = onBack,
-                    modifier = Modifier.align(Alignment.Center).height(48.dp),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
-                ) {
-                    Text(
-                        text = stringResource(content.textTranslation.backRes),
-                        color = Color(0xFF36583A),
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-            }
         }
         }
     }

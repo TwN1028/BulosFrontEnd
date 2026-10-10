@@ -7,6 +7,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -204,6 +206,7 @@ fun SharedTopAppBar(
     @androidx.annotation.StringRes logoDescriptionRes: Int = R.string.app_logo_content_description,
     @androidx.annotation.DrawableRes iconRes: Int? = null,
     subtitle: String? = null,
+    onBack: (() -> Unit)? = null,
     trailingContent: @Composable RowScope.() -> Unit = {},
     selectionMode: Boolean = false,
     selectionContent: @Composable RowScope.() -> Unit = {},
@@ -228,6 +231,15 @@ fun SharedTopAppBar(
                 if (selecting) {
                     selectionContent()
                 } else {
+                    if (onBack != null) {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = null,
+                                tint = Color.White,
+                            )
+                        }
+                    }
                     Icon(
                         painter = painterResource(iconRes ?: R.drawable.ic_launcher_foreground),
                         contentDescription = stringResource(logoDescriptionRes),

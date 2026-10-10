@@ -4,7 +4,7 @@
     <string name="ui_header_translate_eng">Text Translation</string>
     <string name="ui_header_voice_eng">Speech Recognition</string>
     <string name="ui_header_result_eng">Translation Result</string>
-    <string name="ui_header_history_eng">Translation History</string>
+    <string name="ui_header_history_eng">Saved Translation</string>
     <string name="ui_translate_action_eng">Translate Text</string>
     <string name="ui_input_placeholder_eng">Enter text to translate…</string>
     <string name="ui_back_home_eng">Back to Home</string>
@@ -27,7 +27,7 @@
     <string name="ui_feature_text_subtitle_eng">Type &amp; translate</string>
     <string name="ui_feature_dictionary_title_eng">Dictionary</string>
     <string name="ui_feature_dictionary_subtitle_eng">Browse words</string>
-    <string name="ui_feature_history_title_eng">Saved History</string>
+    <string name="ui_feature_history_title_eng">Saved Translation</string>
     <string name="ui_feature_history_subtitle_eng">Past translations</string>
     <string name="ui_recent_eng">Recent Translations</string>
     <string name="ui_see_all_eng">See all</string>
@@ -53,7 +53,7 @@
     <string name="ui_preservation_digital_access_eng">Digital Access</string>
     <string name="ui_preservation_final_lead_eng">Every word carries culture, identity, and history.</string>
     <string name="ui_preservation_final_detail_eng">Preserving a language also helps preserve the stories and knowledge of the community that speaks it.</string>
-    <string name="ui_dictionary_search_eng">Search Bulos, Filipino, or English</string>
+    <string name="ui_dictionary_search_eng">Search the dictionary</string>
     <string name="ui_dictionary_search_description_eng">Search dictionary</string>
     <string name="ui_dictionary_empty_eng">Dictionary entries will appear here when the verified Bulos dataset is added.</string>
     <string name="ui_dictionary_no_results_eng">No dictionary entries match your search.</string>
@@ -109,7 +109,7 @@
     <string name="ui_recent_dynamic_title_eng">Recent Translation</string>
     <string name="ui_view_history_eng">View</string>
     <string name="ui_text_subtitle_eng">Translate words and phrases between languages.</string>
-    <string name="ui_text_input_placeholder_eng">Enter text in %1$s…</string>
+    <string name="ui_text_input_placeholder_eng">Enter text in %1$s.</string>
     <string name="ui_translate_to_eng">Translate to %1$s</string>
     <string name="ui_translate_from_label_eng">Translate From</string>
     <string name="ui_translate_to_label_eng">Translate To</string>
@@ -127,7 +127,7 @@
     <string name="ui_retry_again_eng">Retry Again</string>
     <string name="ui_speech_review_eng">Recording complete. Edit text below if needed</string>
     <string name="ui_transcribing_eng">Transcribing</string>
-    <string name="ui_recognized_text_label_eng">Recognized Text · %1$s</string>
+    <string name="ui_recognized_text_label_eng">TAP TO EDIT</string>
     <string name="ui_recognized_text_placeholder_eng">Speech transcription is not available yet. Enter the spoken text here to continue…</string>
     <string name="ui_edit_eng">Edit</string>
     <string name="ui_done_editing_eng">Done Editing</string>

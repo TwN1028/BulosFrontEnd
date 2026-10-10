@@ -129,6 +129,11 @@ fun FeatureCard(feature: HomeFeature, onClick: () -> Unit, modifier: Modifier = 
     }
     val cardBorderColor = Color(0xFFFFFBF4)
     val textColor = if (isTextFeature) cardBorderColor else Color.Black
+    val subtitleColor = if (feature.route == AppDestinations.MORE) {
+        TranslationInputTextColor
+    } else {
+        textColor
+    }
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val cardElevation by animateDpAsState(
@@ -192,7 +197,7 @@ fun FeatureCard(feature: HomeFeature, onClick: () -> Unit, modifier: Modifier = 
             Spacer(Modifier.height(3.dp))
             Text(
                 stringResource(feature.subtitleRes),
-                color = textColor,
+                color = subtitleColor,
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = 12.sp,
                     lineHeight = 16.sp,

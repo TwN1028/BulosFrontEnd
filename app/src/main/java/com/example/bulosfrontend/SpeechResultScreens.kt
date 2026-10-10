@@ -30,7 +30,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Button
@@ -88,8 +87,6 @@ fun TranslateVoiceScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBa
     val content = viewModel.content
     val labels = content.speechResult
     var recognizedText by rememberSaveable { mutableStateOf(TranslationState.sttTranscript) }
-    var isEditing by rememberSaveable { mutableStateOf(true) }
-    val hasRecording = TranslationState.recordedAudioPath != null || TranslationState.sttTranscript.isNotBlank()
 
     BackHandler(onBack = onBack)
 
@@ -124,41 +121,25 @@ fun TranslateVoiceScreen(viewModel: MainViewModel, onTranslate: () -> Unit, onBa
                     )
                     Spacer(Modifier.height(30.dp))
                     RecognizedTextCard(
-                        label = stringResource(labels.recognizedTextLabelRes, TranslationState.sourceLanguage),
+                        label = stringResource(labels.recognizedTextLabelRes),
                         value = recognizedText,
                         placeholder = stringResource(labels.recognizedTextPlaceholderRes),
-                        isEditing = isEditing,
-                        showEditControl = hasRecording && recognizedText.isNotBlank(),
-                        editLabel = stringResource(if (isEditing) labels.doneEditingRes else labels.editRes),
-                        onEditToggle = { isEditing = !isEditing },
                         onValueChange = { recognizedText = it },
                         modifier = Modifier.padding(horizontal = contentHorizontalPadding),
                     )
                     Spacer(Modifier.height(24.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = contentHorizontalPadding),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    ) {
-                        ResultSecondaryAction(
-                            text = stringResource(labels.clearRes),
-                            onClick = {
-                                recognizedText = ""
-                                isEditing = true
-                                viewModel.clearVoiceDraft()
-                            },
-                            modifier = Modifier.weight(1f),
-                        )
-                        ResultSecondaryAction(
-                            text = stringResource(labels.translateRes),
-                            onClick = {
-                                viewModel.translateVoiceText(recognizedText.trim())
-                                onTranslate()
-                            },
-                            enabled = recognizedText.isNotBlank(),
-                            modifier = Modifier.weight(1f),
-                            emphasized = true,
-                        )
-                    }
+                    ResultSecondaryAction(
+                        text = stringResource(labels.translateRes),
+                        onClick = {
+                            viewModel.translateVoiceText(recognizedText.trim())
+                            onTranslate()
+                        },
+                        enabled = recognizedText.isNotBlank(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = contentHorizontalPadding),
+                        emphasized = true,
+                    )
                     if (useScrollingLayout) {
                         Spacer(Modifier.height(24.dp))
                     } else {
@@ -253,13 +234,18 @@ fun ResultScreen(viewModel: MainViewModel, onBack: () -> Unit, onTranslateAgain:
                                 scrollableText = true,
                             )
                             if (TranslationState.translatedText.isEmpty() && viewModel.offlineTranslationMessage != null) {
-                                Text(
-                                    text = viewModel.offlineTranslationMessage.orEmpty(),
-                                    modifier = Modifier.fillMaxWidth(),
-                                    color = MaterialTheme.colorScheme.error,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    textAlign = TextAlign.Center,
-                                )
+                                val message = viewModel.offlineTranslationMessage.orEmpty()
+                                if (isDirectBulosTranslationUnavailable(message)) {
+                                    TransientDirectBulosTranslationUnavailableNotice(
+                                        noticeId = viewModel.directBulosUnavailableNoticeId,
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                } else {
+                                    TranslationFailureNotice(
+                                        presentation = translationFailurePresentation(message),
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                }
                             }
                             OfflineSuggestionList(
                                 suggestions = viewModel.offlineTranslationSuggestions,
@@ -487,7 +473,7 @@ private fun CompactLanguageMenu(
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Box(modifier) {
+    BoxWithConstraints(modifier) {
         TextButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
             Text(
                 selected,
@@ -497,16 +483,50 @@ private fun CompactLanguageMenu(
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier
+                .width(maxWidth)
+                .clip(LanguageSelectorCardShape)
+                .background(LanguageSelectorCardFill)
+                .padding(vertical = 6.dp),
+            shape = LanguageSelectorCardShape,
+            containerColor = Color.Transparent,
+            tonalElevation = 0.dp,
+            shadowElevation = 8.dp,
+            border = BorderStroke(1.dp, LanguageSelectorCardBorder),
+        ) {
             options
-                .filterNot { language -> language.equals(selected, ignoreCase = true) }
                 .forEach { language ->
+                    val isSelected = language.equals(selected, ignoreCase = true)
                     DropdownMenuItem(
-                        text = { Text(language) },
+                        modifier = Modifier
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (isSelected) {
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+                                } else {
+                                    Color.Transparent
+                                },
+                            ),
+                        text = {
+                            Text(
+                                text = language,
+                                color = if (isSelected) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                            )
+                        },
                         onClick = {
-                            onSelected(language)
+                            if (!isSelected) onSelected(language)
                             expanded = false
                         },
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
                     )
                 }
         }
@@ -518,10 +538,6 @@ private fun RecognizedTextCard(
     label: String,
     value: String,
     placeholder: String,
-    isEditing: Boolean,
-    showEditControl: Boolean,
-    editLabel: String,
-    onEditToggle: () -> Unit,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -530,25 +546,9 @@ private fun RecognizedTextCard(
         value = value,
         placeholder = placeholder,
         onValueChange = onValueChange,
-        editingEnabled = isEditing,
+        textColor = Color(0xFF736E68),
+        editingEnabled = true,
         modifier = modifier,
-        footer = if (showEditControl) {
-            {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(
-                        onClick = onEditToggle,
-                        modifier = Modifier.height(28.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                    ) {
-                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(15.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text(editLabel, style = MaterialTheme.typography.labelSmall)
-                    }
-                }
-            }
-        } else {
-            null
-        },
     )
 }
 
@@ -626,8 +626,16 @@ internal fun ResultSecondaryAction(
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(52.dp),
-        shape = RoundedCornerShape(18.dp),
+        modifier = modifier
+            .height(52.dp)
+            .shadow(
+                elevation = 8.dp,
+                shape = LanguageSelectorCardShape,
+                clip = false,
+                ambientColor = Color.Black.copy(alpha = 0.12f),
+                spotColor = Color.Black.copy(alpha = 0.16f),
+            ),
+        shape = LanguageSelectorCardShape,
         colors = ButtonDefaults.buttonColors(
             containerColor = if (emphasized) SharedActiveButtonColor else Color(0xFFFFFEFA),
             contentColor = if (emphasized) Color(0xFFFFFBF4) else PrimaryGreen,

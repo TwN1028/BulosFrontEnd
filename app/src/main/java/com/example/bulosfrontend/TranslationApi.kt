@@ -269,6 +269,21 @@ class HybridTranslationRepository(
         targetLanguage: String,
         text: String,
     ): TranslationResult {
+        val source = sourceLanguage.toUiLanguage()
+        val target = targetLanguage.toUiLanguage()
+        if (source == UiLanguage.BULOS || target == UiLanguage.BULOS) {
+            when (val verifiedResult = offlineDictionary.lookup(text, source, target)) {
+                is OfflineLookupResult.Translation -> {
+                    return offlineTranslationSuccess(verifiedResult, text, sourceLanguage, targetLanguage)
+                }
+                is OfflineLookupResult.Suggestions -> return TranslationResult.Suggestions(verifiedResult.candidates)
+                OfflineLookupResult.Unavailable -> {
+                    return TranslationResult.Failure(DIRECT_BULOS_TRANSLATION_UNAVAILABLE_MESSAGE)
+                }
+                OfflineLookupResult.NoData -> Unit
+            }
+        }
+
         val wasOnline = canUseOnlineServices(NetworkUtils.isOnline(context), offlineModeEnabled)
         val networkResult = if (wasOnline) {
             networkRepository.translate(sourceLanguage, targetLanguage, text)
@@ -279,23 +294,21 @@ class HybridTranslationRepository(
             isServerReady = true
             return networkResult
         }
-        val source = sourceLanguage.toUiLanguage()
-        val target = targetLanguage.toUiLanguage()
         return when (val offlineResult = offlineDictionary.lookup(text, source, target)) {
-            is OfflineLookupResult.Translation -> TranslationResult.Success(
-                TranslationResponse(
-                    originalText = text,
-                    translatedText = offlineResult.translatedText,
-                    sourceLanguage = BackendLanguageCodes.forUiLabel(sourceLanguage),
-                    targetLanguage = BackendLanguageCodes.forUiLabel(targetLanguage),
-                    confidence = offlineResult.confidence,
-                    intermediateLanguage = null,
-                    translationMethod = offlineResult.method,
-                ),
-            )
+            is OfflineLookupResult.Translation ->
+                offlineTranslationSuccess(offlineResult, text, sourceLanguage, targetLanguage)
             is OfflineLookupResult.Suggestions -> TranslationResult.Suggestions(offlineResult.candidates)
             OfflineLookupResult.NoData -> unresolvedFallback(networkResult, wasOnline, hasOfflineData = false)
-            OfflineLookupResult.Unavailable -> unresolvedFallback(networkResult, wasOnline, hasOfflineData = true)
+            OfflineLookupResult.Unavailable -> unresolvedFallback(
+                networkResult = networkResult,
+                wasOnline = wasOnline,
+                hasOfflineData = true,
+                unavailableMessage = if (source == UiLanguage.BULOS || target == UiLanguage.BULOS) {
+                    DIRECT_BULOS_TRANSLATION_UNAVAILABLE_MESSAGE
+                } else {
+                    DEFAULT_TRANSLATION_UNAVAILABLE_MESSAGE
+                },
+            )
         }
     }
 
@@ -333,6 +346,23 @@ class HybridTranslationRepository(
         "bulos" -> UiLanguage.BULOS
         else -> UiLanguage.ENGLISH
     }
+
+    private fun offlineTranslationSuccess(
+        result: OfflineLookupResult.Translation,
+        text: String,
+        sourceLanguage: String,
+        targetLanguage: String,
+    ) = TranslationResult.Success(
+        TranslationResponse(
+            originalText = text,
+            translatedText = result.translatedText,
+            sourceLanguage = BackendLanguageCodes.forUiLabel(sourceLanguage),
+            targetLanguage = BackendLanguageCodes.forUiLabel(targetLanguage),
+            confidence = result.confidence,
+            intermediateLanguage = null,
+            translationMethod = result.method,
+        ),
+    )
 }
 
 internal fun canUseOnlineServices(hasInternetConnection: Boolean, offlineModeEnabled: Boolean): Boolean =
@@ -342,12 +372,71 @@ internal fun unresolvedFallback(
     networkResult: TranslationResult,
     wasOnline: Boolean,
     hasOfflineData: Boolean,
+    unavailableMessage: String = DEFAULT_TRANSLATION_UNAVAILABLE_MESSAGE,
 ): TranslationResult = when {
     wasOnline || networkResult.isDeviceIdFailure() -> networkResult
     !hasOfflineData -> TranslationResult.Failure(
         "Offline translation data is not installed. Connect to the internet once to download it.",
     )
-    else -> TranslationResult.Failure("Translation unavailable.")
+    else -> TranslationResult.Failure(unavailableMessage)
+}
+
+private const val DEFAULT_TRANSLATION_UNAVAILABLE_MESSAGE = "Translation unavailable."
+internal const val DIRECT_BULOS_TRANSLATION_UNAVAILABLE_TITLE = "No direct Bulos equivalent found"
+internal const val DIRECT_BULOS_TRANSLATION_UNAVAILABLE_DESCRIPTION =
+    "This term has no documented Bulos translation."
+internal const val DIRECT_BULOS_TRANSLATION_UNAVAILABLE_MESSAGE =
+    "$DIRECT_BULOS_TRANSLATION_UNAVAILABLE_TITLE\n$DIRECT_BULOS_TRANSLATION_UNAVAILABLE_DESCRIPTION"
+
+internal fun isDirectBulosTranslationUnavailable(message: String?): Boolean =
+    message == DIRECT_BULOS_TRANSLATION_UNAVAILABLE_MESSAGE
+
+internal data class TranslationFailurePresentation(
+    val title: String,
+    val description: String,
+)
+
+internal fun translationFailurePresentation(message: String): TranslationFailurePresentation = when (message) {
+    DIRECT_BULOS_TRANSLATION_UNAVAILABLE_MESSAGE -> TranslationFailurePresentation(
+        title = DIRECT_BULOS_TRANSLATION_UNAVAILABLE_TITLE,
+        description = DIRECT_BULOS_TRANSLATION_UNAVAILABLE_DESCRIPTION,
+    )
+    "Unable to connect. Check your internet and try again." -> TranslationFailurePresentation(
+        title = "No internet connection",
+        description = "Check your connection and try again.",
+    )
+    "Offline translation data is not installed. Connect to the internet once to download it." -> TranslationFailurePresentation(
+        title = "Offline translation data unavailable",
+        description = "Connect to the internet once to download the dictionary data.",
+    )
+    "Translation service is unavailable. Please try again." -> TranslationFailurePresentation(
+        title = "Translation service unavailable",
+        description = "Please try again in a moment.",
+    )
+    "The translation server took too long to respond. Please try again shortly." -> TranslationFailurePresentation(
+        title = "Translation service is taking too long",
+        description = "Please try again shortly.",
+    )
+    DEVICE_ID_ERROR_MESSAGE -> TranslationFailurePresentation(
+        title = "App identity unavailable",
+        description = "Restart the app and try again.",
+    )
+    "This language pair is not supported." -> TranslationFailurePresentation(
+        title = "Unsupported language pair",
+        description = "Choose a supported source and target language.",
+    )
+    "The selected language is not supported." -> TranslationFailurePresentation(
+        title = "Unsupported language",
+        description = "Choose one of the available languages.",
+    )
+    "The translation response could not be read. Please try again." -> TranslationFailurePresentation(
+        title = "Translation response unavailable",
+        description = "Please try again.",
+    )
+    else -> TranslationFailurePresentation(
+        title = "Translation couldn't be completed",
+        description = message.ifBlank { "Please try again." },
+    )
 }
 
 private fun TranslationResult.isDeviceIdFailure(): Boolean =

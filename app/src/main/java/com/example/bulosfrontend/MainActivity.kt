@@ -7,6 +7,9 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -27,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -37,6 +41,8 @@ import androidx.core.view.WindowCompat
 import com.example.bulosfrontend.ui.theme.BulosFrontEndTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+private const val StartupProgressCompletionHoldMillis = 1_000L
 
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
@@ -55,6 +61,8 @@ class MainActivity : ComponentActivity() {
                 SideEffect { applyWhiteStatusBarContent() }
                 val preferenceRepository = remember { LanguagePreferenceRepository(applicationContext) }
                 val coroutineScope = rememberCoroutineScope()
+                var showStartupSplash by remember { mutableStateOf(true) }
+                var isStartupProgressComplete by remember { mutableStateOf(false) }
                 LaunchedEffect(
                     TranslationState.sourceLanguage,
                     viewModel.isOfflineModePreferenceLoaded,
@@ -64,13 +72,22 @@ class MainActivity : ComponentActivity() {
                         viewModel.preloadOfflineSpeechModel(TranslationState.sourceLanguage)
                     }
                 }
-                if (!viewModel.isStartupReady) {
-                    BrandedSplashScreen(
-                        progress = viewModel.startupCompletedTaskCount.toFloat() / viewModel.startupTaskCount,
-                        errorMessage = viewModel.startupError,
-                        onRetry = viewModel::retryStartup,
-                    )
-                    return@BulosFrontEndTheme
+                LaunchedEffect(viewModel.isStartupReady) {
+                    if (!viewModel.isStartupReady) {
+                        isStartupProgressComplete = false
+                    }
+                }
+                LaunchedEffect(viewModel.isStartupReady, isStartupProgressComplete) {
+                    if (viewModel.isStartupReady && isStartupProgressComplete) {
+                        withFrameNanos { }
+                        delay(StartupProgressCompletionHoldMillis)
+                        showStartupSplash = false
+                    }
+                }
+                val splashProgress = if (viewModel.isStartupReady) {
+                    1f
+                } else {
+                    viewModel.startupCompletedTaskCount.toFloat() / viewModel.startupTaskCount
                 }
                 val hasCompletedPreservationIntro = viewModel.hasCompletedPreservationIntro == true
                 val navController = rememberNavController()
@@ -120,6 +137,13 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
+                Box(Modifier.fillMaxSize()) {
+                AnimatedVisibility(
+                    visible = viewModel.isStartupReady,
+                    enter = EnterTransition.None,
+                    exit = ExitTransition.None,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
                 CompositionLocalProvider(
                     LocalConnectionStatus provides viewModel.connectionStatus,
                     LocalConnectionUiLanguage provides viewModel.uiLanguage,
@@ -227,12 +251,6 @@ class MainActivity : ComponentActivity() {
                             TranslateTextScreen(
                                 viewModel = viewModel,
                                 onBack = { navController.popBackStack() },
-                                onHome = {
-                                    navController.navigate(AppDestinations.HOME) {
-                                        launchSingleTop = true
-                                        popUpTo(AppDestinations.HOME)
-                                    }
-                                },
                                 onFloatingNavigationVisibilityChanged = {
                                     textScreenAllowsFloatingNavigation = it
                                 },
@@ -264,7 +282,7 @@ class MainActivity : ComponentActivity() {
                             RecentTranslationScreen(viewModel) { navController.popBackStack() }
                         }
                         composable(AppDestinations.DICTIONARY) {
-                            DictionaryScreen(viewModel)
+                            DictionaryScreen(viewModel) { navController.popBackStack() }
                         }
                         composable(AppDestinations.MORE) {
                             SettingsScreen(
@@ -317,6 +335,21 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     }
+                }
+                }
+                }
+                AnimatedVisibility(
+                    visible = showStartupSplash,
+                    enter = EnterTransition.None,
+                    exit = fadeOut(tween(durationMillis = 350)),
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    BrandedSplashScreen(
+                        progress = splashProgress,
+                        errorMessage = viewModel.startupError,
+                        onRetry = viewModel::retryStartup,
+                        onProgressCompleted = { isStartupProgressComplete = true },
+                    )
                 }
                 }
             }

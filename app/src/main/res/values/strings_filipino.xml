@@ -4,7 +4,7 @@
     <string name="ui_header_translate_fil">Pagsasalin ng Teksto</string>
     <string name="ui_header_voice_fil">Pagkilala sa Boses</string>
     <string name="ui_header_result_fil">Resulta ng Pagsasalin</string>
-    <string name="ui_header_history_fil">Nakaraang Salin</string>
+    <string name="ui_header_history_fil">Naka-save na Salin</string>
     <string name="ui_translate_action_fil">Isalin ang Teksto</string>
     <string name="ui_input_placeholder_fil">Ipasok ang tekstong isasalin…</string>
     <string name="ui_back_home_fil">Bumalik sa Home</string>
@@ -27,7 +27,7 @@
     <string name="ui_feature_text_subtitle_fil">Mag-type at magsalin</string>
     <string name="ui_feature_dictionary_title_fil">Diksyunaryo</string>
     <string name="ui_feature_dictionary_subtitle_fil">Maghanap ng mga salita</string>
-    <string name="ui_feature_history_title_fil">Nakaraang Salin</string>
+    <string name="ui_feature_history_title_fil">Naka-save na Salin</string>
     <string name="ui_feature_history_subtitle_fil">Mga dating pagsasalin</string>
     <string name="ui_recent_fil">Mga Kamakailang Salin</string>
     <string name="ui_see_all_fil">Tingnan lahat</string>
@@ -109,7 +109,7 @@
     <string name="ui_recent_dynamic_title_fil">Kamakailang Salin</string>
     <string name="ui_view_history_fil">Tingnan</string>
     <string name="ui_text_subtitle_fil">Magsalin ng mga salita at parirala sa iba’t ibang wika.</string>
-    <string name="ui_text_input_placeholder_fil">Maglagay ng teksto sa %1$s…</string>
+    <string name="ui_text_input_placeholder_fil">Maglagay ng teksto sa %1$s.</string>
     <string name="ui_translate_to_fil">Isalin sa %1$s</string>
     <string name="ui_translate_from_label_fil">Isalin Mula Sa</string>
     <string name="ui_translate_to_label_fil">Isalin Sa</string>
@@ -127,7 +127,7 @@
     <string name="ui_retry_again_fil">Subukang Muli</string>
     <string name="ui_speech_review_fil">Tapos na ang recording. Ayusin ang teksto kung kailangan</string>
     <string name="ui_transcribing_fil">Isinusulat</string>
-    <string name="ui_recognized_text_label_fil">Nakilalang Teksto · %1$s</string>
+    <string name="ui_recognized_text_label_fil">Suriin at i-edit</string>
     <string name="ui_recognized_text_placeholder_fil">Hindi pa available ang speech transcription. Ilagay dito ang binigkas na teksto upang magpatuloy…</string>
     <string name="ui_edit_fil">Ayusin</string>
     <string name="ui_done_editing_fil">Tapos Na</string>

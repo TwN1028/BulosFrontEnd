@@ -82,10 +82,10 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
@@ -482,8 +482,14 @@ fun HomeRecordingScreen(
                     statusText = when {
                         viewModel.isSpeechProcessing -> ""
                         viewModel.isRecording -> stringResource(labels.listeningStatusRes)
-                        viewModel.voiceInputReady || recognitionFailed -> ""
+                        viewModel.voiceInputReady -> "Speech captured"
+                        recognitionFailed -> ""
                         else -> stringResource(viewModel.content.home.speechSubtitleRes)
+                    },
+                    statusSupportingText = if (viewModel.voiceInputReady) {
+                        "Tap Finish to continue."
+                    } else {
+                        null
                     },
                     isProcessing = viewModel.isSpeechProcessing,
                     onClick = ::toggleRecording,
@@ -492,7 +498,7 @@ fun HomeRecordingScreen(
                         !viewModel.voiceInputReady,
                     isRecording = viewModel.isRecording,
                     isStopped = !viewModel.isRecording && viewModel.voiceInputReady,
-                    showCancelledIdleGlow = viewModel.wasRecordingCancelled,
+                    showCancelledIdleGlow = viewModel.wasRecordingCancelled || viewModel.isNoSpeechDetected,
                     recordingSeconds = viewModel.recordingTime.takeIf { viewModel.isRecording },
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
@@ -550,7 +556,11 @@ fun HomeRecordingScreen(
                                 } else {
                                     MaterialTheme.typography.titleMedium
                                 },
-                                fontWeight = FontWeight.SemiBold,
+                                fontWeight = if (showNoSpeechMessage) {
+                                    FontWeight.Bold
+                                } else {
+                                    FontWeight.SemiBold
+                                },
                             )
                             if (showNoSpeechMessage) {
                                 Spacer(Modifier.height(4.dp))
@@ -590,15 +600,6 @@ fun HomeRecordingScreen(
                                     onClick = ::completeRecordingOnce,
                                     modifier = Modifier.weight(1f),
                                     emphasized = true,
-                                )
-                            }
-                            if (viewModel.voiceInputReady) {
-                                Spacer(Modifier.height(12.dp))
-                                Text(
-                                    text = "Speech captured. Tap Finish to continue.",
-                                    color = Color.White,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold,
                                 )
                             }
                         }
@@ -741,6 +742,7 @@ private fun LiveSpeechTranscript(
 @Composable
 private fun BottomSpeechMicrophoneHero(
     statusText: String,
+    statusSupportingText: String?,
     isProcessing: Boolean,
     onClick: () -> Unit,
     enabled: Boolean,
@@ -751,19 +753,14 @@ private fun BottomSpeechMicrophoneHero(
     recordingSeconds: Long? = null,
 ) {
     val microphoneButtonSize = 104.dp
-    val idlePromptBottomPadding = 12.dp
-    val microphonePromptGap = 22.dp
-    var idlePromptHeightPx by remember { mutableIntStateOf(0) }
-    val idlePromptHeight = with(LocalDensity.current) {
-        idlePromptHeightPx.toDp()
-    }.coerceAtLeast(28.dp)
-    val microphoneBottomPadding = idlePromptBottomPadding + idlePromptHeight + microphonePromptGap
+    // Match the reference hierarchy: the prompt is above a lower, shared mic/glow anchor.
+    val microphoneBottomPadding = 0.dp
     val transition = rememberInfiniteTransition(label = "bottomSpeechGlow")
     val recordingPulse by transition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1_800, easing = FastOutSlowInEasing),
+            animation = tween(durationMillis = 3_200, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse,
         ),
         label = "bottomSpeechGlowPulse",
@@ -773,7 +770,7 @@ private fun BottomSpeechMicrophoneHero(
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
             animation = tween(durationMillis = 1_900, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart,
+            repeatMode = RepeatMode.Reverse,
         ),
         label = "bottomSpeechProcessingRings",
     )
@@ -790,7 +787,17 @@ private fun BottomSpeechMicrophoneHero(
         label = "bottomSpeechCancelledTransition",
     )
 
-    Box(modifier = modifier, contentAlignment = Alignment.BottomCenter) {
+    BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.BottomCenter) {
+        val promptOuterRingRadius = minOf(
+            maxWidth * 0.58f,
+            (maxHeight - microphoneBottomPadding - microphoneButtonSize / 2f - 60.dp)
+                .coerceAtLeast(0.dp),
+        )
+        val promptInnerRingRadius = promptOuterRingRadius * 0.73f
+        val idlePromptBottomPadding =
+            microphoneBottomPadding + microphoneButtonSize / 2f +
+                (promptOuterRingRadius + promptInnerRingRadius) / 2f - 14.dp
+
         Canvas(Modifier.fillMaxSize()) {
             val microphoneCenter = Offset(
                 x = size.width / 2f,
@@ -909,12 +916,17 @@ private fun BottomSpeechMicrophoneHero(
             }
         }
 
-        val isIdlePrompt = !isProcessing && !isRecording && recordingSeconds == null && statusText.isNotEmpty()
+        val isIdlePrompt = !isProcessing &&
+            !isRecording &&
+            recordingSeconds == null &&
+            statusText.isNotEmpty() &&
+            statusSupportingText == null
         if (isProcessing || (statusText.isNotEmpty() && !isIdlePrompt)) {
+            val statusTopPadding = if (isRecording || statusSupportingText != null) 70.dp else 76.dp
             Column(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .padding(top = 76.dp, start = 16.dp, end = 16.dp),
+                    .padding(top = statusTopPadding, start = 16.dp, end = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 if (isProcessing) {
@@ -932,6 +944,15 @@ private fun BottomSpeechMicrophoneHero(
                         fontWeight = FontWeight.SemiBold,
                         textAlign = TextAlign.Center,
                     )
+                    if (statusSupportingText != null) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = statusSupportingText,
+                            color = Color.White,
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
                 }
                 if (recordingSeconds != null) {
                     val boundedSeconds = recordingSeconds.coerceIn(0L, 60L)
@@ -969,9 +990,8 @@ private fun BottomSpeechMicrophoneHero(
                         start = 16.dp,
                         end = 16.dp,
                         bottom = idlePromptBottomPadding,
-                    )
-                    .onSizeChanged { idlePromptHeightPx = it.height },
-                color = WarmBrown,
+                    ),
+                color = Color.White,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
@@ -1033,6 +1053,7 @@ private fun SpeechMicrophoneHeroPreview() {
             )
             BottomSpeechMicrophoneHero(
                 statusText = "Tap to Speak",
+                statusSupportingText = null,
                 isProcessing = false,
                 onClick = {},
                 enabled = true,
@@ -1053,9 +1074,10 @@ private val IdleSpeechGlowCore = Color(0xFFE3B978)
 private val IdleSpeechGlowInner = Color(0xFFF0D6AA)
 private val SpeechGlowConcentrated = Color(0xFFF3E7AC)
 private val SpeechGlowOuter = Color(0xFFF7F3DE)
-private val HomeReferenceGlowCore = Color(0xFFE8E1C7)
-private val HomeReferenceGlowWarm = Color(0xFFE8E1C7)
-private val HomeReferenceGlowMiddle = Color(0xFFE8E1C7)
+internal val HomeMicGlowCream = Color(0xFFE8E1C7)
+private val HomeReferenceGlowCore = HomeMicGlowCream
+private val HomeReferenceGlowWarm = HomeMicGlowCream
+private val HomeReferenceGlowMiddle = HomeMicGlowCream
 private val HomeReferenceGlowSage = Color(0xFFC7D0AA)
 private val HomeReferenceGlowOuter = Color(0xFF879B70)
 private val MicrophoneGlowCore = Color(0xFFFFF3B0)
@@ -1194,16 +1216,82 @@ private fun HomeVoiceHero(
         ),
         label = "middleRingHighlightAngle",
     )
+    val referenceGlowMotion = rememberInfiniteTransition(label = "homeReferenceGlowMotion")
+    val referenceGlowPulse by referenceGlowMotion.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2_600, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "homeReferenceGlowPulse",
+    )
+    val referenceGlowSweepRotation by referenceGlowMotion.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 4_800, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "homeReferenceGlowSweepRotation",
+    )
+    val referenceGlowOuterDriftRotation by referenceGlowMotion.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 6_400, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "homeReferenceGlowOuterDriftRotation",
+    )
+    val referenceGlowInnerDriftRotation by referenceGlowMotion.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 4_100, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "homeReferenceGlowInnerDriftRotation",
+    )
+    val referenceGlowWaveBreath by referenceGlowMotion.animateFloat(
+        initialValue = 0.96f,
+        targetValue = 1.04f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3_400, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "homeReferenceGlowWaveBreath",
+    )
+    val referenceGlowDepthWaveOne by referenceGlowMotion.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 4_600, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "homeReferenceGlowDepthWaveOne",
+    )
+    val referenceGlowDepthWaveTwo by referenceGlowMotion.animateFloat(
+        initialValue = 0.46f,
+        targetValue = 1.46f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 6_200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "homeReferenceGlowDepthWaveTwo",
+    )
 
     Box(modifier = modifier.size(254.dp), contentAlignment = Alignment.Center) {
         val showReferenceHomeGlow = useReferenceHomeGlow &&
             !isRecording &&
             !isStopped &&
             !showCancelledIdleGlow
+        val referenceGlowExpansion = 0.30f
+        val referenceGlowCanvasScale = 1f + referenceGlowExpansion
         val activePulse = if (useSpeechRecordingAura && isRecording) recordingPulse else 0f
         val auraExpansion = animatedRadiusLevel.value * 38f + activePulse * 28f
         val auraDiameter = when {
-            showReferenceHomeGlow -> homeReferenceAuraDiameter
+            showReferenceHomeGlow -> homeReferenceAuraDiameter * referenceGlowCanvasScale
             useSpeechRecordingAura -> speechAuraDiameter
             else -> 280.dp
         }
@@ -1220,7 +1308,147 @@ private fun HomeVoiceHero(
             },
         ) {
             if (showReferenceHomeGlow) {
-                val auraRadius = size.minDimension / 2f
+                val auraRadius = size.minDimension / (2f * referenceGlowCanvasScale)
+                val expansionEnd = 0.84f
+                val expansionProgress = (referenceGlowPulse / expansionEnd).coerceAtMost(1f)
+                val expansionBrightness = if (referenceGlowPulse <= expansionEnd) {
+                    expansionProgress
+                } else {
+                    1f - ((referenceGlowPulse - expansionEnd) / (1f - expansionEnd))
+                }
+                // Keep a low-intensity moving glow present from the first frame, then
+                // brighten it as the outward pulse reaches its peak.
+                fun glowAlpha(alpha: Float) = alpha * (0.16f + expansionBrightness * 0.46f)
+
+                val sweepScale = 0.90f + expansionProgress * 0.22f
+                // The moving layers are sized to fade out within the visible inner aura,
+                // avoiding a hard clip edge as they rotate.
+                val rotatingLayerRadius = auraRadius * 0.92f
+                val outerSweepWidth = rotatingLayerRadius * 1.68f * sweepScale
+                val outerSweepHeight = rotatingLayerRadius * 1.18f * sweepScale
+                val sweepWidth = rotatingLayerRadius * 1.46f * sweepScale
+                val sweepHeight = rotatingLayerRadius * 1.06f * sweepScale
+                val innerSweepWidth = rotatingLayerRadius * 1.18f * sweepScale
+                val innerSweepHeight = rotatingLayerRadius * 0.90f * sweepScale
+                val accentSweepWidth = rotatingLayerRadius * 0.90f * sweepScale
+                val accentSweepHeight = rotatingLayerRadius * 0.66f * sweepScale
+                val outerWaveWidth = rotatingLayerRadius * 1.58f * sweepScale * referenceGlowWaveBreath
+                val outerWaveHeight = rotatingLayerRadius * 1.36f * sweepScale * referenceGlowWaveBreath
+                val innerWaveWidth = rotatingLayerRadius * 1.06f * sweepScale * referenceGlowWaveBreath
+                val innerWaveHeight = rotatingLayerRadius * 0.82f * sweepScale * referenceGlowWaveBreath
+                // Keep the broad sweep behind the resting bloom and within its soft aura.
+                rotate(degrees = referenceGlowSweepRotation + 36f, pivot = center) {
+                        drawOval(
+                            brush = Brush.radialGradient(
+                                0.00f to HomeReferenceGlowSage.copy(alpha = 0.12f + expansionProgress * 0.05f),
+                                0.42f to HomeReferenceGlowSage.copy(alpha = 0.075f + expansionProgress * 0.035f),
+                                0.68f to HomeReferenceGlowOuter.copy(alpha = 0.025f + expansionProgress * 0.015f),
+                                0.84f to Color.Transparent,
+                                1.00f to Color.Transparent,
+                                center = center,
+                                radius = outerSweepWidth * 0.50f,
+                            ),
+                            topLeft = Offset(center.x - outerSweepWidth / 2f, center.y - outerSweepHeight / 2f),
+                            size = Size(outerSweepWidth, outerSweepHeight),
+                        )
+                }
+                rotate(degrees = referenceGlowSweepRotation + 92f, pivot = center) {
+                        drawOval(
+                            brush = Brush.radialGradient(
+                                0.00f to HomeReferenceGlowSage.copy(alpha = 0.18f + expansionProgress * 0.07f),
+                                0.40f to HomeReferenceGlowSage.copy(alpha = 0.11f + expansionProgress * 0.045f),
+                                0.66f to HomeReferenceGlowOuter.copy(alpha = 0.04f + expansionProgress * 0.02f),
+                                0.84f to Color.Transparent,
+                                1.00f to Color.Transparent,
+                                center = center,
+                                radius = sweepWidth * 0.50f,
+                            ),
+                            topLeft = Offset(center.x - sweepWidth / 2f, center.y - sweepHeight / 2f),
+                            size = Size(sweepWidth, sweepHeight),
+                        )
+                }
+                rotate(degrees = referenceGlowSweepRotation + 148f, pivot = center) {
+                        drawOval(
+                            brush = Brush.radialGradient(
+                                0.00f to HomeReferenceGlowWarm.copy(alpha = 0.16f + expansionProgress * 0.06f),
+                                0.42f to HomeReferenceGlowWarm.copy(alpha = 0.09f + expansionProgress * 0.035f),
+                                0.68f to HomeReferenceGlowSage.copy(alpha = 0.03f + expansionProgress * 0.015f),
+                                0.84f to Color.Transparent,
+                                1.00f to Color.Transparent,
+                                center = center,
+                                radius = innerSweepWidth * 0.50f,
+                            ),
+                            topLeft = Offset(center.x - innerSweepWidth / 2f, center.y - innerSweepHeight / 2f),
+                            size = Size(innerSweepWidth, innerSweepHeight),
+                        )
+                }
+                rotate(degrees = referenceGlowSweepRotation + 212f, pivot = center) {
+                    drawOval(
+                        brush = Brush.radialGradient(
+                            0.00f to HomeReferenceGlowCore.copy(
+                                alpha = 0.07f + expansionProgress * 0.03f,
+                            ),
+                            0.42f to HomeReferenceGlowWarm.copy(
+                                alpha = 0.035f + expansionProgress * 0.018f,
+                            ),
+                            0.68f to HomeReferenceGlowSage.copy(alpha = 0.012f),
+                            0.84f to Color.Transparent,
+                            1.00f to Color.Transparent,
+                            center = center,
+                            radius = accentSweepWidth * 0.50f,
+                        ),
+                        topLeft = Offset(
+                            center.x - accentSweepWidth / 2f,
+                            center.y - accentSweepHeight / 2f,
+                        ),
+                        size = Size(accentSweepWidth, accentSweepHeight),
+                    )
+                }
+                rotate(degrees = referenceGlowOuterDriftRotation + 292f, pivot = center) {
+                    drawOval(
+                        brush = Brush.radialGradient(
+                            0.00f to HomeReferenceGlowSage.copy(
+                                alpha = 0.075f + expansionProgress * 0.025f,
+                            ),
+                            0.40f to HomeReferenceGlowSage.copy(
+                                alpha = 0.042f + expansionProgress * 0.016f,
+                            ),
+                            0.68f to HomeReferenceGlowOuter.copy(alpha = 0.014f),
+                            0.84f to Color.Transparent,
+                            1.00f to Color.Transparent,
+                            center = center,
+                            radius = outerWaveWidth * 0.50f,
+                        ),
+                        topLeft = Offset(
+                            center.x - outerWaveWidth / 2f,
+                            center.y - outerWaveHeight / 2f,
+                        ),
+                        size = Size(outerWaveWidth, outerWaveHeight),
+                    )
+                }
+                rotate(degrees = referenceGlowInnerDriftRotation + 28f, pivot = center) {
+                    drawOval(
+                        brush = Brush.radialGradient(
+                            0.00f to HomeReferenceGlowWarm.copy(
+                                alpha = 0.055f + expansionProgress * 0.022f,
+                            ),
+                            0.42f to HomeReferenceGlowWarm.copy(
+                                alpha = 0.030f + expansionProgress * 0.012f,
+                            ),
+                            0.70f to HomeReferenceGlowSage.copy(alpha = 0.010f),
+                            0.86f to Color.Transparent,
+                            1.00f to Color.Transparent,
+                            center = center,
+                            radius = innerWaveWidth * 0.50f,
+                        ),
+                        topLeft = Offset(
+                            center.x - innerWaveWidth / 2f,
+                            center.y - innerWaveHeight / 2f,
+                        ),
+                        size = Size(innerWaveWidth, innerWaveHeight),
+                    )
+                }
+                // Keep the original home-screen glow visible at rest.
                 drawCircle(
                     brush = Brush.radialGradient(
                         0.00f to HomeReferenceGlowSage.copy(alpha = 0.18f),
@@ -1234,7 +1462,7 @@ private fun HomeVoiceHero(
                     radius = auraRadius,
                     center = center,
                 )
-                val creamBloomRadius = auraRadius * 0.82f
+                val restingBloomRadius = auraRadius * 0.82f
                 drawCircle(
                     brush = Brush.radialGradient(
                         0.00f to HomeReferenceGlowWarm.copy(alpha = 0.66f),
@@ -1243,12 +1471,12 @@ private fun HomeVoiceHero(
                         0.82f to HomeReferenceGlowMiddle.copy(alpha = 0.12f),
                         1.00f to Color.Transparent,
                         center = center,
-                        radius = creamBloomRadius,
+                        radius = restingBloomRadius,
                     ),
-                    radius = creamBloomRadius,
+                    radius = restingBloomRadius,
                     center = center,
                 )
-                val brightCoreRadius = auraRadius * 0.60f
+                val restingCoreRadius = auraRadius * 0.60f
                 drawCircle(
                     brush = Brush.radialGradient(
                         0.00f to HomeReferenceGlowCore.copy(alpha = 0.98f),
@@ -1257,10 +1485,83 @@ private fun HomeVoiceHero(
                         0.86f to HomeReferenceGlowWarm.copy(alpha = 0.15f),
                         1.00f to Color.Transparent,
                         center = center,
+                        radius = restingCoreRadius,
+                    ),
+                    radius = restingCoreRadius,
+                    center = center,
+                )
+
+                val outerRippleRadius = auraRadius * (1f + expansionProgress * referenceGlowExpansion)
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        0.00f to HomeReferenceGlowWarm.copy(alpha = glowAlpha(0.18f)),
+                        0.50f to HomeReferenceGlowWarm.copy(alpha = glowAlpha(0.12f)),
+                        0.78f to HomeReferenceGlowMiddle.copy(alpha = glowAlpha(0.06f)),
+                        0.94f to HomeReferenceGlowMiddle.copy(alpha = glowAlpha(0.02f)),
+                        1.00f to Color.Transparent,
+                        center = center,
+                        radius = outerRippleRadius,
+                    ),
+                    radius = outerRippleRadius,
+                    center = center,
+                )
+                val creamBloomRadius = auraRadius * 0.82f * (1f + expansionProgress * 0.18f)
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        0.00f to HomeReferenceGlowWarm.copy(alpha = glowAlpha(0.66f)),
+                        0.28f to HomeReferenceGlowWarm.copy(alpha = glowAlpha(0.58f)),
+                        0.58f to HomeReferenceGlowMiddle.copy(alpha = glowAlpha(0.32f)),
+                        0.82f to HomeReferenceGlowMiddle.copy(alpha = glowAlpha(0.12f)),
+                        1.00f to Color.Transparent,
+                        center = center,
+                        radius = creamBloomRadius,
+                    ),
+                    radius = creamBloomRadius,
+                    center = center,
+                )
+                val brightCoreRadius = auraRadius * 0.60f * (1f + expansionProgress * 0.07f)
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        0.00f to HomeReferenceGlowCore.copy(alpha = glowAlpha(0.98f)),
+                        0.34f to HomeReferenceGlowCore.copy(alpha = glowAlpha(0.90f)),
+                        0.65f to HomeReferenceGlowWarm.copy(alpha = glowAlpha(0.52f)),
+                        0.86f to HomeReferenceGlowWarm.copy(alpha = glowAlpha(0.15f)),
+                        1.00f to Color.Transparent,
+                        center = center,
                         radius = brightCoreRadius,
                     ),
                     radius = brightCoreRadius,
                     center = center,
+                )
+
+                // Two wide, diffuse wave fronts add depth without introducing ring outlines.
+                fun drawDepthWave(progress: Float, color: Color, strength: Float) {
+                    val waveIntensity = sin(progress * Math.PI.toFloat()).coerceIn(0f, 1f)
+                    val waveRadius = auraRadius * (0.50f + progress * 0.46f)
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            0.00f to Color.Transparent,
+                            0.48f to Color.Transparent,
+                            0.66f to color.copy(alpha = strength * waveIntensity * 0.22f),
+                            0.80f to color.copy(alpha = strength * waveIntensity),
+                            0.94f to color.copy(alpha = strength * waveIntensity * 0.16f),
+                            1.00f to Color.Transparent,
+                            center = center,
+                            radius = waveRadius,
+                        ),
+                        radius = waveRadius,
+                        center = center,
+                    )
+                }
+                drawDepthWave(
+                    progress = referenceGlowDepthWaveOne,
+                    color = HomeReferenceGlowSage,
+                    strength = 0.12f,
+                )
+                drawDepthWave(
+                    progress = referenceGlowDepthWaveTwo % 1f,
+                    color = HomeReferenceGlowWarm,
+                    strength = 0.10f,
                 )
             } else {
                 drawCircle(

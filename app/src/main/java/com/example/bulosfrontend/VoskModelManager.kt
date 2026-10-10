@@ -123,6 +123,8 @@ class VoskModelManager(
     private fun modelSpec(language: String): ModelSpec? = when {
         language.equals("English", ignoreCase = true) -> ENGLISH_MODEL
         language.equals("Filipino", ignoreCase = true) -> FILIPINO_MODEL
+        // Bulos uses the Filipino model, the closest available recognition model.
+        language.equals("Bulos", ignoreCase = true) -> FILIPINO_MODEL
         else -> null
     }
 

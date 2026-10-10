@@ -3,19 +3,31 @@ package com.example.bulosfrontend
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.example.bulosfrontend.ui.theme.Cream
 import com.example.bulosfrontend.ui.theme.PatternGreen
 import com.example.bulosfrontend.ui.theme.PrimaryGreen
+import com.example.bulosfrontend.ui.theme.SoftGreen
+import com.example.bulosfrontend.ui.theme.SplashSage
 
 internal val HomeContentCream = Color(0xFFFFFBF4)
 internal val AppHeaderBottomExtension = 30.dp
@@ -27,10 +39,14 @@ fun HomeHeaderBackground(
     modifier: Modifier = Modifier,
     includeCreamTail: Boolean = true,
     includePattern: Boolean = true,
+    includeAmbientWhirlpool: Boolean = false,
 ) {
     Box(
         modifier = modifier.background(homeHeaderGradientBrush(includeCreamTail)),
     ) {
+        if (includeAmbientWhirlpool) {
+            HomeAmbientWhirlpool(Modifier.matchParentSize())
+        }
         if (includePattern) {
             GeometricGreenBackground(
                 modifier = Modifier.matchParentSize(),
@@ -40,6 +56,91 @@ fun HomeHeaderBackground(
                 patternColor = Color(0xFF5E7A4A),
             )
         }
+    }
+}
+
+/** A low-opacity, non-interactive wash used only behind the Home header content. */
+@Composable
+private fun HomeAmbientWhirlpool(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "homeAmbientWhirlpool")
+    val rotation by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 42_000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "homeAmbientWhirlpoolRotation",
+    )
+    val scale by transition.animateFloat(
+        initialValue = 0.96f,
+        targetValue = 1.04f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 9_000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "homeAmbientWhirlpoolScale",
+    )
+    val intensity by transition.animateFloat(
+        initialValue = 0.78f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 11_000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "homeAmbientWhirlpoolIntensity",
+    )
+
+    Canvas(modifier = modifier) {
+        val center = Offset(size.width / 2f, size.height * 0.48f)
+        val baseDiameter = minOf(size.width, size.height)
+
+        fun drawSoftLayer(
+            degrees: Float,
+            centerOffset: Offset,
+            widthMultiplier: Float,
+            heightMultiplier: Float,
+            centerColor: Color,
+            middleColor: Color,
+        ) {
+            val ovalWidth = baseDiameter * widthMultiplier * scale
+            val ovalHeight = baseDiameter * heightMultiplier * scale
+            val layerCenter = center + centerOffset
+            val ovalTopLeft = Offset(
+                x = layerCenter.x - ovalWidth / 2f,
+                y = layerCenter.y - ovalHeight / 2f,
+            )
+            rotate(degrees = degrees, pivot = center) {
+                drawOval(
+                    brush = Brush.radialGradient(
+                        0.00f to centerColor.copy(alpha = centerColor.alpha * intensity),
+                        0.48f to middleColor.copy(alpha = middleColor.alpha * intensity),
+                        1.00f to Color.Transparent,
+                        center = layerCenter,
+                        radius = ovalWidth * 0.52f,
+                    ),
+                    topLeft = ovalTopLeft,
+                    size = Size(ovalWidth, ovalHeight),
+                )
+            }
+        }
+
+        drawSoftLayer(
+            degrees = rotation,
+            centerOffset = Offset(x = -baseDiameter * 0.15f, y = -baseDiameter * 0.05f),
+            widthMultiplier = 1.74f,
+            heightMultiplier = 0.94f,
+            centerColor = SoftGreen.copy(alpha = 0.16f),
+            middleColor = SplashSage.copy(alpha = 0.07f),
+        )
+        drawSoftLayer(
+            degrees = rotation * 0.62f,
+            centerOffset = Offset(x = baseDiameter * 0.13f, y = baseDiameter * 0.09f),
+            widthMultiplier = 1.48f,
+            heightMultiplier = 0.78f,
+            centerColor = Cream.copy(alpha = 0.11f),
+            middleColor = SoftGreen.copy(alpha = 0.05f),
+        )
     }
 }
 

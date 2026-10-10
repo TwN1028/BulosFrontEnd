@@ -4,7 +4,7 @@
     <string name="ui_header_translate_bul">[BULOS: Text Translation]</string>
     <string name="ui_header_voice_bul">[BULOS: Speech Recognition]</string>
     <string name="ui_header_result_bul">[BULOS: Translation Result]</string>
-    <string name="ui_header_history_bul">[BULOS: Translation History]</string>
+    <string name="ui_header_history_bul">[BULOS: Saved Translation]</string>
     <string name="ui_translate_action_bul">[BULOS: Translate Text]</string>
     <string name="ui_input_placeholder_bul">[BULOS: Enter text]</string>
     <string name="ui_back_home_bul">[BULOS: Back to Home]</string>
@@ -27,7 +27,7 @@
     <string name="ui_feature_text_subtitle_bul">[BULOS: Type &amp; translate]</string>
     <string name="ui_feature_dictionary_title_bul">[BULOS: Dictionary]</string>
     <string name="ui_feature_dictionary_subtitle_bul">[BULOS: Browse words]</string>
-    <string name="ui_feature_history_title_bul">[BULOS: Saved History]</string>
+    <string name="ui_feature_history_title_bul">[BULOS: Saved Translation]</string>
     <string name="ui_feature_history_subtitle_bul">[BULOS: Past translations]</string>
     <string name="ui_recent_bul">[BULOS: Recent Translations]</string>
     <string name="ui_see_all_bul">[BULOS: See all]</string>
@@ -109,7 +109,7 @@
     <string name="ui_recent_dynamic_title_bul">[BULOS: Recent Translation]</string>
     <string name="ui_view_history_bul">[BULOS: View]</string>
     <string name="ui_text_subtitle_bul">[BULOS: Translate words and phrases between languages.]</string>
-    <string name="ui_text_input_placeholder_bul">[BULOS: Enter text in %1$s…]</string>
+    <string name="ui_text_input_placeholder_bul">[BULOS: Enter text in %1$s.]</string>
     <string name="ui_translate_to_bul">[BULOS: Translate to %1$s]</string>
     <string name="ui_translate_from_label_bul">[BULOS: Translate From]</string>
     <string name="ui_translate_to_label_bul">[BULOS: Translate To]</string>
@@ -127,7 +127,7 @@
     <string name="ui_retry_again_bul">[BULOS: Retry Again]</string>
     <string name="ui_speech_review_bul">[BULOS: Recording complete. Edit text below if needed]</string>
     <string name="ui_transcribing_bul">[BULOS: Transcribing]</string>
-    <string name="ui_recognized_text_label_bul">[BULOS: Recognized Text · %1$s]</string>
+    <string name="ui_recognized_text_label_bul">[BULOS: Review and edit]</string>
     <string name="ui_recognized_text_placeholder_bul">[BULOS: Speech transcription is not available yet. Enter the spoken text here to continue…]</string>
     <string name="ui_edit_bul">[BULOS: Edit]</string>
     <string name="ui_done_editing_bul">[BULOS: Done Editing]</string>

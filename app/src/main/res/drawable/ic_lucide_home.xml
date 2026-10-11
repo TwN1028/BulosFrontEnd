@@ -1,0 +1,19 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!--
+        Lucide "Home" — outline style, no fills.
+        Outer house silhouette: roof peak at (12,3), walls down to y=21, door cutout.
+        Uses only L commands (no arcs) for maximum Android compatibility.
+    -->
+    <!-- Outer house shape (roof + walls, no close so door gap is visible) -->
+    <path
+        android:pathData="M3,10 L12,3 L21,10 L21,21 L15,21 L15,14 L9,14 L9,21 L3,21 Z"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="@android:color/transparent"/>
+</vector>

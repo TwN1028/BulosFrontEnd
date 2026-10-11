@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<font-family xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="UnusedAttribute">
+
+    <!-- Regular -->
+    <font
+        app:font="@font/aileron_regular"
+        app:fontStyle="normal"
+        app:fontWeight="400"
+        android:font="@font/aileron_regular"
+        android:fontStyle="normal"
+        android:fontWeight="400" />
+    <font
+        app:font="@font/aileron_italic"
+        app:fontStyle="italic"
+        app:fontWeight="400"
+        android:font="@font/aileron_italic"
+        android:fontStyle="italic"
+        android:fontWeight="400" />
+
+    <!-- Bold -->
+    <font
+        app:font="@font/aileron_bold"
+        app:fontStyle="normal"
+        app:fontWeight="700"
+        android:font="@font/aileron_bold"
+        android:fontStyle="normal"
+        android:fontWeight="700" />
+    <font
+        app:font="@font/aileron_bolditalic"
+        app:fontStyle="italic"
+        app:fontWeight="700"
+        android:font="@font/aileron_bolditalic"
+        android:fontStyle="italic"
+        android:fontWeight="700" />
+
+    <!-- SemiBold -->
+    <font
+        app:font="@font/aileron_semibold"
+        app:fontStyle="normal"
+        app:fontWeight="600"
+        android:font="@font/aileron_semibold"
+        android:fontStyle="normal"
+        android:fontWeight="600" />
+    <font
+        app:font="@font/aileron_semibolditalic"
+        app:fontStyle="italic"
+        app:fontWeight="600"
+        android:font="@font/aileron_semibolditalic"
+        android:fontStyle="italic"
+        android:fontWeight="600" />
+
+    <!-- Light -->
+    <font
+        app:font="@font/aileron_light"
+        app:fontStyle="normal"
+        app:fontWeight="300"
+        android:font="@font/aileron_light"
+        android:fontStyle="normal"
+        android:fontWeight="300" />
+    <font
+        app:font="@font/aileron_lightitalic"
+        app:fontStyle="italic"
+        app:fontWeight="300"
+        android:font="@font/aileron_lightitalic"
+        android:fontStyle="italic"
+        android:fontWeight="300" />
+
+    <!-- Thin -->
+    <font
+        app:font="@font/aileron_thin"
+        app:fontStyle="normal"
+        app:fontWeight="100"
+        android:font="@font/aileron_thin"
+        android:fontStyle="normal"
+        android:fontWeight="100" />
+    <font
+        app:font="@font/aileron_thinitalic"
+        app:fontStyle="italic"
+        app:fontWeight="100"
+        android:font="@font/aileron_thinitalic"
+        android:fontStyle="italic"
+        android:fontWeight="100" />
+
+    <!-- Black -->
+    <font
+        app:font="@font/aileron_black"
+        app:fontStyle="normal"
+        app:fontWeight="900"
+        android:font="@font/aileron_black"
+        android:fontStyle="normal"
+        android:fontWeight="900" />
+    <font
+        app:font="@font/aileron_blackitalic"
+        app:fontStyle="italic"
+        app:fontWeight="900"
+        android:font="@font/aileron_blackitalic"
+        android:fontStyle="italic"
+        android:fontWeight="900" />
+
+    <!-- Heavy -->
+    <font
+        app:font="@font/aileron_heavy"
+        app:fontStyle="normal"
+        app:fontWeight="800"
+        android:font="@font/aileron_heavy"
+        android:fontStyle="normal"
+        android:fontWeight="800" />
+    <font
+        app:font="@font/aileron_heavyitalic"
+        app:fontStyle="italic"
+        app:fontWeight="800"
+        android:font="@font/aileron_heavyitalic"
+        android:fontStyle="italic"
+        android:fontWeight="800" />
+
+    <!-- UltraLight -->
+    <font
+        app:font="@font/aileron_ultralight"
+        app:fontStyle="normal"
+        app:fontWeight="200"
+        android:font="@font/aileron_ultralight"
+        android:fontStyle="normal"
+        android:fontWeight="200" />
+    <font
+        app:font="@font/aileron_ultralightitalic"
+        app:fontStyle="italic"
+        app:fontWeight="200"
+        android:font="@font/aileron_ultralightitalic"
+        android:fontStyle="italic"
+        android:fontWeight="200" />
+
+</font-family>

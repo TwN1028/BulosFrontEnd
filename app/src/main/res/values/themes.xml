@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.BulosFrontEnd" parent="Base.Theme.BulosFrontEnd">
+        <!-- Transparent system bars for edge-to-edge. -->
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+    <!-- Base application theme. -->
+    <style name="Base.Theme.BulosFrontEnd" parent="Theme.Material3.Light.NoActionBar">
+        <!-- Customize your light theme here. -->
+        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <item name="android:fontFamily">@font/aileron</item>
+    </style>
+
+    <style name="Theme.BulosFrontEnd.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_forest_green</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_system_splash_transparent</item>
+        <item name="postSplashScreenTheme">@style/Theme.BulosFrontEnd</item>
+        <item name="android:statusBarColor">@color/splash_forest_green</item>
+        <item name="android:navigationBarColor">@color/splash_forest_green</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

@@ -115,6 +115,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var recordingTime by mutableLongStateOf(0L)
     private var recorder: MediaRecorder? = null
     private var audioFile: File? = null
+    private var bulosCapture: IsolatedPcmWavCapture? = null
+    private var bulosWavFile: File? = null
+    private var bulosTranscriptionJob: Job? = null
     private var isRecorderStarting = false
     private var recordingTimerJob: Job? = null
     private var cancelledGlowResetJob: Job? = null
@@ -144,6 +147,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var onDeviceSpeechRecognizer: SpeechRecognizer? = null
     private var usesVoskRecognizer = false
     private var usesOnDeviceRecognizer = false
+    private var usesBulosOnlineCapture = false
     private var speechSessionId = 0L
     private var voskCommittedText = ""
     private var speechAmplitude = 0
@@ -161,6 +165,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private set
     val supportsLiveSpeechRecognition: Boolean
         get() = voskModelManager.supports(TranslationState.sourceLanguage)
+
+    private val bulosSttApi: BackendSttApi by lazy {
+        BackendSttClientFactory.create(
+            TranslationServiceProvider.BASE_URL,
+            TranslationServiceProvider.createBackendClient(getApplication<Application>()),
+        )
+    }
 
     init {
         TranslationState.ensureValidLanguagePair()
@@ -595,7 +606,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun startRecording() {
         if (
             isRecording || recorder != null || voskSpeechService != null ||
-            onDeviceSpeechRecognizer != null || isRecorderStarting
+            onDeviceSpeechRecognizer != null || isRecorderStarting ||
+            bulosCapture != null || bulosTranscriptionJob?.isActive == true
         ) return
         cancelledGlowResetJob?.cancel()
         cancelledGlowResetJob = null
@@ -607,6 +619,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         isSpeechProcessing = false
         TranslationState.recordedAudioPath = null
         val language = TranslationState.sourceLanguage
+        if (BulosOnlineStt.shouldUseBackend(language, canUseOnlineServices)) {
+            startBulosOnlineRecording()
+            return
+        }
         usesVoskRecognizer = voskModelManager.supports(language)
         if (
             offlineModeEnabled && usesVoskRecognizer &&
@@ -1042,6 +1058,102 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return getApplication<Application>().getString(messageRes)
     }
 
+    /** Bulos-only online path. English and Filipino retain their existing recognizer routes. */
+    private fun startBulosOnlineRecording() {
+        val capture = IsolatedPcmWavCapture(getApplication<Application>())
+        val sessionId = ++speechSessionId
+        isRecorderStarting = true
+        isSpeechProcessing = true
+        usesBulosOnlineCapture = true
+        TranslationState.sttTranscript = ""
+        if (!capture.start()) {
+            usesBulosOnlineCapture = false
+            isRecorderStarting = false
+            isSpeechProcessing = false
+            speechSessionFinished = true
+            speechRecognitionError = "Microphone recording could not be started. Please try again."
+            return
+        }
+        if (sessionId != speechSessionId) {
+            capture.cancel()
+            return
+        }
+        bulosCapture = capture
+        isRecorderStarting = false
+        isSpeechProcessing = false
+        isRecording = true
+        startTimer()
+    }
+
+    private suspend fun transcribeBulosRecording(sessionId: Long, wav: File) {
+        try {
+            val recognizedText = try {
+                val response = withContext(Dispatchers.IO) {
+                    RecordedPcmWavValidator.validate(wav)
+                    bulosSttApi.transcribe(
+                        audio = BackendSttClientFactory.audioPart(wav, HybridSttAudioFormat.WAV_MIME_TYPE),
+                        language = BackendSttClientFactory.languagePart("bul"),
+                    )
+                }
+                BulosOnlineStt.recognizedText(response)
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                transcribeBulosOfflineFallback(wav, sessionId)
+            }
+            if (sessionId != speechSessionId) return
+            if (recognizedText.isBlank()) {
+                finishBulosRecognition(
+                    sessionId,
+                    text = null,
+                    error = "Online Bulos transcription failed and the Filipino offline fallback is unavailable.",
+                )
+            } else {
+                finishBulosRecognition(sessionId, text = recognizedText, error = null)
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } finally {
+            wav.delete()
+            if (sessionId == speechSessionId) {
+                bulosWavFile = null
+                bulosCapture = null
+                usesBulosOnlineCapture = false
+            }
+        }
+    }
+
+    private suspend fun transcribeBulosOfflineFallback(wav: File, sessionId: Long): String =
+        runCatching {
+            withContext(Dispatchers.IO) {
+                if (!voskModelManager.isInstalled("Bulos")) return@withContext ""
+                val result = RecordedAudioVoskAdapter(voskModelManager).transcribe(wav, "Bulos") {
+                    sessionId != speechSessionId
+                }
+                parseVoskText(result, "text")
+            }
+        }.getOrDefault("")
+
+    private fun finishBulosRecognition(sessionId: Long, text: String?, error: String?) {
+        if (sessionId != speechSessionId) return
+        recordingTimerJob?.cancel()
+        recordingTimerJob = null
+        isRecorderStarting = false
+        isRecording = false
+        isSpeechProcessing = false
+        if (text != null) {
+            TranslationState.sttTranscript = text
+            speechRecognitionError = null
+            isNoSpeechDetected = false
+            voiceInputReady = true
+        } else {
+            TranslationState.sttTranscript = ""
+            speechRecognitionError = error
+            isNoSpeechDetected = false
+            voiceInputReady = false
+        }
+        speechSessionFinished = true
+    }
+
     private fun startAudioFileRecording() {
         isRecorderStarting = true
         val context = getApplication<Application>()
@@ -1077,6 +1189,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (!isRecording) return 0
         if (usesOnDeviceRecognizer) return speechAmplitude
         if (usesVoskRecognizer) return speechAmplitude
+        if (usesBulosOnlineCapture) return 0
         return try {
             recorder?.maxAmplitude ?: 0
         } catch (_: IllegalStateException) {
@@ -1105,6 +1218,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun stopRecording() {
+        val activeBulosCapture = bulosCapture
+        if (usesBulosOnlineCapture && activeBulosCapture != null) {
+            recordingTimerJob?.cancel()
+            recordingTimerJob = null
+            isRecording = false
+            isSpeechProcessing = true
+            val sessionId = speechSessionId
+            bulosTranscriptionJob = viewModelScope.launch {
+                val wav = withContext(Dispatchers.IO) { activeBulosCapture.stop() }
+                if (sessionId != speechSessionId || bulosCapture !== activeBulosCapture) {
+                    wav?.delete()
+                    return@launch
+                }
+                if (wav == null) {
+                    finishBulosRecognition(
+                        sessionId,
+                        text = null,
+                        error = "Microphone recording could not be finalized. Please try again.",
+                    )
+                    bulosCapture = null
+                    usesBulosOnlineCapture = false
+                    return@launch
+                }
+                bulosWavFile = wav
+                transcribeBulosRecording(sessionId, wav)
+            }
+            return
+        }
         if (usesOnDeviceRecognizer && onDeviceSpeechRecognizer != null) {
             recordingTimerJob?.cancel()
             recordingTimerJob = null
@@ -1150,6 +1291,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         speechSessionId++
         recordingTimerJob?.cancel()
         recordingTimerJob = null
+        bulosTranscriptionJob?.cancel()
+        bulosTranscriptionJob = null
+        bulosCapture?.cancel()
+        bulosCapture = null
+        bulosWavFile?.delete()
+        bulosWavFile = null
         voskModelLoadJob?.cancel()
         voskModelLoadJob = null
         onDeviceSpeechRecognizer?.cancel()
@@ -1185,6 +1332,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             isSpeechProcessing = false
             usesVoskRecognizer = false
             usesOnDeviceRecognizer = false
+            usesBulosOnlineCapture = false
             wasRecordingCancelled = true
             cancelledGlowResetJob?.cancel()
             cancelledGlowResetJob = viewModelScope.launch {
@@ -1214,6 +1362,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         voskSpeechService?.stop()
         voskSpeechService?.shutdown()
         voskSpeechService = null
+        bulosTranscriptionJob?.cancel()
+        bulosTranscriptionJob = null
+        bulosCapture?.cancel()
+        bulosCapture = null
+        bulosWavFile?.delete()
+        bulosWavFile = null
         voskModel?.close()
         voskModel = null
         recorder?.release()

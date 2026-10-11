@@ -116,11 +116,18 @@ internal class OfflineDictionary(entries: List<Map<String, String>>) {
         )
     }
 
-    private fun exact(normalizedInput: String, source: UiLanguage, target: UiLanguage, phrase: Boolean): String? =
-        rows.firstOrNull { row ->
-            row.isPhrase == phrase &&
-                row.values[source]?.let(TextNormalizer::normalizeForMatching) == normalizedInput
-        }?.values?.get(target)
+    private fun exact(normalizedInput: String, source: UiLanguage, target: UiLanguage, phrase: Boolean): String? {
+        val translations = rows.asSequence()
+            .filter { row ->
+                row.isPhrase == phrase &&
+                    row.values[source]?.let(TextNormalizer::normalizeForMatching) == normalizedInput
+            }
+            .mapNotNull { it.values[target] }
+            .distinct()
+            .toList()
+        // A normalized source key with conflicting target values must never choose an arbitrary first row.
+        return translations.singleOrNull()
+    }
 
     companion object {
         const val CATEGORY_KEY = "_category"
@@ -175,8 +182,15 @@ class OfflineDictionaryManager(private val context: Context) {
         private set
 
     suspend fun load(): Unit = withContext(Dispatchers.IO) {
-        if (!dictionaryFile.exists()) return@withContext
-        runCatching { readEntries(dictionaryFile) }
+        val cachedEntries = if (dictionaryFile.exists()) {
+            runCatching { readEntries(dictionaryFile) }.getOrElse {
+                isLoaded = false
+                return@withContext
+            }
+        } else {
+            emptyList()
+        }
+        runCatching { mergeVerifiedDictionaryAdditions(cachedEntries, readVerifiedAdditions()) }
             .onSuccess { entries ->
                 dictionary = OfflineDictionary(entries)
                 isLoaded = entries.isNotEmpty()
@@ -186,7 +200,7 @@ class OfflineDictionaryManager(private val context: Context) {
 
     suspend fun replace(entries: List<Map<String, String>>) = withContext(Dispatchers.IO) {
         require(entries.isNotEmpty()) { "Verified dictionary download was empty." }
-        val replacement = OfflineDictionary(entries)
+        val replacement = OfflineDictionary(mergeVerifiedDictionaryAdditions(entries, readVerifiedAdditions()))
         val temporaryFile = File(context.filesDir, "custom_dictionary.json.tmp")
         try {
             temporaryFile.writeText(Gson().toJson(entries))
@@ -212,4 +226,43 @@ class OfflineDictionaryManager(private val context: Context) {
         val type = object : TypeToken<List<Map<String, String>>>() {}.type
         return file.reader().use { Gson().fromJson(it, type) }
     }
+
+    private fun readVerifiedAdditions(): List<Map<String, String>> = runCatching<List<Map<String, String>>> {
+        val type = object : TypeToken<List<Map<String, String>>>() {}.type
+        context.assets.open(VERIFIED_ADDITIONS_ASSET).bufferedReader().use { reader ->
+            Gson().fromJson<List<Map<String, String>>>(reader, type)
+        }
+    }.getOrDefault(emptyList())
+
+    private companion object {
+        const val VERIFIED_ADDITIONS_ASSET = "verified_dictionary_additions.json"
+    }
+}
+
+/**
+ * Appends only complete curated rows whose source keys cannot alter an existing first-match lookup.
+ * The downloaded cache remains authoritative and is never rewritten with bundled additions.
+ */
+internal fun mergeVerifiedDictionaryAdditions(
+    cachedEntries: List<Map<String, String>>,
+    additions: List<Map<String, String>>,
+): List<Map<String, String>> {
+    val languages = listOf("English", "Filipino", "Bulos")
+    fun sourceKeys(entry: Map<String, String>): Set<Pair<String, String>> = languages.mapNotNull { language ->
+        entry[language]
+            ?.takeIf(String::isNotBlank)
+            ?.let(TextNormalizer::normalizeForMatching)
+            ?.takeIf(String::isNotBlank)
+            ?.let { language to it }
+    }.toSet()
+
+    val occupiedSourceKeys = cachedEntries.flatMapTo(mutableSetOf()) { sourceKeys(it) }
+    val selected = additions.filter { entry ->
+        val complete = languages.all { entry[it]?.isNotBlank() == true && entry[it] != "—" }
+        val keys = sourceKeys(entry)
+        val accepted = complete && keys.size == languages.size && keys.none(occupiedSourceKeys::contains)
+        if (accepted) occupiedSourceKeys.addAll(keys)
+        accepted
+    }
+    return cachedEntries + selected
 }

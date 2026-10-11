@@ -22,7 +22,9 @@ class RecordedAudioVoskDeviceTest {
             "Real microphone capture requires the explicit runRealMicrophoneCapture=true runner argument.",
             arguments.getString("runRealMicrophoneCapture") == "true"
         )
-        val expectedPhrase = "Hello, this is a speech recognition test."
+        val expectedPhrase = arguments.getString("expectedPhrase")
+            ?.takeIf { it.isNotBlank() }
+            ?: "Hello, this is a speech recognition test."
 
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val capture = IsolatedPcmWavCapture(context)

@@ -511,15 +511,19 @@ object TranslationServiceProvider {
         repository ?: createRepository(context.applicationContext).also { repository = it }
     }
 
-    private fun createRepository(context: Context): TranslationRepository {
-        val client = OkHttpClient.Builder()
-            .addInterceptor(DeviceIdInterceptor(InstallationIdProvider(context)))
+    /** Shared authenticated client configuration for APIs hosted by the Bulos backend. */
+    internal fun createBackendClient(context: Context): OkHttpClient =
+        OkHttpClient.Builder()
+            .addInterceptor(DeviceIdInterceptor(InstallationIdProvider(context.applicationContext)))
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(90, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .callTimeout(120, TimeUnit.SECONDS)
             .retryOnConnectionFailure(false)
             .build()
+
+    private fun createRepository(context: Context): TranslationRepository {
+        val client = createBackendClient(context)
         val retrofit = Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(client)

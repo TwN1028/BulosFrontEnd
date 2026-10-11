@@ -87,4 +87,36 @@ class OfflineDictionaryTest {
             verified.displayEntries().single(),
         )
     }
+
+    @Test
+    fun conflictingNormalizedPhraseKeysNeverBecomeAutomaticTranslations() {
+        val conflicted = OfflineDictionary(
+            listOf(
+                mapOf("_category" to "phrases", "English" to "Source text", "Filipino" to "Pinagmulan", "Bulos" to "Unang salin"),
+                mapOf("_category" to "phrases", "English" to "source   text!", "Filipino" to "Pinagmulan", "Bulos" to "Ibang salin"),
+                mapOf("_category" to "phrases", "English" to "First English", "Filipino" to "Unang Filipino", "Bulos" to "Parehong Bulos"),
+                mapOf("_category" to "phrases", "English" to "Second English", "Filipino" to "Ikalawang Filipino", "Bulos" to "parehong bulos"),
+            ),
+        )
+
+        assertTrue(conflicted.lookup("SOURCE TEXT", UiLanguage.ENGLISH, UiLanguage.BULOS) is OfflineLookupResult.Unavailable)
+        assertTrue(conflicted.lookup("pinagmulan", UiLanguage.FILIPINO, UiLanguage.BULOS) is OfflineLookupResult.Unavailable)
+        assertTrue(conflicted.lookup("Parehong Bulos", UiLanguage.BULOS, UiLanguage.ENGLISH) is OfflineLookupResult.Unavailable)
+        assertTrue(conflicted.lookup("Parehong Bulos", UiLanguage.BULOS, UiLanguage.FILIPINO) is OfflineLookupResult.Unavailable)
+    }
+
+    @Test
+    fun duplicateNormalizedKeysWithTheSameTranslationRemainExactMatches() {
+        val duplicates = OfflineDictionary(
+            listOf(
+                mapOf("_category" to "phrases", "English" to "Good day", "Filipino" to "Magandang araw", "Bulos" to "Masdep a agew"),
+                mapOf("_category" to "phrases", "English" to "good  day!", "Filipino" to "Magandang araw", "Bulos" to "Masdep a agew"),
+            ),
+        )
+
+        val result = duplicates.lookup("GOOD DAY", UiLanguage.ENGLISH, UiLanguage.BULOS)
+
+        assertEquals("Masdep a agew", (result as OfflineLookupResult.Translation).translatedText)
+        assertEquals("offline_exact_phrase", result.method)
+    }
 }

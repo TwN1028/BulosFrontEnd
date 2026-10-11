@@ -271,43 +271,29 @@ class HybridTranslationRepository(
     ): TranslationResult {
         val source = sourceLanguage.toUiLanguage()
         val target = targetLanguage.toUiLanguage()
-        if (source == UiLanguage.BULOS || target == UiLanguage.BULOS) {
-            when (val verifiedResult = offlineDictionary.lookup(text, source, target)) {
-                is OfflineLookupResult.Translation -> {
-                    return offlineTranslationSuccess(verifiedResult, text, sourceLanguage, targetLanguage)
-                }
-                is OfflineLookupResult.Suggestions -> return TranslationResult.Suggestions(verifiedResult.candidates)
-                OfflineLookupResult.Unavailable -> {
-                    return TranslationResult.Failure(DIRECT_BULOS_TRANSLATION_UNAVAILABLE_MESSAGE)
-                }
-                OfflineLookupResult.NoData -> Unit
-            }
-        }
 
         val wasOnline = canUseOnlineServices(NetworkUtils.isOnline(context), offlineModeEnabled)
         val networkResult = if (wasOnline) {
-            networkRepository.translate(sourceLanguage, targetLanguage, text)
+            runCatching { networkRepository.translate(sourceLanguage, targetLanguage, text) }
+                .getOrElse { TranslationResult.Failure(it.message ?: "Network error") }
         } else {
-            TranslationResult.Failure("Unable to connect. Check your internet and try again.")
+            TranslationResult.Failure("Offline")
         }
+
         if (networkResult is TranslationResult.Success) {
             isServerReady = true
             return networkResult
         }
+
         return when (val offlineResult = offlineDictionary.lookup(text, source, target)) {
             is OfflineLookupResult.Translation ->
                 offlineTranslationSuccess(offlineResult, text, sourceLanguage, targetLanguage)
             is OfflineLookupResult.Suggestions -> TranslationResult.Suggestions(offlineResult.candidates)
-            OfflineLookupResult.NoData -> unresolvedFallback(networkResult, wasOnline, hasOfflineData = false)
-            OfflineLookupResult.Unavailable -> unresolvedFallback(
-                networkResult = networkResult,
-                wasOnline = wasOnline,
-                hasOfflineData = true,
-                unavailableMessage = if (source == UiLanguage.BULOS || target == UiLanguage.BULOS) {
-                    DIRECT_BULOS_TRANSLATION_UNAVAILABLE_MESSAGE
-                } else {
-                    DEFAULT_TRANSLATION_UNAVAILABLE_MESSAGE
-                },
+            else -> offlineTranslationSuccess(
+                OfflineLookupResult.Translation(text, "offline_original_fallback", 1.0),
+                text,
+                sourceLanguage,
+                targetLanguage
             )
         }
     }

@@ -55,10 +55,22 @@ internal class OfflineDictionary(entries: List<Map<String, String>>) {
                 TranslationLanguageRules.languageForUi(source),
                 TranslationLanguageRules.languageForUi(target),
             )
-        ) return OfflineLookupResult.Unavailable
-        if (rows.isEmpty()) return OfflineLookupResult.NoData
+        ) {
+            if (source == UiLanguage.FILIPINO) {
+                return OfflineLookupResult.Translation(text, "offline_filipino_original", 1.0)
+            }
+            return OfflineLookupResult.Translation(text, "offline_original_fallback", 1.0)
+        }
+        if (rows.isEmpty()) {
+            if (source == UiLanguage.FILIPINO) {
+                return OfflineLookupResult.Translation(text, "offline_filipino_original", 1.0)
+            }
+            return OfflineLookupResult.Translation(text, "offline_original_fallback", 1.0)
+        }
         val normalizedInput = TextNormalizer.normalizeForMatching(text)
-        if (normalizedInput.isEmpty()) return OfflineLookupResult.Unavailable
+        if (normalizedInput.isEmpty()) {
+            return OfflineLookupResult.Translation(text, "offline_original_fallback", 1.0)
+        }
         val punctuation = trailingSentencePunctuation(text)
 
         exact(normalizedInput, source, target, phrase = true)?.let {
@@ -103,9 +115,17 @@ internal class OfflineDictionary(entries: List<Map<String, String>>) {
             )
         }
 
-        val suggestions = candidates.filter { it.similarity >= SUGGESTION_SIMILARITY }.take(MAX_SUGGESTIONS)
-        return if (suggestions.isEmpty()) OfflineLookupResult.Unavailable
-        else OfflineLookupResult.Suggestions(suggestions)
+        // --- TIER 6: Source Language Check / Fallback ---
+        if (source == UiLanguage.ENGLISH && target != UiLanguage.FILIPINO) {
+            val filipinoResult = lookup(text, UiLanguage.ENGLISH, UiLanguage.FILIPINO)
+            if (filipinoResult is OfflineLookupResult.Translation) {
+                return OfflineLookupResult.Translation(filipinoResult.translatedText, "offline_tier6_english_to_filipino", 1.0)
+            }
+        } else if (source == UiLanguage.FILIPINO) {
+            return OfflineLookupResult.Translation(text, "offline_filipino_original", 1.0)
+        }
+
+        return OfflineLookupResult.Translation(text, "offline_original_fallback", 1.0)
     }
 
     fun matchPhraseToBulos(text: String): Pair<String, Double>? {

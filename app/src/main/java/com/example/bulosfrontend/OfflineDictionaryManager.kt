@@ -116,23 +116,18 @@ internal class OfflineDictionary(entries: List<Map<String, String>>) {
             )
         }
 
-        // --- TIER 6: English -> Filipino -> Bulos Bridge ---
-        if (source == UiLanguage.ENGLISH && target == UiLanguage.BULOS) {
-            val phraseTranslated = subdivideAndTranslatePhrases(cleanedInput, UiLanguage.ENGLISH, UiLanguage.FILIPINO)
-            val tokens = phraseTranslated.split(Regex("\\s+"))
-            val translatedToFilipino = tokens.map { token ->
-                if (token.startsWith("[[P") && token.endsWith("]]")) return@map token
-                val normToken = TextNormalizer.normalizeForMatching(token)
-                if (normToken.isEmpty()) return@map token
-                exact(normToken, UiLanguage.ENGLISH, UiLanguage.FILIPINO, phrase = false)?.let { return@map it }
-                findFuzzyWord(normToken, UiLanguage.ENGLISH, UiLanguage.FILIPINO, 0.70)?.let { return@map it }
-                findFuzzyWord(normToken, UiLanguage.ENGLISH, UiLanguage.FILIPINO, 0.45)?.let { return@map it }
-                token
-            }.joinToString(" ")
-
-            val bulosResult = lookup(translatedToFilipino, UiLanguage.FILIPINO, UiLanguage.BULOS)
-            if (bulosResult is OfflineLookupResult.Translation) {
-                return OfflineLookupResult.Translation(bulosResult.translatedText + punctuation, "offline_tier6_bridge", 1.0)
+        // --- TIER 6 & 7: English -> Filipino -> Target Bridge ---
+        if (source == UiLanguage.ENGLISH && target != UiLanguage.FILIPINO) {
+            val filipinoResult = lookup(text, UiLanguage.ENGLISH, UiLanguage.FILIPINO)
+            val filipinoText = when (filipinoResult) {
+                is OfflineLookupResult.Translation -> filipinoResult.translatedText
+                else -> text
+            }
+            if (filipinoText != text) {
+                val finalResult = lookup(filipinoText, UiLanguage.FILIPINO, target)
+                if (finalResult is OfflineLookupResult.Translation) {
+                    return OfflineLookupResult.Translation(finalResult.translatedText + punctuation, "offline_bridge_english_filipino", 1.0)
+                }
             }
         } else if (source == UiLanguage.FILIPINO) {
             return OfflineLookupResult.Translation(text, "offline_filipino_original", 1.0)
@@ -246,8 +241,7 @@ internal class OfflineDictionary(entries: List<Map<String, String>>) {
             .mapNotNull { it.values[target] }
             .distinct()
             .toList()
-        // A normalized source key with conflicting target values must never choose an arbitrary first row.
-        return translations.singleOrNull()
+        return translations.firstOrNull()
     }
 
     companion object {

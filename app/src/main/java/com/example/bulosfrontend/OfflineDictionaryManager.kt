@@ -72,6 +72,7 @@ internal class OfflineDictionary(entries: List<Map<String, String>>) {
             return OfflineLookupResult.Translation(text, "offline_original_fallback", 1.0)
         }
         val punctuation = trailingSentencePunctuation(text)
+        val cleanedInput = TextNormalizer.cleanForDisplay(text)
 
         exact(normalizedInput, source, target, phrase = true)?.let {
             return OfflineLookupResult.Translation(it + punctuation, "offline_exact_phrase", 1.0)
@@ -115,17 +116,83 @@ internal class OfflineDictionary(entries: List<Map<String, String>>) {
             )
         }
 
-        // --- TIER 6: Source Language Check / Fallback ---
-        if (source == UiLanguage.ENGLISH && target != UiLanguage.FILIPINO) {
-            val filipinoResult = lookup(text, UiLanguage.ENGLISH, UiLanguage.FILIPINO)
-            if (filipinoResult is OfflineLookupResult.Translation) {
-                return OfflineLookupResult.Translation(filipinoResult.translatedText, "offline_tier6_english_to_filipino", 1.0)
+        // --- TIER 6: English -> Filipino -> Bulos Bridge ---
+        if (source == UiLanguage.ENGLISH && target == UiLanguage.BULOS) {
+            val phraseTranslated = subdivideAndTranslatePhrases(cleanedInput, UiLanguage.ENGLISH, UiLanguage.FILIPINO)
+            val tokens = phraseTranslated.split(Regex("\\s+"))
+            val translatedToFilipino = tokens.map { token ->
+                if (token.startsWith("[[P") && token.endsWith("]]")) return@map token
+                val normToken = TextNormalizer.normalizeForMatching(token)
+                if (normToken.isEmpty()) return@map token
+                exact(normToken, UiLanguage.ENGLISH, UiLanguage.FILIPINO, phrase = false)?.let { return@map it }
+                findFuzzyWord(normToken, UiLanguage.ENGLISH, UiLanguage.FILIPINO, 0.70)?.let { return@map it }
+                findFuzzyWord(normToken, UiLanguage.ENGLISH, UiLanguage.FILIPINO, 0.45)?.let { return@map it }
+                token
+            }.joinToString(" ")
+
+            val bulosResult = lookup(translatedToFilipino, UiLanguage.FILIPINO, UiLanguage.BULOS)
+            if (bulosResult is OfflineLookupResult.Translation) {
+                return OfflineLookupResult.Translation(bulosResult.translatedText + punctuation, "offline_tier6_bridge", 1.0)
             }
         } else if (source == UiLanguage.FILIPINO) {
             return OfflineLookupResult.Translation(text, "offline_filipino_original", 1.0)
         }
 
         return OfflineLookupResult.Translation(text, "offline_original_fallback", 1.0)
+    }
+
+    private fun findFuzzyWord(normalizedInput: String, source: UiLanguage, target: UiLanguage, threshold: Double): String? {
+        if (normalizedInput.length < 3) return null
+        var bestMatch: String? = null
+        var highestSimilarity = threshold
+
+        rows.filterNot(Row::isPhrase).forEach { row ->
+            val sourceVal = row.values[source] ?: return@forEach
+            val targetVal = row.values[target] ?: return@forEach
+            val normCand = TextNormalizer.normalizeForMatching(sourceVal)
+            if (normCand.isEmpty()) return@forEach
+            val distance = levenshteinDistance(normalizedInput, normCand)
+            val maxLen = maxOf(normalizedInput.length, normCand.length)
+            if (maxLen == 0) return@forEach
+            val similarity = 1.0 - (distance.toDouble() / maxLen.toDouble())
+            if (similarity >= highestSimilarity) {
+                highestSimilarity = similarity
+                bestMatch = targetVal
+            }
+        }
+        return bestMatch
+    }
+
+    private fun subdivideAndTranslatePhrases(
+        text: String,
+        source: UiLanguage,
+        target: UiLanguage,
+    ): String {
+        val words = text.split(Regex("\\s+"))
+        if (words.size <= 1) return text
+
+        for (windowSize in words.size downTo 2) {
+            for (i in 0..words.size - windowSize) {
+                val subPhrase = words.subList(i, i + windowSize).joinToString(" ")
+                val normSub = TextNormalizer.normalizeForMatching(subPhrase)
+                val match = exact(normSub, source, target, phrase = true)
+                    ?: exact(normSub, source, target, phrase = false)
+                if (match != null) {
+                    val leftPart = if (i > 0) words.subList(0, i).joinToString(" ") else ""
+                    val rightPart = if (i + windowSize < words.size) words.subList(i + windowSize, words.size).joinToString(" ") else ""
+
+                    val translatedLeft = if (leftPart.isNotEmpty()) subdivideAndTranslatePhrases(leftPart, source, target) else ""
+                    val translatedRight = if (rightPart.isNotEmpty()) subdivideAndTranslatePhrases(rightPart, source, target) else ""
+
+                    return listOfNotNull(
+                        translatedLeft.takeIf { it.isNotEmpty() },
+                        match,
+                        translatedRight.takeIf { it.isNotEmpty() },
+                    ).joinToString(" ")
+                }
+            }
+        }
+        return text
     }
 
     fun matchPhraseToBulos(text: String): Pair<String, Double>? {

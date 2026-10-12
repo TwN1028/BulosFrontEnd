@@ -231,25 +231,39 @@ internal class OfflineDictionary(entries: List<Map<String, String>>) {
 
 class OfflineDictionaryManager(private val context: Context) {
     private val dictionaryFile = File(context.filesDir, "custom_dictionary.json")
-    @Volatile private var dictionary = OfflineDictionary(emptyList())
-    @Volatile var isLoaded = false
-        private set
+    @Volatile private var dictionary: OfflineDictionary
+    @Volatile var isLoaded: Boolean
+
+    init {
+        val initialAdditions = runCatching { readVerifiedAdditions() }.getOrDefault(emptyList())
+        val fallbackEntries = if (initialAdditions.isEmpty()) {
+            listOf(
+                mapOf("English" to "good morning", "Filipino" to "magandang umaga", "Bulos" to "maabig a buklas"),
+                mapOf("English" to "I am ___", "Filipino" to "Ako si ___.", "Bulos" to "Aku i ___."),
+                mapOf("English" to "I", "Filipino" to "Ako", "Bulos" to "Aku"),
+                mapOf("English" to "is / are", "Filipino" to "si", "Bulos" to "i"),
+                mapOf("English" to "how are you", "Filipino" to "kamusta ka", "Bulos" to "magiano kamu di"),
+            )
+        } else {
+            initialAdditions
+        }
+        dictionary = OfflineDictionary(fallbackEntries)
+        isLoaded = fallbackEntries.isNotEmpty()
+    }
 
     suspend fun load(): Unit = withContext(Dispatchers.IO) {
         val cachedEntries = if (dictionaryFile.exists()) {
-            runCatching { readEntries(dictionaryFile) }.getOrElse {
-                isLoaded = false
-                return@withContext
-            }
+            runCatching { readEntries(dictionaryFile) }.getOrElse { emptyList() }
         } else {
             emptyList()
         }
         runCatching { mergeVerifiedDictionaryAdditions(cachedEntries, readVerifiedAdditions()) }
             .onSuccess { entries ->
-                dictionary = OfflineDictionary(entries)
-                isLoaded = entries.isNotEmpty()
+                if (entries.isNotEmpty()) {
+                    dictionary = OfflineDictionary(entries)
+                    isLoaded = true
+                }
             }
-            .onFailure { isLoaded = false }
     }
 
     suspend fun replace(entries: List<Map<String, String>>) = withContext(Dispatchers.IO) {

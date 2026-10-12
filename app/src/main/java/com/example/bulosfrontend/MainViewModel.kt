@@ -402,11 +402,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     is TranslationResult.Success -> {
                         offlineTranslationMessage = null
                         val displayResponse = result.response.copy(originalText = text)
+                        val method = result.response.translationMethod
+                        val isOnlineMethod = !method.contains("offline", ignoreCase = true)
                         savedTranslationRepository.record(
                             sourceLang = sourceLanguage,
                             targetLang = targetLanguage,
                             inputText = text,
                             translatedText = displayResponse.translatedText,
+                            translationSource = if (isOnlineMethod) "Online" else "Offline",
                         )
                         TranslationState.textToTranslate = text
                         TranslationState.translatedText = displayResponse.translatedText
@@ -471,11 +474,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 ) {
                     is TranslationResult.Success -> {
                         offlineTranslationMessage = null
+                        val method = result.response.translationMethod
+                        val isOnlineMethod = !method.contains("offline", ignoreCase = true)
                         savedTranslationRepository.record(
                             sourceLang = sourceLanguage,
                             targetLang = targetLanguage,
                             inputText = displayText,
                             translatedText = result.response.translatedText,
+                            translationSource = if (isOnlineMethod) "Online" else "Offline",
                         )
                         TranslationState.textToTranslate = displayText
                         TranslationState.translatedText = result.response.translatedText
@@ -525,6 +531,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 targetLang = TranslationState.targetLanguage,
                 inputText = input,
                 translatedText = suggestion.translatedText,
+                translationSource = "Offline",
             )
         }
         offlineTranslationSuggestions = emptyList()

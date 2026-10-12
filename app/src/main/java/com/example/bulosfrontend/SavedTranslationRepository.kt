@@ -27,13 +27,14 @@ class SavedTranslationRepository(private val context: Context) {
         inputText: String,
         translatedText: String,
         isSaved: Boolean = false,
+        translationSource: String = "Online",
     ) {
         context.savedTranslationsDataStore.edit { preferences ->
             val current = pruneExpiredUnsaved(decodeList(preferences[entriesKey].orEmpty()))
             var timestamp = System.currentTimeMillis()
             while (current.any { it.timestamp == timestamp }) timestamp++
             preferences[entriesKey] = encodeList(
-                listOf(HistoryItem(sourceLang, targetLang, inputText, translatedText, timestamp, isSaved = isSaved)) + current,
+                listOf(HistoryItem(sourceLang, targetLang, inputText, translatedText, timestamp, isSaved = isSaved, translationSource = translationSource)) + current,
             )
         }
     }
@@ -188,6 +189,7 @@ class SavedTranslationRepository(private val context: Context) {
                 appendField(entry.timestamp.toString())
                 appendField(entry.isFavorite.toString())
                 appendField(entry.isSaved.toString())
+                appendField(entry.translationSource)
             }
             appendField(encoded)
         }
@@ -197,7 +199,7 @@ class SavedTranslationRepository(private val context: Context) {
         val records = readFields(encoded)
         records.mapNotNull { record ->
             val fields = readFields(record)
-            if (fields.size !in 5..7) return@mapNotNull null
+            if (fields.size !in 5..8) return@mapNotNull null
             val timestamp = fields[4].toLongOrNull() ?: return@mapNotNull null
             HistoryItem(
                 sourceLang = fields[0],
@@ -207,6 +209,7 @@ class SavedTranslationRepository(private val context: Context) {
                 timestamp = timestamp,
                 isFavorite = fields.getOrNull(5) == "true",
                 isSaved = fields.getOrNull(6) != "false",
+                translationSource = fields.getOrNull(7) ?: "Online",
             )
         }
     }.getOrDefault(emptyList())

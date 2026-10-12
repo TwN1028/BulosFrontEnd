@@ -1060,5 +1060,47 @@
     "English": "I built house",
     "Filipino": "Gumawa ako ng bahay",
     "Bulos": "Nagyedi ok ni beloy/Yumadi ok ni beloy"
+  },
+  {
+    "_category": "common-phrases",
+    "English": "when are we going to school",
+    "Filipino": "kailan tayo pupunta sa paaralan",
+    "Bulos": "kapide ikitam dumuman de eskwelahan"
+  },
+  {
+    "_category": "common-phrases",
+    "English": "when are we going to school?",
+    "Filipino": "kailan tayo pupunta sa paaralan?",
+    "Bulos": "kapide ikitam dumuman de eskwelahan"
+  },
+  {
+    "_category": "common-words",
+    "English": "when",
+    "Filipino": "kailan",
+    "Bulos": "kapide"
+  },
+  {
+    "_category": "common-words",
+    "English": "we",
+    "Filipino": "tayo",
+    "Bulos": "ikitam"
+  },
+  {
+    "_category": "common-words",
+    "English": "going",
+    "Filipino": "pupunta",
+    "Bulos": "dumuman"
+  },
+  {
+    "_category": "common-words",
+    "English": "to",
+    "Filipino": "sa",
+    "Bulos": "de"
+  },
+  {
+    "_category": "common-words",
+    "English": "school",
+    "Filipino": "paaralan",
+    "Bulos": "eskwelahan"
   }
 ]

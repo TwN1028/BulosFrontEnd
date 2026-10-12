@@ -12,7 +12,7 @@ import java.util.zip.ZipInputStream
 
 /** Installs official Vosk models once and reuses them for fully offline recognition. */
 class VoskModelManager(
-    context: Context,
+    private val context: Context,
     private val httpClient: OkHttpClient = OkHttpClient(),
 ) {
     private val modelRoot = File(context.filesDir, "vosk_models")
@@ -67,6 +67,22 @@ class VoskModelManager(
     }
 
     private fun download(spec: ModelSpec, destination: File) {
+        val assetPaths = listOf("vosk_models/${spec.name}.zip", "${spec.name}.zip")
+        var copiedFromAsset = false
+        for (path in assetPaths) {
+            copiedFromAsset = runCatching {
+                context.assets.open(path).use { input ->
+                    FileOutputStream(destination).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                true
+            }.getOrDefault(false)
+            if (copiedFromAsset) break
+        }
+
+        if (copiedFromAsset) return
+
         val request = Request.Builder().url(spec.url).build()
         httpClient.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {

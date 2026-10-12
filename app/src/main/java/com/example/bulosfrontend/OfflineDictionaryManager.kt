@@ -81,42 +81,43 @@ internal class OfflineDictionary(entries: List<Map<String, String>>) {
             return OfflineLookupResult.Translation(it + punctuation, "offline_exact_dictionary", 1.0)
         }
 
-        val candidates = rows.asSequence()
-            .filterNot(Row::isPhrase)
-            .mapNotNull { row ->
-                val sourceText = row.values[source] ?: return@mapNotNull null
-                val translatedText = row.values[target] ?: return@mapNotNull null
-                val normalizedCandidate = TextNormalizer.normalizeForMatching(sourceText)
-                if (normalizedCandidate.isEmpty()) return@mapNotNull null
-                val distance = levenshteinDistance(normalizedInput, normalizedCandidate)
-                val longestLength = maxOf(normalizedInput.length, normalizedCandidate.length)
-                val similarity = if (longestLength == 0) 1.0 else 1.0 - distance.toDouble() / longestLength
-                OfflineTranslationSuggestion(sourceText, translatedText, similarity, distance)
-            }
-            .sortedWith(
-                compareByDescending<OfflineTranslationSuggestion> { it.similarity }
-                    .thenBy { it.editDistance }
-                    .thenBy { it.sourceText },
-            )
-            .toList()
-
-        val best = candidates.firstOrNull()
-        val runnerUp = candidates.getOrNull(1)
-        if (
-            best != null &&
-            normalizedInput.length >= MIN_FUZZY_LENGTH &&
-            best.similarity >= AUTO_TRANSLATE_SIMILARITY &&
-            best.editDistance <= maximumAutomaticEdits(normalizedInput.length) &&
-            (runnerUp == null || best.similarity - runnerUp.similarity >= AMBIGUITY_MARGIN)
-        ) {
-            return OfflineLookupResult.Translation(
-                best.translatedText + punctuation,
-                "offline_strict_fuzzy_dictionary",
-                best.similarity,
-            )
+        // --- TIER 3: Subdividing Phrase-Based Chunk Match ---
+        var currentText = cleanedInput
+        val subdividedResult = subdivideAndTranslatePhrases(currentText, source, target)
+        if (subdividedResult != currentText) {
+            currentText = subdividedResult
         }
 
-        // --- TIER 6 & 7: English -> Filipino -> Target Bridge ---
+        // --- TIER 4, 5, & 6: Word-by-Word & Fuzzy Matching ---
+        val tokens = currentText.split(Regex("\\s+"))
+        val translatedTokens = tokens.map { token ->
+            if (token.startsWith("[[P") && token.endsWith("]]")) return@map token
+
+            val normToken = TextNormalizer.normalizeForMatching(token)
+            if (normToken.isEmpty()) return@map token
+
+            exact(normToken, source, target, phrase = false)?.let { return@map it }
+
+            val wordMatch = Regex("^(.+?)([,.!?]+)?$").find(token)
+            if (wordMatch != null) {
+                val coreWord = wordMatch.groupValues[1]
+                val punct = wordMatch.groupValues[2]
+                val coreNorm = TextNormalizer.normalizeForMatching(coreWord)
+                exact(coreNorm, source, target, phrase = false)?.let { return@map it + punct }
+            }
+
+            findFuzzyWord(normToken, source, target, 0.65)?.let { return@map it }
+            findFuzzyWord(normToken, source, target, 0.45)?.let { return@map it }
+
+            token
+        }
+
+        val finalResult = translatedTokens.joinToString(" ")
+        if (finalResult.isNotBlank() && finalResult != cleanedInput) {
+            return OfflineLookupResult.Translation(finalResult + punctuation, "offline_multi_tier_translation", 1.0)
+        }
+
+        // --- TIER 7: English -> Filipino -> Target Bridge ---
         if (source == UiLanguage.ENGLISH && target != UiLanguage.FILIPINO) {
             val filipinoResult = lookup(text, UiLanguage.ENGLISH, UiLanguage.FILIPINO)
             val filipinoText = when (filipinoResult) {
@@ -129,19 +130,17 @@ internal class OfflineDictionary(entries: List<Map<String, String>>) {
                     return OfflineLookupResult.Translation(finalResult.translatedText + punctuation, "offline_bridge_english_filipino", 1.0)
                 }
             }
-        } else if (source == UiLanguage.FILIPINO) {
-            return OfflineLookupResult.Translation(text, "offline_filipino_original", 1.0)
         }
 
         return OfflineLookupResult.Translation(text, "offline_original_fallback", 1.0)
     }
 
     private fun findFuzzyWord(normalizedInput: String, source: UiLanguage, target: UiLanguage, threshold: Double): String? {
-        if (normalizedInput.length < 3) return null
+        if (normalizedInput.length < 2) return null
         var bestMatch: String? = null
         var highestSimilarity = threshold
 
-        rows.filterNot(Row::isPhrase).forEach { row ->
+        rows.forEach { row ->
             val sourceVal = row.values[source] ?: return@forEach
             val targetVal = row.values[target] ?: return@forEach
             val normCand = TextNormalizer.normalizeForMatching(sourceVal)

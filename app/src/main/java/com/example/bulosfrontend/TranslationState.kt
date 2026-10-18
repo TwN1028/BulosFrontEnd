@@ -135,6 +135,12 @@ object TranslationState {
     fun hasValidLanguagePair(): Boolean =
         TranslationLanguageRules.isValidPair(sourceLanguage, targetLanguage)
 
+    /** Clears only Text-to-Text content; the selected language pair is intentionally preserved. */
+    fun clearTextTranslationContent() {
+        textToTranslate = ""
+        translatedText = ""
+    }
+
     private fun currentLanguagePair() = TranslationLanguagePair(sourceLanguage, targetLanguage)
 
     private fun applyLanguagePair(pair: TranslationLanguagePair) {

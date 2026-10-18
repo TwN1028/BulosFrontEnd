@@ -28,7 +28,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
@@ -40,7 +40,6 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import com.example.bulosfrontend.ui.theme.BulosFrontEndTheme
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 private const val StartupProgressCompletionHoldMillis = 1_000L
 
@@ -59,8 +58,6 @@ class MainActivity : ComponentActivity() {
                 fontScale = viewModel.selectedFontSize.scaleFactor,
             ) {
                 SideEffect { applyWhiteStatusBarContent() }
-                val preferenceRepository = remember { LanguagePreferenceRepository(applicationContext) }
-                val coroutineScope = rememberCoroutineScope()
                 var showStartupSplash by remember { mutableStateOf(true) }
                 var isStartupProgressComplete by remember { mutableStateOf(false) }
                 LaunchedEffect(
@@ -89,14 +86,20 @@ class MainActivity : ComponentActivity() {
                 } else {
                     viewModel.startupCompletedTaskCount.toFloat() / viewModel.startupTaskCount
                 }
-                val hasCompletedPreservationIntro = viewModel.hasCompletedPreservationIntro == true
+                val hasCompletedOnboarding = viewModel.hasCompletedOnboarding == true
                 val navController = rememberNavController()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
                 var resultOriginRoute by remember { mutableStateOf<String?>(null) }
+                var sttTutorialActive by rememberSaveable { mutableStateOf(false) }
+                var sttTutorialStepName by rememberSaveable {
+                    mutableStateOf(SttTutorialStep.LANGUAGE.name)
+                }
+                val sttTutorialStep = SttTutorialStep.valueOf(sttTutorialStepName)
                 var showFloatingNavigation by remember { mutableStateOf(false) }
                 var textScreenAllowsFloatingNavigation by remember { mutableStateOf(true) }
                 var displayedNavigationRoute by remember { mutableStateOf<String?>(null) }
+                val systemNavigationMode = rememberSystemNavigationMode()
                 val dictionaryFabProgress = remember { Animatable(0f) }
                 val featureRoutes = setOf(
                     AppDestinations.VOICE,
@@ -152,6 +155,36 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     containerColor = HomeContentCream,
                     contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                    bottomBar = {
+                        if (
+                            systemNavigationMode == SystemNavigationMode.GESTURE &&
+                            showFloatingNavigation &&
+                            (currentRoute != AppDestinations.TEXT || textScreenAllowsFloatingNavigation)
+                        ) {
+                            val activeFunctionRoute = when (displayedNavigationRoute) {
+                                AppDestinations.HOME_RECORDING,
+                                AppDestinations.VOICE,
+                                -> AppDestinations.HOME_RECORDING
+
+                                AppDestinations.RESULT -> resultOriginRoute
+                                else -> displayedNavigationRoute
+                            }
+                            AppBottomNavigation(
+                                currentRoute = displayedNavigationRoute,
+                                activeFunctionRoute = activeFunctionRoute,
+                                content = viewModel.content.home,
+                                onNavigate = { route ->
+                                    if (route != currentRoute) {
+                                        navController.navigate(route) {
+                                            launchSingleTop = true
+                                            restoreState = true
+                                            popUpTo(AppDestinations.HOME) { saveState = true }
+                                        }
+                                    }
+                                },
+                            )
+                        }
+                    },
                 ) { contentPadding ->
                     Box(
                         Modifier
@@ -162,7 +195,7 @@ class MainActivity : ComponentActivity() {
                         navController = navController,
                         startDestination = when {
                             viewModel.selectedUiLanguage == null -> AppDestinations.LANGUAGE_SELECTION
-                            hasCompletedPreservationIntro == false -> AppDestinations.PRESERVATION_INTRO
+                            hasCompletedOnboarding == false -> AppDestinations.ONBOARDING
                             else -> AppDestinations.HOME
                         },
                         modifier = Modifier.fillMaxSize(),
@@ -173,23 +206,41 @@ class MainActivity : ComponentActivity() {
                                 selectedLanguage = null,
                                 onLanguageSelected = { language ->
                                     viewModel.selectHomeUiLanguage(language)
-                                    navController.navigate(AppDestinations.PRESERVATION_INTRO) {
+                                    navController.navigate(AppDestinations.ONBOARDING) {
                                         popUpTo(AppDestinations.LANGUAGE_SELECTION) { inclusive = true }
                                     }
                                 },
-                                confirmationRequired = true,
                             )
                         }
-                        composable(AppDestinations.PRESERVATION_INTRO) {
-                            PreservationIntroScreen(
-                                content = viewModel.content.preservationIntro,
-                                onContinue = {
-                                    coroutineScope.launch {
-                                        preferenceRepository.markPreservationIntroCompleted()
+                        composable(AppDestinations.ONBOARDING) {
+                            OnboardingScreen(
+                                uiLanguage = viewModel.uiLanguage,
+                                isReplay = hasCompletedOnboarding,
+                                sttWalkthroughCompleted = viewModel.hasCompletedSttWalkthrough == true,
+                                onComplete = {
+                                    viewModel.markOnboardingCompleted()
+                                    navController.navigate(AppDestinations.HOME) {
+                                        launchSingleTop = true
+                                        popUpTo(AppDestinations.ONBOARDING) { inclusive = true }
+                                    }
+                                },
+                                onExit = {
+                                    if (hasCompletedOnboarding && !navController.popBackStack()) {
                                         navController.navigate(AppDestinations.HOME) {
                                             launchSingleTop = true
-                                            popUpTo(AppDestinations.PRESERVATION_INTRO) { inclusive = true }
+                                            popUpTo(AppDestinations.ONBOARDING) { inclusive = true }
                                         }
+                                    }
+                                },
+                                onOpenFeature = { route ->
+                                    navController.navigate(route) { launchSingleTop = true }
+                                },
+                                onStartSttWalkthrough = {
+                                    viewModel.resetVoiceTranslationForNewRecording()
+                                    sttTutorialActive = true
+                                    sttTutorialStepName = SttTutorialStep.LANGUAGE.name
+                                    navController.navigate(AppDestinations.HOME_RECORDING) {
+                                        launchSingleTop = true
                                     }
                                 },
                             )
@@ -199,7 +250,12 @@ class MainActivity : ComponentActivity() {
                                 viewModel = viewModel,
                                 dictionaryFabProgress = dictionaryFabProgress.value,
                             ) { route ->
-                                navController.navigate(route) { launchSingleTop = true }
+                                val destination = if (route == AppDestinations.HELP) {
+                                    AppDestinations.ONBOARDING
+                                } else {
+                                    route
+                                }
+                                navController.navigate(destination) { launchSingleTop = true }
                             }
                         }
                         composable(
@@ -219,13 +275,22 @@ class MainActivity : ComponentActivity() {
                         ) {
                             HomeRecordingScreen(
                                 viewModel = viewModel,
+                                tutorialStep = sttTutorialStep.takeIf { sttTutorialActive },
+                                onTutorialStepChange = { sttTutorialStepName = it.name },
                                 onBack = {
-                                    navController.navigate(AppDestinations.HOME) {
+                                    if (sttTutorialActive) {
+                                        viewModel.cancelRecording()
+                                        sttTutorialActive = false
+                                        navController.popBackStack(AppDestinations.ONBOARDING, inclusive = false)
+                                    } else navController.navigate(AppDestinations.HOME) {
                                         launchSingleTop = true
                                         popUpTo(AppDestinations.HOME_RECORDING) { inclusive = true }
                                     }
                                 },
                                 onRecordingFinished = {
+                                    if (sttTutorialActive) {
+                                        sttTutorialStepName = SttTutorialStep.TRANSCRIPT.name
+                                    }
                                     navController.navigate(AppDestinations.VOICE) {
                                         launchSingleTop = true
                                         popUpTo(AppDestinations.HOME_RECORDING) { inclusive = true }
@@ -251,6 +316,12 @@ class MainActivity : ComponentActivity() {
                             TranslateTextScreen(
                                 viewModel = viewModel,
                                 onBack = { navController.popBackStack() },
+                                onBackToHome = {
+                                    navController.navigate(AppDestinations.HOME) {
+                                        launchSingleTop = true
+                                        popUpTo(AppDestinations.HOME) { inclusive = false }
+                                    }
+                                },
                                 onFloatingNavigationVisibilityChanged = {
                                     textScreenAllowsFloatingNavigation = it
                                 },
@@ -258,21 +329,53 @@ class MainActivity : ComponentActivity() {
                         }
                         composable(AppDestinations.VOICE) {
                             TranslateVoiceScreen(
-                                viewModel,
+                                viewModel = viewModel,
+                                tutorialStep = sttTutorialStep.takeIf { sttTutorialActive },
+                                onTutorialStepChange = { sttTutorialStepName = it.name },
                                 onTranslate = {
                                     resultOriginRoute = AppDestinations.HOME_RECORDING
+                                    if (sttTutorialActive) {
+                                        sttTutorialStepName = SttTutorialStep.COMPLETE.name
+                                    }
                                     navController.navigate(AppDestinations.RESULT)
                                 },
-                            ) {
-                                viewModel.clearVoiceDraft()
-                                navController.popBackStack()
-                            }
+                                onBack = {
+                                    viewModel.clearVoiceDraft()
+                                    if (sttTutorialActive) {
+                                        sttTutorialActive = false
+                                        navController.popBackStack(AppDestinations.ONBOARDING, inclusive = false)
+                                    } else navController.popBackStack()
+                                },
+                            )
                         }
                         composable(AppDestinations.RESULT) {
                             ResultScreen(
                                 viewModel = viewModel,
-                                onBack = { navController.popBackStack() },
-                                onTranslateAgain = { navController.popBackStack() },
+                                tutorialComplete = sttTutorialActive && sttTutorialStep == SttTutorialStep.COMPLETE,
+                                onTutorialComplete = {
+                                    viewModel.markSttWalkthroughCompleted()
+                                    sttTutorialActive = false
+                                    navController.popBackStack(AppDestinations.ONBOARDING, inclusive = false)
+                                },
+                                onBack = {
+                                    if (sttTutorialActive) {
+                                        sttTutorialActive = false
+                                        navController.popBackStack(AppDestinations.ONBOARDING, inclusive = false)
+                                    } else navController.popBackStack()
+                                },
+                                onTranslateAgain = {
+                                    viewModel.resetVoiceTranslationForNewRecording()
+                                    navController.navigate(AppDestinations.HOME_RECORDING) {
+                                        launchSingleTop = true
+                                        popUpTo(AppDestinations.HOME_RECORDING) { inclusive = true }
+                                    }
+                                },
+                                onBackToHome = {
+                                    navController.navigate(AppDestinations.HOME) {
+                                        launchSingleTop = true
+                                        popUpTo(AppDestinations.HOME) { inclusive = false }
+                                    }
+                                },
                             )
                         }
                         composable(AppDestinations.HISTORY) {
@@ -297,7 +400,11 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         composable(AppDestinations.HELP) {
-                            HelpOnboardingScreen(viewModel, onBack = { navController.popBackStack() })
+                            HelpOnboardingScreen(
+                                viewModel = viewModel,
+                                onBack = { navController.popBackStack() },
+                                onOpenGuide = { navController.navigate(AppDestinations.ONBOARDING) },
+                            )
                         }
                         composable(AppDestinations.LANGUAGE_SETTINGS) {
                             LanguageSettingsScreen(viewModel) { language ->
@@ -308,6 +415,7 @@ class MainActivity : ComponentActivity() {
                         }
 
                         if (
+                            systemNavigationMode == SystemNavigationMode.BUTTONS &&
                             showFloatingNavigation &&
                             (currentRoute != AppDestinations.TEXT || textScreenAllowsFloatingNavigation)
                         ) {

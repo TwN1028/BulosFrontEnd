@@ -1,6 +1,8 @@
 package com.example.bulosfrontend
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -12,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.annotation.DrawableRes
 import androidx.compose.ui.res.painterResource
@@ -21,6 +24,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.bulosfrontend.ui.theme.InactiveButtonColor
 import com.example.bulosfrontend.ui.theme.SharedActiveButtonColor
+import com.example.bulosfrontend.ui.theme.WarmWhite
+
+private val OfflineModeCardBrush = Brush.verticalGradient(
+    colors = listOf(Color(0xFFFFFEFC), Color(0xFFFFFAF2)),
+)
+private val OfflineResourcesBrush = Brush.verticalGradient(
+    colors = listOf(
+        Color(0xFFDCE9CF),
+        Color(0xFFEEF2D9),
+        Color(0xFFFFF7E7),
+    ),
+)
+private val OfflineResourceTextColor = Color(0xFF10492F)
+private val OfflineResourceSupportingColor = Color(0xFF765F48)
 
 @Composable
 fun SettingsScreen(
@@ -56,8 +73,9 @@ fun SettingsScreen(
             Card(
                 onClick = onLanguageClick,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 88.dp),
-                shape = RoundedCornerShape(18.dp),
+                shape = HomeCardShape,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = HomeSupportingCardBorder,
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
             ) {
                 Row(
@@ -71,7 +89,7 @@ fun SettingsScreen(
                     Column(Modifier.weight(1f)) {
                         Text(stringResource(home.languageRes), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         Spacer(Modifier.height(3.dp))
-                        Text(stringResource(home.languageSummaryRes), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.secondary)
+                        Text(stringResource(home.languageSummaryRes), style = MaterialTheme.typography.bodyMedium, color = TranslationInputTextColor)
                         Spacer(Modifier.height(3.dp))
                         Text(
                             stringResource(home.currentLanguageRes, stringResource(viewModel.uiLanguage.displayNameRes)),
@@ -88,7 +106,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(10.dp))
             OfflineModeCard(viewModel)
             Spacer(Modifier.height(24.dp))
-            SettingsSectionHeader(stringResource(home.fontSizeRes))
+            SettingsSectionHeader(stringResource(appearanceSectionRes(viewModel.uiLanguage)))
             Spacer(Modifier.height(10.dp))
             Card(
                 modifier = Modifier.fillMaxWidth().heightIn(min = 104.dp),
@@ -130,6 +148,12 @@ fun SettingsScreen(
         }
         }
     }
+}
+
+private fun appearanceSectionRes(language: UiLanguage): Int = when (language) {
+    UiLanguage.ENGLISH -> R.string.ui_appearance_eng
+    UiLanguage.FILIPINO -> R.string.ui_appearance_fil
+    UiLanguage.BULOS -> R.string.ui_appearance_bul
 }
 
 @Composable
@@ -206,18 +230,21 @@ private fun SettingsTitleAndSubtitle(
     title: String,
     subtitle: String,
     modifier: Modifier = Modifier,
+    titleColor: Color = MaterialTheme.colorScheme.onSurface,
+    subtitleColor: Color = TranslationInputTextColor,
 ) {
     Column(modifier) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
+            color = titleColor,
         )
         Spacer(Modifier.height(3.dp))
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.secondary,
+            color = subtitleColor,
         )
     }
 }
@@ -249,11 +276,16 @@ private fun OfflineModeCard(viewModel: MainViewModel) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = HomeCardShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         border = HomeSupportingCardBorder,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
-        Column(Modifier.fillMaxWidth().padding(18.dp)) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .background(OfflineModeCardBrush)
+                .padding(18.dp),
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 SettingsIcon(R.drawable.ic_lucide_cloud_off)
                 Spacer(Modifier.width(12.dp))
@@ -263,14 +295,20 @@ private fun OfflineModeCard(viewModel: MainViewModel) {
                         if (viewModel.offlineModeEnabled) strings.activeRes else strings.automaticRes,
                     ),
                     modifier = Modifier.weight(1f),
+                    titleColor = OfflineResourceTextColor,
+                    subtitleColor = OfflineResourceSupportingColor,
                 )
                 Spacer(Modifier.width(12.dp))
                 Switch(
                     checked = viewModel.offlineModeEnabled,
                     onCheckedChange = viewModel::selectOfflineMode,
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = HomeFeatureIconTint,
-                        uncheckedThumbColor = HomeFeatureIconTint,
+                        checkedThumbColor = WarmWhite,
+                        checkedTrackColor = SharedActiveButtonColor,
+                        checkedBorderColor = SharedActiveButtonColor,
+                        uncheckedThumbColor = WarmWhite,
+                        uncheckedTrackColor = Color(0xFFF1E8DA),
+                        uncheckedBorderColor = Color(0xFFE5DDD2).copy(alpha = 0.65f),
                     ),
                 )
             }
@@ -279,14 +317,19 @@ private fun OfflineModeCard(viewModel: MainViewModel) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.38f),
+                    color = Color.Transparent,
                 ) {
-                    Column(Modifier.fillMaxWidth().padding(14.dp)) {
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .background(OfflineResourcesBrush)
+                            .padding(14.dp),
+                    ) {
                         Text(
                             stringResource(strings.resourcesRes),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = OfflineResourceTextColor,
                         )
                         Spacer(Modifier.height(12.dp))
                         ResourceStatusRow(
@@ -295,18 +338,21 @@ private fun OfflineModeCard(viewModel: MainViewModel) {
                                 if (viewModel.isDictionaryLoaded) strings.readyRes else strings.notInstalledRes,
                             ),
                             ready = viewModel.isDictionaryLoaded,
+                            textColor = OfflineResourceTextColor,
+                            supportingColor = OfflineResourceSupportingColor,
                         )
                         Spacer(Modifier.height(14.dp))
                         Text(
                             stringResource(strings.speechRecognitionRes),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold,
+                            color = OfflineResourceTextColor,
                         )
                         Spacer(Modifier.height(3.dp))
                         Text(
                             stringResource(strings.availabilityRes),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.secondary,
+                            color = OfflineResourceSupportingColor,
                         )
                         Spacer(Modifier.height(10.dp))
                         languages.forEachIndexed { index, language ->
@@ -317,6 +363,8 @@ private fun OfflineModeCard(viewModel: MainViewModel) {
                                 downloadsEnabled = viewModel.isOnline && !downloadInProgress,
                                 strings = strings,
                                 onDownload = { viewModel.downloadOfflineSpeechModel(language) },
+                                textColor = OfflineResourceTextColor,
+                                supportingColor = OfflineResourceSupportingColor,
                             )
                             if (index != languages.lastIndex) Spacer(Modifier.height(10.dp))
                         }
@@ -326,14 +374,14 @@ private fun OfflineModeCard(viewModel: MainViewModel) {
                                 stringResource(strings.downloadResourcesRes),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = OfflineResourceTextColor,
                             )
                             if (!viewModel.isOnline) {
                                 Spacer(Modifier.height(4.dp))
                                 Text(
                                     stringResource(strings.requiresInternetRes),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.secondary,
+                                    color = OfflineResourceSupportingColor,
                                 )
                             }
                         }
@@ -345,15 +393,26 @@ private fun OfflineModeCard(viewModel: MainViewModel) {
 }
 
 @Composable
-private fun ResourceStatusRow(label: String, status: String, ready: Boolean) {
+private fun ResourceStatusRow(
+    label: String,
+    status: String,
+    ready: Boolean,
+    textColor: Color,
+    supportingColor: Color,
+) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+        Text(
+            label,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyMedium,
+            color = textColor,
+        )
         Spacer(Modifier.width(12.dp))
         Text(
             status,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
-            color = if (ready) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+            color = if (ready) textColor else supportingColor,
         )
     }
 }
@@ -366,6 +425,8 @@ private fun OfflineSpeechModelRow(
     downloadsEnabled: Boolean,
     strings: OfflineSpeechResourceStrings,
     onDownload: () -> Unit,
+    textColor: Color,
+    supportingColor: Color,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -376,6 +437,7 @@ private fun OfflineSpeechModelRow(
                 stringResource(language.displayNameRes),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
+                color = textColor,
             )
             Text(
                 text = when {
@@ -386,9 +448,9 @@ private fun OfflineSpeechModelRow(
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = if (state == OfflineSpeechResourceState.READY) {
-                    MaterialTheme.colorScheme.primary
+                    textColor
                 } else {
-                    MaterialTheme.colorScheme.secondary
+                    supportingColor
                 },
             )
         }
@@ -521,14 +583,16 @@ private fun ThemeOption(
 ) {
     Surface(
         modifier = modifier.fillMaxHeight().clickable(onClick = onClick),
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(20.dp),
         color = if (selected) SharedActiveButtonColor else InactiveButtonColor,
         contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+        border = if (selected) null else BorderStroke(1.dp, TranslationInputBorderColor),
+        shadowElevation = if (selected) 4.dp else 0.dp,
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
             )

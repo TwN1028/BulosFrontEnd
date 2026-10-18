@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
@@ -38,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -53,6 +55,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.bulosfrontend.ui.theme.NavigationCream
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private data class FloatingNavigationItem(
     @StringRes val labelRes: Int,
@@ -70,6 +74,7 @@ fun AppFloatingNavigation(
     activeFunctionRoute: String? = currentRoute,
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     val dismissInteraction = remember { MutableInteractionSource() }
     val items = listOf(
         FloatingNavigationItem(content.navSpeechRes, painterResource(R.drawable.ic_lucide_mic), AppDestinations.HOME_RECORDING),
@@ -117,13 +122,17 @@ fun AppFloatingNavigation(
                     exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Bottom) +
                         scaleOut(transformOrigin = TransformOrigin(1f, 1f)),
                 ) {
-                    Column(
+                    Box(
                         modifier = Modifier
-                            .heightIn(max = availableOptionsHeight)
-                            .verticalScroll(rememberScrollState()),
-                        horizontalAlignment = Alignment.End,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                            .heightIn(max = availableOptionsHeight),
                     ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState()),
+                            horizontalAlignment = Alignment.End,
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
                         items.forEach { item ->
                             val selected = item.route == activeFunctionRoute
                             val label = stringResource(item.labelRes)
@@ -132,15 +141,18 @@ fun AppFloatingNavigation(
                                     .widthIn(min = 164.dp, max = 232.dp)
                                     .semantics { this.selected = selected }
                                     .clickable(role = Role.Tab, onClickLabel = label) {
-                                        expanded = false
-                                        if (!selected) onNavigate(item.route)
+                                        if (selected) {
+                                            expanded = false
+                                        } else {
+                                            onNavigate(item.route)
+                                            scope.launch {
+                                                delay(220)
+                                                expanded = false
+                                            }
+                                        }
                                     },
                                 shape = RoundedCornerShape(18.dp),
-                                color = if (selected) {
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
-                                } else {
-                                    NavigationCream
-                                },
+                                color = NavigationCream,
                                 contentColor = if (selected) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.onSurface,
                                 border = BorderStroke(
@@ -166,12 +178,14 @@ fun AppFloatingNavigation(
                                     Icon(
                                         painter = item.icon,
                                         contentDescription = null,
-                                        modifier = Modifier.size(24.dp),
+                                        modifier = Modifier
+                                            .size(24.dp),
                                         tint = if (selected) MaterialTheme.colorScheme.primary
                                         else MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                             }
+                        }
                         }
                     }
                 }

@@ -9,12 +9,14 @@ import android.os.Looper
 import org.vosk.Recognizer
 import org.vosk.android.RecognitionListener
 import java.io.IOException
+import kotlin.math.abs
 import kotlin.math.max
 
 /** Streams smaller microphone chunks than Vosk's default Android SpeechService. */
 class LowLatencyVoskSpeechService(
     private val recognizer: Recognizer,
     sampleRate: Float,
+    private val onAmplitude: (Int) -> Unit = {},
 ) {
     private val sampleRate = sampleRate.toInt()
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -54,6 +56,10 @@ class LowLatencyVoskSpeechService(
                 val count = recorder.read(readBuffer, 0, readBuffer.size)
                 if (count < 0) throw IOException("Unable to read microphone audio ($count).")
                 if (count == 0) continue
+                val peakAmplitude = (0 until count).maxOf { index ->
+                    abs(readBuffer[index].toInt())
+                }
+                mainHandler.post { onAmplitude(peakAmplitude) }
                 if (recognizer.acceptWaveForm(readBuffer, count)) {
                     val result = recognizer.result
                     lastPartial = ""

@@ -10,7 +10,6 @@ data class HistoryItem(
     val timestamp: Long = System.currentTimeMillis(),
     val isFavorite: Boolean = false,
     val isSaved: Boolean = true,
-    val translationSource: String = "Online",
 )
 
 internal const val RECENT_TRANSLATION_RETENTION_MILLIS = 7L * 24 * 60 * 60 * 1_000

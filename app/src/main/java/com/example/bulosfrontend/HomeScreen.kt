@@ -2,10 +2,12 @@ package com.example.bulosfrontend
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -17,6 +19,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.rememberScrollState
@@ -63,6 +66,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
@@ -306,18 +310,34 @@ fun HomeRecordingScreen(
     onBack: () -> Unit,
     onRecordingFinished: () -> Unit,
     autoStartRecording: Boolean = false,
+    tutorialStep: SttTutorialStep? = null,
+    onTutorialStepChange: (SttTutorialStep) -> Unit = {},
 ) {
     val context = LocalContext.current
     val labels = viewModel.content.speechResult
     val scope = rememberCoroutineScope()
     var actionHandled by remember { mutableStateOf(false) }
     var finishRequested by remember { mutableStateOf(false) }
+    var finishRequestedAtMillis by remember { mutableLongStateOf(0L) }
     var recordingStartRequestId by remember { mutableIntStateOf(0) }
     var isRecordingStartPending by remember { mutableStateOf(false) }
     val recognitionFailed = viewModel.speechSessionFinished &&
         !viewModel.voiceInputReady &&
         !viewModel.isSpeechProcessing &&
         !viewModel.isRecording
+    // Keep the mic visually active during both the start cue and the Finish-to-
+    // recognition hand-off, so neither path briefly falls back to idle.
+    val isFinishingSpeech = finishRequested &&
+        !viewModel.speechSessionFinished &&
+        !viewModel.voiceInputReady
+    val isRecordingOrStarting = viewModel.isRecording ||
+        isRecordingStartPending ||
+        isFinishingSpeech
+    LaunchedEffect(tutorialStep, viewModel.isRecording) {
+        if (tutorialStep == SttTutorialStep.MICROPHONE && viewModel.isRecording) {
+            onTutorialStepChange(SttTutorialStep.LISTENING)
+        }
+    }
 
     fun cancelOnce() {
         recordingStartRequestId++
@@ -339,6 +359,9 @@ fun HomeRecordingScreen(
     fun startRecordingOnce() {
         if (actionHandled || viewModel.isRecording || isRecordingStartPending) return
         viewModel.clearVoiceDraft()
+        // Clear the previous no-speech/cancel feedback immediately, rather than
+        // leaving the red glow visible while the recording-start cue plays.
+        viewModel.clearVoiceCancellationGlow()
         val requestId = ++recordingStartRequestId
         isRecordingStartPending = true
         val cuePlayed = playRecordingStartCue(context)
@@ -355,6 +378,7 @@ fun HomeRecordingScreen(
         if (actionHandled) return
         actionHandled = true
         finishRequested = true
+        finishRequestedAtMillis = SystemClock.elapsedRealtime()
         if (viewModel.isRecording) {
             viewModel.stopRecording()
         } else if (!viewModel.voiceInputReady && !viewModel.isSpeechProcessing) {
@@ -379,7 +403,11 @@ fun HomeRecordingScreen(
     }
 
     fun toggleRecording() {
-        if (viewModel.isRecording) viewModel.stopRecording() else requestPermissionOrStartRecording()
+        when {
+            viewModel.isRecording -> viewModel.stopRecording()
+            isRecordingStartPending -> cancelOnce()
+            else -> requestPermissionOrStartRecording()
+        }
     }
 
     LaunchedEffect(autoStartRecording) {
@@ -388,6 +416,10 @@ fun HomeRecordingScreen(
     }
 
     LaunchedEffect(viewModel.voiceInputReady, viewModel.speechSessionFinished, finishRequested) {
+        if (!finishRequested) return@LaunchedEffect
+        val remainingFinishDelay = (1_000L -
+            (SystemClock.elapsedRealtime() - finishRequestedAtMillis)).coerceAtLeast(0L)
+        if (remainingFinishDelay > 0L) delay(remainingFinishDelay)
         if (!finishRequested) return@LaunchedEffect
         when {
             viewModel.voiceInputReady -> onRecordingFinished()
@@ -402,6 +434,7 @@ fun HomeRecordingScreen(
         if (viewModel.recordingTime >= 60L) {
             actionHandled = true
             finishRequested = true
+            finishRequestedAtMillis = SystemClock.elapsedRealtime()
         }
     }
 
@@ -476,12 +509,31 @@ fun HomeRecordingScreen(
                         .offset(y = (-50).dp)
                         .height(50.dp),
                     useHomeCardStyle = true,
+                    onLanguageInteracted = {
+                        if (tutorialStep == SttTutorialStep.LANGUAGE) {
+                            onTutorialStepChange(SttTutorialStep.MICROPHONE)
+                        }
+                    },
                 )
+
+                if (tutorialStep == SttTutorialStep.LANGUAGE) {
+                    TutorialTapCue(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(top = 4.dp),
+                    )
+                    SttTutorialHint(
+                        step = 1,
+                        title = "Select Your Languages",
+                        body = "Choose the language you'll speak and the language to translate it into.",
+                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 54.dp),
+                    )
+                }
 
                 BottomSpeechMicrophoneHero(
                     statusText = when {
                         viewModel.isSpeechProcessing -> ""
-                        viewModel.isRecording -> stringResource(labels.listeningStatusRes)
+                        isRecordingOrStarting -> stringResource(labels.listeningStatusRes)
                         viewModel.voiceInputReady -> "Speech captured"
                         recognitionFailed -> ""
                         else -> stringResource(viewModel.content.home.speechSubtitleRes)
@@ -495,16 +547,39 @@ fun HomeRecordingScreen(
                     onClick = ::toggleRecording,
                     enabled = !viewModel.isSpeechProcessing &&
                         !recognitionFailed &&
-                        !viewModel.voiceInputReady,
-                    isRecording = viewModel.isRecording,
-                    isStopped = !viewModel.isRecording && viewModel.voiceInputReady,
+                        !viewModel.voiceInputReady &&
+                        !isFinishingSpeech,
+                    isRecording = isRecordingOrStarting,
+                    isStopped = !isRecordingOrStarting && viewModel.voiceInputReady,
                     showCancelledIdleGlow = viewModel.wasRecordingCancelled || viewModel.isNoSpeechDetected,
                     recordingSeconds = viewModel.recordingTime.takeIf { viewModel.isRecording },
+                    amplitudeProvider = viewModel::currentRecordingAmplitude,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .height(bottomHeroHeight),
                 )
+
+                if (tutorialStep == SttTutorialStep.MICROPHONE) {
+                    SttTutorialHint(
+                        step = 2,
+                        title = "Tap the microphone to start speaking.",
+                        body = "Microphone permission is requested only when it is needed.",
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 54.dp),
+                    )
+                } else if (tutorialStep == SttTutorialStep.LISTENING) {
+                    SttTutorialHint(
+                        step = 3,
+                        title = "Recording... Start speaking.",
+                        body = "Try saying a short word or phrase, then tap Finish when you're done.",
+                        bodyHighlight = "Finish",
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 16.dp),
+                    )
+                }
 
                 val liveTranscript = TranslationState.sttTranscript
                     .takeIf { viewModel.supportsLiveSpeechRecognition && it.isNotBlank() }
@@ -515,7 +590,7 @@ fun HomeRecordingScreen(
                     )
                     LiveSpeechTranscript(
                         text = liveTranscript,
-                        isRecording = viewModel.isRecording,
+                        isRecording = isRecordingOrStarting,
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .fillMaxSize()
@@ -751,6 +826,7 @@ private fun BottomSpeechMicrophoneHero(
     showCancelledIdleGlow: Boolean,
     modifier: Modifier = Modifier,
     recordingSeconds: Long? = null,
+    amplitudeProvider: () -> Int = { 0 },
 ) {
     val microphoneButtonSize = 104.dp
     // Match the reference hierarchy: the prompt is above a lower, shared mic/glow anchor.
@@ -774,17 +850,77 @@ private fun BottomSpeechMicrophoneHero(
         ),
         label = "bottomSpeechProcessingRings",
     )
-    val pulse = if (isRecording) recordingPulse else 0f
+    val cancelledGlowPulse by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3_200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "bottomSpeechCancelledGlowPulse",
+    )
+    var visualEnvelope by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(isRecording, amplitudeProvider) {
+        if (!isRecording) {
+            visualEnvelope = 0f
+            return@LaunchedEffect
+        }
+        var smoothedAmplitude = 0f
+        while (isRecording) {
+            val normalizedAmplitude = normalizeHomeMicrophoneAmplitude(amplitudeProvider())
+            smoothedAmplitude = smoothedAmplitude * 0.72f + normalizedAmplitude * 0.28f
+            val target = ((smoothedAmplitude - HOME_VISUAL_NOISE_FLOOR) /
+                (1f - HOME_VISUAL_NOISE_FLOOR)).coerceIn(0f, 1f)
+            val coefficient = if (target > visualEnvelope) {
+                HOME_ENVELOPE_EXPANSION_COEFFICIENT
+            } else {
+                HOME_ENVELOPE_CONTRACTION_COEFFICIENT
+            }
+            visualEnvelope = (visualEnvelope + (target - visualEnvelope) * coefficient)
+                .coerceIn(0f, 1f)
+            delay(75L)
+        }
+    }
+    val responsiveLevel by animateFloatAsState(
+        targetValue = visualEnvelope,
+        animationSpec = tween(durationMillis = 90),
+        label = "bottomSpeechAmplitude",
+    )
+    val pulse = if (isRecording) (recordingPulse * 0.16f + responsiveLevel * 0.84f) else 0f
     val creamPreparationPulse = if (isProcessing) recordingPulse else 0f
     val preparationGlowAlpha = if (isProcessing) {
         0.78f + recordingPulse * 0.22f
     } else {
         1f
     }
-    val idleToCancelled by animateFloatAsState(
-        targetValue = if (showCancelledIdleGlow && !isRecording) 1f else 0f,
-        animationSpec = tween(SPEECH_IDLE_GLOW_TRANSITION_MS, easing = FastOutSlowInEasing),
-        label = "bottomSpeechCancelledTransition",
+    // Animate directly between the actual STT state palettes. This keeps the
+    // glow smooth without routing any transition through the idle palette.
+    val isCancelledState = showCancelledIdleGlow && !isRecording
+    val usesIdleGlow = !isRecording && !isProcessing && !isStopped && !isCancelledState
+    val targetGlowCore = when {
+        isCancelledState -> RecordingRed
+        usesIdleGlow -> IdleSpeechGlowCore
+        else -> SpeechGlowConcentrated
+    }
+    val targetGlowOuter = when {
+        isCancelledState -> OuterVoiceRing
+        usesIdleGlow -> IdleSpeechGlowInner
+        else -> SpeechGlowOuter
+    }
+    val glowCore by animateColorAsState(
+        targetValue = targetGlowCore,
+        animationSpec = tween(durationMillis = 420, easing = FastOutSlowInEasing),
+        label = "bottomSpeechGlowCoreTransition",
+    )
+    val glowOuter by animateColorAsState(
+        targetValue = targetGlowOuter,
+        animationSpec = tween(durationMillis = 420, easing = FastOutSlowInEasing),
+        label = "bottomSpeechGlowOuterTransition",
+    )
+    val cancelledGlowVisibility by animateFloatAsState(
+        targetValue = if (isCancelledState) 1f else 0f,
+        animationSpec = tween(durationMillis = 420, easing = FastOutSlowInEasing),
+        label = "bottomSpeechCancelledGlowVisibility",
     )
 
     BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.BottomCenter) {
@@ -798,49 +934,96 @@ private fun BottomSpeechMicrophoneHero(
             microphoneBottomPadding + microphoneButtonSize / 2f +
                 (promptOuterRingRadius + promptInnerRingRadius) / 2f - 14.dp
 
+        // Idle retains the shared Home-style ambience. Cancellation is rendered
+        // independently below so its feedback stays clear and restrained.
+        if (!isStopped && !isRecording && !showCancelledIdleGlow) {
+            HomeVoiceHero(
+                promptRes = R.string.feature_speech_subtitle,
+                onClick = {},
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .offset(y = 75.dp),
+                enabled = false,
+                isRecording = false,
+                showPrompt = false,
+                useReferenceHomeGlow = true,
+                referenceGlowPalette = SttIdleReferenceGlowPalette,
+                referenceGlowWaveScale = 1.9f,
+                showReferenceGlowBase = false,
+                referenceGlowWavesOnly = true,
+                showMicrophoneButton = false,
+            )
+        }
+
+        // A soft Home-style bloom expands behind the fixed cancellation glow.
+        // It is intentionally a radial glow, not a ring or flowing wave.
+        if (cancelledGlowVisibility > 0.001f) {
+            Canvas(Modifier.fillMaxSize()) {
+                val microphoneCenter = Offset(
+                    x = size.width / 2f,
+                    y = size.height - microphoneBottomPadding.toPx() - microphoneButtonSize.toPx() / 2f,
+                )
+
+                fun drawCancelledGlowPulse(progress: Float) {
+                    val eased = FastOutSlowInEasing.transform(progress)
+                    val radius = size.width * (0.48f + eased * 0.94f)
+                    val fade = (1f - eased).pow(1.55f)
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            0.00f to RecordingRed.copy(alpha = 0.28f * fade * cancelledGlowVisibility),
+                            0.24f to InnerVoiceRing.copy(alpha = 0.18f * fade * cancelledGlowVisibility),
+                            0.52f to OuterVoiceRing.copy(alpha = 0.075f * fade * cancelledGlowVisibility),
+                            0.78f to OuterVoiceRing.copy(alpha = 0.018f * fade * cancelledGlowVisibility),
+                            1.00f to Color.Transparent,
+                            center = microphoneCenter,
+                            radius = radius,
+                        ),
+                        radius = radius,
+                        center = microphoneCenter,
+                    )
+                }
+
+                // Offset pulses overlap softly, avoiding any gap in the bloom.
+                drawCancelledGlowPulse(cancelledGlowPulse)
+                drawCancelledGlowPulse((cancelledGlowPulse + 0.5f) % 1f)
+            }
+        }
+
         Canvas(Modifier.fillMaxSize()) {
             val microphoneCenter = Offset(
                 x = size.width / 2f,
                 y = size.height - microphoneBottomPadding.toPx() - microphoneButtonSize.toPx() / 2f,
             )
-            val atmosphereRadius = size.width * (0.82f + pulse * 0.01f)
+            val atmosphereRadius = size.width * (0.82f + pulse * 0.06f)
             val softCreamRadius = size.width * (
-                0.68f + pulse * 0.01f + creamPreparationPulse * 0.008f
+                0.68f + pulse * 0.045f + creamPreparationPulse * 0.008f
             )
             val glowRadius = size.width * (
-                0.46f + pulse * 0.008f + creamPreparationPulse * 0.006f
+                0.46f + pulse * 0.035f + creamPreparationPulse * 0.006f
             )
-            val isIdleGlow = !isRecording && !showCancelledIdleGlow
-            val glowCore = lerp(
-                if (isIdleGlow) IdleSpeechGlowCore else SpeechGlowConcentrated,
-                RecordingRed,
-                idleToCancelled,
-            )
-            val glowOuter = lerp(
-                if (isIdleGlow) IdleSpeechGlowInner else SpeechGlowOuter,
-                OuterVoiceRing,
-                idleToCancelled,
-            )
+            val atmosphereCore = Color(0xFFC8CFB3)
+            val atmosphereMid = Color(0xFFABB99A)
+            val atmosphereOuter = Color(0xFF5E7A4A)
 
             drawCircle(
-                brush = Brush.radialGradient(
-                    0.00f to Color(0xFFC8CFB3).copy(alpha = 0.06f),
-                    0.16f to Color(0xFFABB99A).copy(alpha = 0.12f),
-                    0.32f to Color(0xFF879B70).copy(alpha = 0.29f),
-                    0.50f to Color(0xFF5E7A4A).copy(alpha = 0.48f),
-                    0.68f to Color(0xFF5E7A4A).copy(alpha = 0.44f),
-                    0.84f to Color(0xFF5E7A4A).copy(alpha = 0.25f),
-                    0.95f to Color(0xFF5E7A4A).copy(alpha = 0.08f),
+                    brush = Brush.radialGradient(
+                    0.00f to atmosphereCore.copy(alpha = 0.06f),
+                    0.16f to atmosphereMid.copy(alpha = 0.12f),
+                    0.32f to atmosphereOuter.copy(alpha = 0.29f),
+                    0.50f to atmosphereOuter.copy(alpha = 0.48f),
+                    0.68f to atmosphereOuter.copy(alpha = 0.44f),
+                    0.84f to atmosphereOuter.copy(alpha = 0.25f),
+                    0.95f to atmosphereOuter.copy(alpha = 0.08f),
                     1.00f to Color.Transparent,
                     center = microphoneCenter,
                     radius = atmosphereRadius,
                 ),
-                radius = atmosphereRadius,
-                center = microphoneCenter,
+                    radius = atmosphereRadius,
+                    center = microphoneCenter,
             )
 
             drawCircle(
-                brush = Brush.radialGradient(
+                    brush = Brush.radialGradient(
                     0.00f to glowOuter.copy(alpha = 0.54f * preparationGlowAlpha),
                     0.20f to glowOuter.copy(alpha = 0.47f * preparationGlowAlpha),
                     0.44f to glowOuter.copy(alpha = 0.33f * preparationGlowAlpha),
@@ -852,12 +1035,12 @@ private fun BottomSpeechMicrophoneHero(
                     center = microphoneCenter,
                     radius = softCreamRadius,
                 ),
-                radius = softCreamRadius,
-                center = microphoneCenter,
+                    radius = softCreamRadius,
+                    center = microphoneCenter,
             )
 
             drawCircle(
-                brush = Brush.radialGradient(
+                    brush = Brush.radialGradient(
                     0.00f to glowCore.copy(alpha = 0.62f * preparationGlowAlpha),
                     0.10f to glowCore.copy(alpha = 0.57f * preparationGlowAlpha),
                     0.24f to glowCore.copy(alpha = 0.48f * preparationGlowAlpha),
@@ -871,12 +1054,12 @@ private fun BottomSpeechMicrophoneHero(
                     center = microphoneCenter,
                     radius = glowRadius,
                 ),
-                radius = glowRadius,
-                center = microphoneCenter,
+                    radius = glowRadius,
+                    center = microphoneCenter,
             )
 
             val outerRingRadius = minOf(
-                size.width * (0.58f + pulse * 0.006f),
+                size.width * (0.58f + pulse * 0.028f),
                 microphoneCenter.y - 60.dp.toPx(),
             )
             val innerRingRadius = outerRingRadius * 0.73f
@@ -914,6 +1097,27 @@ private fun BottomSpeechMicrophoneHero(
                     style = Stroke(width = 0.75.dp.toPx()),
                 )
             }
+        }
+
+        // Keep the active recording treatment in its original foreground
+        // position, above the STT base glow.
+        if (!isStopped && isRecording) {
+            HomeVoiceHero(
+                promptRes = R.string.feature_speech_subtitle,
+                onClick = {},
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .offset(y = 75.dp),
+                enabled = false,
+                isRecording = false,
+                showPrompt = false,
+                useReferenceHomeGlow = true,
+                referenceGlowPalette = SttActiveReferenceGlowPalette,
+                referenceGlowWaveScale = 1.9f,
+                showReferenceGlowBase = false,
+                referenceGlowWavesOnly = true,
+                showMicrophoneButton = false,
+            )
         }
 
         val isIdlePrompt = !isProcessing &&
@@ -1074,12 +1278,41 @@ private val IdleSpeechGlowCore = Color(0xFFE3B978)
 private val IdleSpeechGlowInner = Color(0xFFF0D6AA)
 private val SpeechGlowConcentrated = Color(0xFFF3E7AC)
 private val SpeechGlowOuter = Color(0xFFF7F3DE)
-internal val HomeMicGlowCream = Color(0xFFE8E1C7)
+internal val HomeMicGlowCream = Color(0xFFFFF5D7)
 private val HomeReferenceGlowCore = HomeMicGlowCream
 private val HomeReferenceGlowWarm = HomeMicGlowCream
 private val HomeReferenceGlowMiddle = HomeMicGlowCream
 private val HomeReferenceGlowSage = Color(0xFFC7D0AA)
 private val HomeReferenceGlowOuter = Color(0xFF879B70)
+internal data class ReferenceGlowPalette(
+    val core: Color,
+    val warm: Color,
+    val middle: Color,
+    val sage: Color,
+    val outer: Color,
+)
+
+private val HomeReferenceGlowPalette = ReferenceGlowPalette(
+    core = HomeReferenceGlowCore,
+    warm = HomeReferenceGlowWarm,
+    middle = HomeReferenceGlowMiddle,
+    sage = HomeReferenceGlowSage,
+    outer = HomeReferenceGlowOuter,
+)
+private val SttIdleReferenceGlowPalette = ReferenceGlowPalette(
+    core = IdleSpeechGlowCore,
+    warm = IdleSpeechGlowInner,
+    middle = Color(0xFFF6E2B8),
+    sage = Color(0xFFD39B5C),
+    outer = Color(0xFFA96B35),
+)
+private val SttActiveReferenceGlowPalette = ReferenceGlowPalette(
+    core = Color(0xFFE8F1CB),
+    warm = Color(0xFFC7D9A5),
+    middle = Color(0xFF93B77B),
+    sage = Color(0xFF5D8B54),
+    outer = PrimaryGreen,
+)
 private val MicrophoneGlowCore = Color(0xFFFFF3B0)
 private val MicrophoneGlowMid = Color(0xFFDFE7A8)
 private val MicrophoneGlowEdge = Color(0xFFDCE9D2)
@@ -1105,7 +1338,7 @@ private fun normalizeHomeMicrophoneAmplitude(rawAmplitude: Int): Float {
 }
 
 @Composable
-private fun HomeVoiceHero(
+internal fun HomeVoiceHero(
     @androidx.annotation.StringRes promptRes: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -1115,11 +1348,26 @@ private fun HomeVoiceHero(
     amplitudeProvider: () -> Int = { 0 },
     showPrompt: Boolean = true,
     useReferenceHomeGlow: Boolean = false,
+    showReferenceGlowWhileRecording: Boolean = false,
+    referenceGlowPalette: ReferenceGlowPalette = HomeReferenceGlowPalette,
+    referenceGlowWaveScale: Float = 1f,
+    showReferenceGlowBase: Boolean = true,
+    referenceGlowWavesOnly: Boolean = false,
+    showMicrophoneButton: Boolean = true,
+    showMicrophoneButtonBorder: Boolean = true,
     useSpeechRecordingAura: Boolean = false,
     showCancelledIdleGlow: Boolean = false,
     speechAuraDiameter: Dp = 280.dp,
     speechAuraMaxDiameter: Dp = 280.dp,
 ) {
+    // Local aliases retain the existing renderer below while allowing STT to
+    // supply its own colors without changing the Home animation's geometry.
+    val HomeReferenceGlowCore = referenceGlowPalette.core
+    val HomeReferenceGlowWarm = referenceGlowPalette.warm
+    val HomeReferenceGlowMiddle = referenceGlowPalette.middle
+    val HomeReferenceGlowSage = referenceGlowPalette.sage
+    val HomeReferenceGlowOuter = referenceGlowPalette.outer
+    val safeReferenceGlowWaveScale = referenceGlowWaveScale.coerceIn(1f, 2f)
     val windowWidth = with(LocalDensity.current) {
         LocalWindowInfo.current.containerSize.width.toDp()
     }
@@ -1254,10 +1502,10 @@ private fun HomeVoiceHero(
         label = "homeReferenceGlowInnerDriftRotation",
     )
     val referenceGlowWaveBreath by referenceGlowMotion.animateFloat(
-        initialValue = 0.96f,
-        targetValue = 1.04f,
+        initialValue = 0.91f,
+        targetValue = 1.09f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 3_400, easing = FastOutSlowInEasing),
+            animation = tween(durationMillis = 2_800, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse,
         ),
         label = "homeReferenceGlowWaveBreath",
@@ -1266,7 +1514,7 @@ private fun HomeVoiceHero(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 4_600, easing = LinearEasing),
+            animation = tween(durationMillis = 3_600, easing = LinearEasing),
             repeatMode = RepeatMode.Restart,
         ),
         label = "homeReferenceGlowDepthWaveOne",
@@ -1275,7 +1523,7 @@ private fun HomeVoiceHero(
         initialValue = 0.46f,
         targetValue = 1.46f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 6_200, easing = LinearEasing),
+            animation = tween(durationMillis = 4_800, easing = LinearEasing),
             repeatMode = RepeatMode.Restart,
         ),
         label = "homeReferenceGlowDepthWaveTwo",
@@ -1283,15 +1531,16 @@ private fun HomeVoiceHero(
 
     Box(modifier = modifier.size(254.dp), contentAlignment = Alignment.Center) {
         val showReferenceHomeGlow = useReferenceHomeGlow &&
-            !isRecording &&
             !isStopped &&
-            !showCancelledIdleGlow
+            !showCancelledIdleGlow &&
+            (!isRecording || showReferenceGlowWhileRecording)
         val referenceGlowExpansion = 0.30f
         val referenceGlowCanvasScale = 1f + referenceGlowExpansion
         val activePulse = if (useSpeechRecordingAura && isRecording) recordingPulse else 0f
         val auraExpansion = animatedRadiusLevel.value * 38f + activePulse * 28f
         val auraDiameter = when {
-            showReferenceHomeGlow -> homeReferenceAuraDiameter * referenceGlowCanvasScale
+            showReferenceHomeGlow ->
+                homeReferenceAuraDiameter * referenceGlowCanvasScale * safeReferenceGlowWaveScale
             useSpeechRecordingAura -> speechAuraDiameter
             else -> 280.dp
         }
@@ -1308,7 +1557,11 @@ private fun HomeVoiceHero(
             },
         ) {
             if (showReferenceHomeGlow) {
-                val auraRadius = size.minDimension / (2f * referenceGlowCanvasScale)
+                // The larger canvas prevents wide STT waves from clipping, while this
+                // compensating divisor keeps the shared Home bloom at its original size.
+                val auraRadius = size.minDimension / (
+                    2f * referenceGlowCanvasScale * safeReferenceGlowWaveScale
+                )
                 val expansionEnd = 0.84f
                 val expansionProgress = (referenceGlowPulse / expansionEnd).coerceAtMost(1f)
                 val expansionBrightness = if (referenceGlowPulse <= expansionEnd) {
@@ -1323,7 +1576,7 @@ private fun HomeVoiceHero(
                 val sweepScale = 0.90f + expansionProgress * 0.22f
                 // The moving layers are sized to fade out within the visible inner aura,
                 // avoiding a hard clip edge as they rotate.
-                val rotatingLayerRadius = auraRadius * 0.92f
+                val rotatingLayerRadius = auraRadius * 0.92f * safeReferenceGlowWaveScale
                 val outerSweepWidth = rotatingLayerRadius * 1.68f * sweepScale
                 val outerSweepHeight = rotatingLayerRadius * 1.18f * sweepScale
                 val sweepWidth = rotatingLayerRadius * 1.46f * sweepScale
@@ -1337,6 +1590,7 @@ private fun HomeVoiceHero(
                 val innerWaveWidth = rotatingLayerRadius * 1.06f * sweepScale * referenceGlowWaveBreath
                 val innerWaveHeight = rotatingLayerRadius * 0.82f * sweepScale * referenceGlowWaveBreath
                 // Keep the broad sweep behind the resting bloom and within its soft aura.
+                if (!referenceGlowWavesOnly) {
                 rotate(degrees = referenceGlowSweepRotation + 36f, pivot = center) {
                         drawOval(
                             brush = Brush.radialGradient(
@@ -1448,50 +1702,55 @@ private fun HomeVoiceHero(
                         size = Size(innerWaveWidth, innerWaveHeight),
                     )
                 }
-                // Keep the original home-screen glow visible at rest.
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        0.00f to HomeReferenceGlowSage.copy(alpha = 0.18f),
-                        0.50f to HomeReferenceGlowSage.copy(alpha = 0.12f),
-                        0.78f to HomeReferenceGlowOuter.copy(alpha = 0.06f),
-                        0.94f to HomeReferenceGlowOuter.copy(alpha = 0.02f),
-                        1.00f to Color.Transparent,
-                        center = center,
+                }
+                if (showReferenceGlowBase) {
+                    // Keep the original home-screen glow visible at rest.
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            0.00f to HomeReferenceGlowSage.copy(alpha = 0.18f),
+                            0.50f to HomeReferenceGlowSage.copy(alpha = 0.12f),
+                            0.78f to HomeReferenceGlowOuter.copy(alpha = 0.06f),
+                            0.94f to HomeReferenceGlowOuter.copy(alpha = 0.02f),
+                            1.00f to Color.Transparent,
+                            center = center,
+                            radius = auraRadius,
+                        ),
                         radius = auraRadius,
-                    ),
-                    radius = auraRadius,
-                    center = center,
-                )
-                val restingBloomRadius = auraRadius * 0.82f
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        0.00f to HomeReferenceGlowWarm.copy(alpha = 0.66f),
-                        0.28f to HomeReferenceGlowWarm.copy(alpha = 0.58f),
-                        0.58f to HomeReferenceGlowMiddle.copy(alpha = 0.32f),
-                        0.82f to HomeReferenceGlowMiddle.copy(alpha = 0.12f),
-                        1.00f to Color.Transparent,
                         center = center,
+                    )
+                    val restingBloomRadius = auraRadius * 0.82f
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            0.00f to HomeReferenceGlowWarm.copy(alpha = 0.66f),
+                            0.28f to HomeReferenceGlowWarm.copy(alpha = 0.58f),
+                            0.58f to HomeReferenceGlowMiddle.copy(alpha = 0.32f),
+                            0.82f to HomeReferenceGlowMiddle.copy(alpha = 0.12f),
+                            1.00f to Color.Transparent,
+                            center = center,
+                            radius = restingBloomRadius,
+                        ),
                         radius = restingBloomRadius,
-                    ),
-                    radius = restingBloomRadius,
-                    center = center,
-                )
-                val restingCoreRadius = auraRadius * 0.60f
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        0.00f to HomeReferenceGlowCore.copy(alpha = 0.98f),
-                        0.34f to HomeReferenceGlowCore.copy(alpha = 0.90f),
-                        0.65f to HomeReferenceGlowWarm.copy(alpha = 0.52f),
-                        0.86f to HomeReferenceGlowWarm.copy(alpha = 0.15f),
-                        1.00f to Color.Transparent,
                         center = center,
+                    )
+                    val restingCoreRadius = auraRadius * 0.60f
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            0.00f to HomeReferenceGlowCore.copy(alpha = 0.98f),
+                            0.34f to HomeReferenceGlowCore.copy(alpha = 0.90f),
+                            0.65f to HomeReferenceGlowWarm.copy(alpha = 0.52f),
+                            0.86f to HomeReferenceGlowWarm.copy(alpha = 0.15f),
+                            1.00f to Color.Transparent,
+                            center = center,
+                            radius = restingCoreRadius,
+                        ),
                         radius = restingCoreRadius,
-                    ),
-                    radius = restingCoreRadius,
-                    center = center,
-                )
+                        center = center,
+                    )
+                }
 
-                val outerRippleRadius = auraRadius * (1f + expansionProgress * referenceGlowExpansion)
+                if (!referenceGlowWavesOnly) {
+                val outerRippleRadius = auraRadius *
+                    (1f + expansionProgress * referenceGlowExpansion) * safeReferenceGlowWaveScale
                 drawCircle(
                     brush = Brush.radialGradient(
                         0.00f to HomeReferenceGlowWarm.copy(alpha = glowAlpha(0.18f)),
@@ -1533,18 +1792,50 @@ private fun HomeVoiceHero(
                     radius = brightCoreRadius,
                     center = center,
                 )
+                }
+
+                // Keep a constant bloom at the microphone, then layer two offset radial
+                // pulses over it. Their overlap prevents the aura from dropping out as a
+                // pulse reaches the edge of the microphone field.
+                fun drawContinuousMicPulse(progress: Float, color: Color) {
+                    val easedProgress = FastOutSlowInEasing.transform(progress.coerceIn(0f, 1f))
+                    val pulseRadius = auraRadius *
+                        (0.18f + easedProgress * 0.96f) * safeReferenceGlowWaveScale
+                    val fade = (1f - easedProgress).pow(1.45f)
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            0.00f to if (referenceGlowWavesOnly) Color.Transparent else
+                                color.copy(alpha = 0.035f + fade * 0.070f),
+                            0.34f to if (referenceGlowWavesOnly) Color.Transparent else
+                                color.copy(alpha = 0.025f + fade * 0.055f),
+                            0.62f to color.copy(alpha = 0.014f + fade * 0.040f),
+                            0.82f to color.copy(alpha = fade * 0.090f),
+                            1.00f to Color.Transparent,
+                            center = center,
+                            radius = pulseRadius,
+                        ),
+                        radius = pulseRadius,
+                        center = center,
+                    )
+                }
+                drawContinuousMicPulse(referenceGlowDepthWaveOne, HomeReferenceGlowSage)
+                drawContinuousMicPulse(
+                    (referenceGlowDepthWaveOne + 0.50f) % 1f,
+                    HomeReferenceGlowWarm,
+                )
 
                 // Two wide, diffuse wave fronts add depth without introducing ring outlines.
                 fun drawDepthWave(progress: Float, color: Color, strength: Float) {
                     val waveIntensity = sin(progress * Math.PI.toFloat()).coerceIn(0f, 1f)
-                    val waveRadius = auraRadius * (0.50f + progress * 0.46f)
+                    val waveRadius = auraRadius *
+                        (0.46f + progress * 0.54f) * safeReferenceGlowWaveScale
                     drawCircle(
                         brush = Brush.radialGradient(
                             0.00f to Color.Transparent,
                             0.48f to Color.Transparent,
-                            0.66f to color.copy(alpha = strength * waveIntensity * 0.22f),
+                            0.62f to color.copy(alpha = strength * waveIntensity * 0.36f),
                             0.80f to color.copy(alpha = strength * waveIntensity),
-                            0.94f to color.copy(alpha = strength * waveIntensity * 0.16f),
+                            0.94f to color.copy(alpha = strength * waveIntensity * 0.26f),
                             1.00f to Color.Transparent,
                             center = center,
                             radius = waveRadius,
@@ -1556,12 +1847,12 @@ private fun HomeVoiceHero(
                 drawDepthWave(
                     progress = referenceGlowDepthWaveOne,
                     color = HomeReferenceGlowSage,
-                    strength = 0.12f,
+                    strength = 0.22f,
                 )
                 drawDepthWave(
                     progress = referenceGlowDepthWaveTwo % 1f,
                     color = HomeReferenceGlowWarm,
-                    strength = 0.10f,
+                    strength = 0.18f,
                 )
             } else {
                 drawCircle(
@@ -1670,40 +1961,46 @@ private fun HomeVoiceHero(
             drawCircle(CreamAura.copy(alpha = 0.05f), 5.dp.toPx(), middleHighlight)
             drawCircle(CreamAura.copy(alpha = 0.20f), 2.2.dp.toPx(), middleHighlight)
         }
-        Surface(
-            onClick = onClick,
-            enabled = enabled && !isStopped,
-            modifier = Modifier
-                .align(Alignment.Center)
-                .size(112.dp)
-                .graphicsLayer {
-                    scaleX = buttonScale
-                    scaleY = buttonScale
+        if (showMicrophoneButton) {
+            Surface(
+                onClick = onClick,
+                enabled = enabled && !isStopped,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(112.dp)
+                    .graphicsLayer {
+                        scaleX = buttonScale
+                        scaleY = buttonScale
+                    }
+                    .shadow(
+                        elevation = 14.dp,
+                        shape = CircleShape,
+                        ambientColor = Color(0x331E3F20),
+                        spotColor = Color(0x291E3F20),
+                    )
+                    .clip(CircleShape),
+                shape = CircleShape,
+                color = WarmWhiteCard,
+                border = if (showMicrophoneButtonBorder) {
+                    androidx.compose.foundation.BorderStroke(6.dp, Cream.copy(alpha = 0.92f))
+                } else {
+                    null
+                },
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_lucide_mic),
+                        contentDescription = null,
+                        tint = if (!useSpeechRecordingAura) {
+                            Color(0xFF5A6A31)
+                        } else if (isStopped) {
+                            WarmBrown
+                        } else {
+                            PrimaryGreen
+                        },
+                        modifier = Modifier.size(38.dp),
+                    )
                 }
-                .shadow(
-                    elevation = 14.dp,
-                    shape = CircleShape,
-                    ambientColor = Color(0x331E3F20),
-                    spotColor = Color(0x291E3F20),
-                )
-                .clip(CircleShape),
-            shape = CircleShape,
-            color = WarmWhiteCard,
-            border = androidx.compose.foundation.BorderStroke(6.dp, Cream.copy(alpha = 0.92f)),
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_lucide_mic),
-                    contentDescription = null,
-                    tint = if (!useSpeechRecordingAura) {
-                        Color(0xFF5A6A31)
-                    } else if (isStopped) {
-                        WarmBrown
-                    } else {
-                        PrimaryGreen
-                    },
-                    modifier = Modifier.size(38.dp),
-                )
             }
         }
         if (showPrompt) {

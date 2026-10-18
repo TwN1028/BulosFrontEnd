@@ -18,6 +18,36 @@ import java.util.UUID
 import java.util.concurrent.Executors
 
 class TranslationIntegrationTest {
+
+    @Test
+    fun partialLegacyEnglishToBulosResponseCanUseTheLocalFilipinoBridge() {
+        val response = TranslationResponse(
+            originalText = "house",
+            translatedText = "house",
+            sourceLanguage = "en",
+            targetLanguage = "bul",
+            confidence = 0.0,
+            intermediateLanguage = null,
+            translationMethod = "word_match_partial",
+        )
+
+        assertTrue(shouldRepairPartialEnglishBulosResponse("English", "Bulos", response))
+        assertTrue(!shouldRepairPartialEnglishBulosResponse("English", "Filipino", response))
+        assertTrue(
+            !shouldRepairPartialEnglishBulosResponse(
+                "English",
+                "Bulos",
+                response.copy(confidence = 1.0),
+            ),
+        )
+        assertTrue(
+            !shouldRepairPartialEnglishBulosResponse(
+                "English",
+                "Bulos",
+                response.copy(translationMethod = "en_bul_filipino_fallback"),
+            ),
+        )
+    }
     @Test
     fun languageMappingUsesExactBackendCodes() {
         assertEquals("en", BackendLanguageCodes.forUiLabel("English"))

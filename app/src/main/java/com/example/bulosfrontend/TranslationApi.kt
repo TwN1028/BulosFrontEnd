@@ -282,6 +282,21 @@ class HybridTranslationRepository(
 
         if (networkResult is TranslationResult.Success) {
             isServerReady = true
+            val response = networkResult.response
+            if (shouldRepairPartialEnglishBulosResponse(sourceLanguage, targetLanguage, response)) {
+                val localBridgeResult = offlineDictionary.lookup(text, source, target)
+                if (
+                    localBridgeResult is OfflineLookupResult.Translation &&
+                    localBridgeResult.method == "offline_bridge_english_filipino"
+                ) {
+                    return offlineTranslationSuccess(
+                        localBridgeResult,
+                        text,
+                        sourceLanguage,
+                        targetLanguage,
+                    )
+                }
+            }
             return networkResult
         }
 
@@ -353,6 +368,21 @@ class HybridTranslationRepository(
 
 internal fun canUseOnlineServices(hasInternetConnection: Boolean, offlineModeEnabled: Boolean): Boolean =
     hasInternetConnection && !offlineModeEnabled
+
+/**
+ * Older backend deployments can return a successful but incomplete English -> Bulos response.
+ * Let the verified local Filipino bridge repair only that narrow case; never replace a complete
+ * translation or a response already produced by the backend's current bridge.
+ */
+internal fun shouldRepairPartialEnglishBulosResponse(
+    sourceLanguage: String,
+    targetLanguage: String,
+    response: TranslationResponse,
+): Boolean =
+    sourceLanguage == "English" &&
+        targetLanguage == "Bulos" &&
+        response.confidence < 1.0 &&
+        response.translationMethod != "en_bul_filipino_fallback"
 
 internal fun unresolvedFallback(
     networkResult: TranslationResult,

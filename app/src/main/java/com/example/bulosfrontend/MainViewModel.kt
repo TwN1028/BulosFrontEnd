@@ -2,7 +2,6 @@ package com.example.bulosfrontend
 
 import android.app.Application
 import android.content.Intent
-import android.media.MediaRecorder
 import android.os.Build
 import android.os.Bundle
 import android.speech.RecognitionListener
@@ -70,6 +69,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private set
     var hasCompletedPreservationIntro by mutableStateOf<Boolean?>(null)
         private set
+    var hasCompletedOnboarding by mutableStateOf<Boolean?>(null)
+        private set
+    var hasCompletedSttWalkthrough by mutableStateOf<Boolean?>(null)
+        private set
     var isHistoryLoaded by mutableStateOf(false)
         private set
     var isOfflineDictionaryLoadComplete by mutableStateOf(false)
@@ -81,11 +84,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             isLanguagePreferenceLoaded,
             isFontSizePreferenceLoaded,
             isOfflineModePreferenceLoaded,
-            hasCompletedPreservationIntro != null,
+            hasCompletedOnboarding != null,
+            hasCompletedSttWalkthrough != null,
             isHistoryLoaded,
             isOfflineDictionaryLoadComplete,
         ).count { it }
-    val startupTaskCount: Int get() = 6
+    val startupTaskCount: Int get() = 7
     val isStartupReady: Boolean get() = startupCompletedTaskCount == startupTaskCount && startupError == null
     val uiLanguage: UiLanguage get() = selectedUiLanguage ?: UiLanguage.ENGLISH
     val content: DialogueContent get() = DialogueProvider.getDialogue(uiLanguage)
@@ -113,8 +117,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Recording State
     var isRecording by mutableStateOf(false)
     var recordingTime by mutableLongStateOf(0L)
-    private var recorder: MediaRecorder? = null
-    private var audioFile: File? = null
     private var bulosCapture: IsolatedPcmWavCapture? = null
     private var bulosWavFile: File? = null
     private var bulosTranscriptionJob: Job? = null
@@ -217,6 +219,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (hasCompletedPreservationIntro == null) load {
             hasCompletedPreservationIntro = languagePreferences.hasCompletedPreservationIntro.first() ?: false
         }
+        if (hasCompletedOnboarding == null) load {
+            hasCompletedOnboarding = languagePreferences.hasCompletedOnboarding.first()
+        }
+        if (hasCompletedSttWalkthrough == null) load {
+            hasCompletedSttWalkthrough = languagePreferences.hasCompletedSttWalkthrough.first()
+        }
         if (!isHistoryLoaded && savedTranslationsObservationJob?.isActive != true) {
             savedTranslationsObservationJob = viewModelScope.launch {
                 savedTranslationRepository.pruneExpiredUnsavedEntries()
@@ -313,6 +321,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         TranslationState.synchronizeSourceWithUiLanguage(language)
     }
 
+    fun markSttWalkthroughCompleted() {
+        hasCompletedSttWalkthrough = true
+        viewModelScope.launch { languagePreferences.markSttWalkthroughCompleted() }
+    }
+
+    fun markPreservationIntroCompleted() {
+        hasCompletedPreservationIntro = true
+        viewModelScope.launch { languagePreferences.markPreservationIntroCompleted() }
+    }
+
+    fun markOnboardingCompleted() {
+        // Keep the in-memory value synchronized with persistence so reopening the User Guide
+        // within the same app session is correctly treated as a replay.
+        hasCompletedOnboarding = true
+        viewModelScope.launch { languagePreferences.markOnboardingCompleted() }
+    }
+
     fun selectFontSize(fontSize: AppFontSize) {
         selectedFontSize = fontSize
         viewModelScope.launch { languagePreferences.saveFontSize(fontSize) }
@@ -402,14 +427,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     is TranslationResult.Success -> {
                         offlineTranslationMessage = null
                         val displayResponse = result.response.copy(originalText = text)
-                        val method = result.response.translationMethod
-                        val isOnlineMethod = !method.contains("offline", ignoreCase = true)
                         savedTranslationRepository.record(
                             sourceLang = sourceLanguage,
                             targetLang = targetLanguage,
                             inputText = text,
                             translatedText = displayResponse.translatedText,
-                            translationSource = if (isOnlineMethod) "Online" else "Offline",
                         )
                         TranslationState.textToTranslate = text
                         TranslationState.translatedText = displayResponse.translatedText
@@ -444,8 +466,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun resetTextTranslationResult() {
+        textTranslationJob?.cancel()
+        textTranslationJob = null
+        isTranslating = false
+        translationStatus = ""
         textTranslationState = TextTranslationUiState.Idle
-        TranslationState.translatedText = ""
+        TranslationState.clearTextTranslationContent()
         offlineTranslationSuggestions = emptyList()
         offlineSuggestionInput = ""
         offlineTranslationMessage = null
@@ -474,14 +500,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 ) {
                     is TranslationResult.Success -> {
                         offlineTranslationMessage = null
-                        val method = result.response.translationMethod
-                        val isOnlineMethod = !method.contains("offline", ignoreCase = true)
                         savedTranslationRepository.record(
                             sourceLang = sourceLanguage,
                             targetLang = targetLanguage,
                             inputText = displayText,
                             translatedText = result.response.translatedText,
-                            translationSource = if (isOnlineMethod) "Online" else "Offline",
                         )
                         TranslationState.textToTranslate = displayText
                         TranslationState.translatedText = result.response.translatedText
@@ -531,7 +554,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 targetLang = TranslationState.targetLanguage,
                 inputText = input,
                 translatedText = suggestion.translatedText,
-                translationSource = "Offline",
             )
         }
         offlineTranslationSuggestions = emptyList()
@@ -551,6 +573,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         offlineTranslationSuggestions = emptyList()
         offlineSuggestionInput = ""
         offlineTranslationMessage = null
+    }
+
+    /** Clears only the temporary cancellation visual state before a new attempt begins. */
+    fun clearVoiceCancellationGlow() {
+        cancelledGlowResetJob?.cancel()
+        cancelledGlowResetJob = null
+        wasRecordingCancelled = false
+        isNoSpeechDetected = false
+    }
+
+    /** Returns the voice flow to a clean, idle microphone state without changing its language pair. */
+    fun resetVoiceTranslationForNewRecording() {
+        voiceTranslationJob?.cancel()
+        voiceTranslationJob = null
+        isTranslating = false
+        translationStatus = ""
+        TranslationState.clearTextTranslationContent()
+        clearVoiceDraft()
     }
 
     fun saveCurrentTranslation() {
@@ -612,7 +652,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun startRecording() {
         if (
-            isRecording || recorder != null || voskSpeechService != null ||
+            isRecording || voskSpeechService != null ||
             onDeviceSpeechRecognizer != null || isRecorderStarting ||
             bulosCapture != null || bulosTranscriptionJob?.isActive == true
         ) return
@@ -630,24 +670,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             startBulosOnlineRecording()
             return
         }
-        usesVoskRecognizer = voskModelManager.supports(language)
-        if (
-            offlineModeEnabled && usesVoskRecognizer &&
-            !voskModelManager.isInstalled(language) && !canUseOnDeviceRecognizer()
-        ) {
+        // When a connection and a system recognizer are available, begin recognition without
+        // waiting for a Vosk model to be installed or loaded. Vosk remains the offline route.
+        if (canUseOnlineServices && canUseSystemRecognizer()) {
             usesVoskRecognizer = false
-            speechSessionFinished = true
-            speechRecognitionError = offlineResourcesUnavailableMessage()
+            startAndroidSpeechRecognition(language, preferOffline = false)
             return
         }
-        if (usesVoskRecognizer && canUseOnDeviceRecognizer()) {
-            startAndroidSpeechRecognition(language, preferOffline = true)
-        } else if (usesVoskRecognizer && canUseOnlineServices && canUseSystemRecognizer()) {
-            startAndroidSpeechRecognition(language, preferOffline = false)
-        } else if (usesVoskRecognizer) {
+        usesVoskRecognizer = voskModelManager.supports(language)
+        if (usesVoskRecognizer) {
             startVoskSpeechRecognition(language)
         } else {
-            startAudioFileRecording()
+            startSpeechRecognizerFallback(language)
         }
     }
 
@@ -781,7 +815,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }.getOrElse {
             usesOnDeviceRecognizer = false
             isRecorderStarting = false
-            startFallbackSpeechRecognition(language, preferOffline)
+            recoverAndroidSpeechRecognizer(language, preferOffline)
             return
         }
         onDeviceSpeechRecognizer = recognizer
@@ -811,7 +845,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (sessionId != speechSessionId || !usesOnDeviceRecognizer) return
                 if (shouldFallbackFromOnDevice(error)) {
                     finishOnDeviceRecognition(markFinished = false)
-                    startFallbackSpeechRecognition(language, preferOffline)
+                    recoverAndroidSpeechRecognizer(language, preferOffline)
                 } else {
                     isNoSpeechDetected = error == SpeechRecognizer.ERROR_NO_MATCH ||
                         error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT
@@ -837,17 +871,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
-    private fun startFallbackSpeechRecognition(language: String, attemptedOffline: Boolean) {
+    private fun startSpeechRecognizerFallback(language: String) {
+        when {
+            canUseOnDeviceRecognizer() -> startAndroidSpeechRecognition(language, preferOffline = true)
+            canUseOnlineServices && canUseSystemRecognizer() -> startAndroidSpeechRecognition(language, preferOffline = false)
+            else -> finishRecognizerUnavailable()
+        }
+    }
+
+    private fun recoverAndroidSpeechRecognizer(language: String, attemptedOffline: Boolean) {
         if (attemptedOffline && canUseOnlineServices && canUseSystemRecognizer()) {
             startAndroidSpeechRecognition(language, preferOffline = false)
-        } else if (offlineModeEnabled && !voskModelManager.isInstalled(language)) {
-            usesVoskRecognizer = false
-            isRecorderStarting = false
-            isSpeechProcessing = false
-            speechSessionFinished = true
-            speechRecognitionError = offlineResourcesUnavailableMessage()
         } else {
-            startVoskSpeechRecognition(language)
+            finishRecognizerUnavailable()
+        }
+    }
+
+    private fun finishRecognizerUnavailable() {
+        usesVoskRecognizer = false
+        usesOnDeviceRecognizer = false
+        isRecorderStarting = false
+        isSpeechProcessing = false
+        isRecording = false
+        speechSessionFinished = true
+        speechRecognitionError = if (offlineModeEnabled) {
+            offlineResourcesUnavailableMessage()
+        } else {
+            "Speech recognition is unavailable on this device."
         }
     }
 
@@ -946,7 +996,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     recognizer.close()
                     return@launch
                 }
-                val service = LowLatencyVoskSpeechService(recognizer, VOSK_SAMPLE_RATE)
+                val service = LowLatencyVoskSpeechService(
+                    recognizer = recognizer,
+                    sampleRate = VOSK_SAMPLE_RATE,
+                    onAmplitude = { amplitude ->
+                        if (sessionId == speechSessionId && isRecording) {
+                            speechAmplitude = amplitude
+                        }
+                    },
+                )
                 voskSpeechService = service
                 service.startListening(voskListener(sessionId))
                 isRecorderStarting = false
@@ -955,12 +1013,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 startTimer()
             } catch (error: Exception) {
                 if (sessionId != speechSessionId) return@launch
-                isRecorderStarting = false
-                isSpeechProcessing = false
-                isRecording = false
                 usesVoskRecognizer = false
-                speechSessionFinished = true
-                speechRecognitionError = offlineModelError(language, error)
+                startSpeechRecognizerFallback(language)
             }
         }
     }
@@ -1037,23 +1091,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         voiceInputReady = TranslationState.sttTranscript.isNotBlank()
         isNoSpeechDetected = !voiceInputReady && speechRecognitionError == null
         speechSessionFinished = true
-    }
-
-    private fun offlineModelError(language: String, error: Exception): String {
-        val size = if (
-            language.equals("Filipino", ignoreCase = true) ||
-            language.equals("Bulos", ignoreCase = true)
-        ) {
-            "314 MB"
-        } else {
-            "39 MB"
-        }
-        return if (offlineModeEnabled || !NetworkUtils.isOnline(getApplication())) {
-            "$language offline speech model is not installed. Connect once to download the $size model."
-        } else {
-            error.message?.takeIf(String::isNotBlank)
-                ?: "Could not prepare the $language offline speech model. Please try again."
-        }
     }
 
     private fun offlineResourcesUnavailableMessage(): String {
@@ -1161,53 +1198,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         speechSessionFinished = true
     }
 
-    private fun startAudioFileRecording() {
-        isRecorderStarting = true
-        val context = getApplication<Application>()
-        audioFile = File(context.externalCacheDir, "recording_${System.currentTimeMillis()}.mp3")
-        recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            MediaRecorder(context)
-        } else {
-            createLegacyMediaRecorder()
-        }
-        recorder?.apply {
-            setAudioSource(MediaRecorder.AudioSource.MIC)
-            setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-            setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-            setOutputFile(audioFile?.absolutePath)
-            try {
-                prepare()
-                start()
-                isRecording = true
-                startTimer()
-            } catch (e: Exception) {
-                e.printStackTrace()
-                release()
-                recorder = null
-                audioFile?.delete()
-                audioFile = null
-            } finally {
-                isRecorderStarting = false
-            }
-        }
-    }
-
     fun currentRecordingAmplitude(): Int {
         if (!isRecording) return 0
         if (usesOnDeviceRecognizer) return speechAmplitude
         if (usesVoskRecognizer) return speechAmplitude
-        if (usesBulosOnlineCapture) return 0
-        return try {
-            recorder?.maxAmplitude ?: 0
-        } catch (_: IllegalStateException) {
-            0
-        } catch (_: RuntimeException) {
-            0
-        }
+        return 0
     }
-
-    @Suppress("DEPRECATION")
-    private fun createLegacyMediaRecorder(): MediaRecorder = MediaRecorder()
 
     private fun startTimer() {
         recordingTimerJob?.cancel()
@@ -1277,21 +1273,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
             return
         }
-        recordingTimerJob?.cancel()
-        recordingTimerJob = null
-        try {
-            recorder?.stop()
-            recorder?.release()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        } finally {
-            recorder = null
-            isRecorderStarting = false
-            isRecording = false
-            TranslationState.recordedAudioPath = audioFile?.absolutePath
-            voiceInputReady = TranslationState.recordedAudioPath != null
-            speechSessionFinished = true
-        }
+        finishRecognizerUnavailable()
     }
 
     fun cancelRecording() {
@@ -1313,39 +1295,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         voskSpeechService?.shutdown()
         voskSpeechService = null
         speechAmplitude = 0
-        val activeRecorder = recorder
-        recorder = null
-        try {
-            activeRecorder?.stop()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        } finally {
-            try {
-                activeRecorder?.release()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-            isRecorderStarting = false
-            isRecording = false
-            recordingTime = 0L
-            audioFile?.delete()
-            audioFile = null
-            TranslationState.sttTranscript = ""
-            TranslationState.recordedAudioPath = null
-            voiceInputReady = false
-            speechSessionFinished = false
-            speechRecognitionError = null
-            isNoSpeechDetected = false
-            isSpeechProcessing = false
-            usesVoskRecognizer = false
-            usesOnDeviceRecognizer = false
-            usesBulosOnlineCapture = false
-            wasRecordingCancelled = true
-            cancelledGlowResetJob?.cancel()
-            cancelledGlowResetJob = viewModelScope.launch {
-                delay(CANCELLED_GLOW_DURATION_MS)
-                wasRecordingCancelled = false
-            }
+        isRecorderStarting = false
+        isRecording = false
+        recordingTime = 0L
+        TranslationState.sttTranscript = ""
+        TranslationState.recordedAudioPath = null
+        voiceInputReady = false
+        speechSessionFinished = false
+        speechRecognitionError = null
+        isNoSpeechDetected = false
+        isSpeechProcessing = false
+        usesVoskRecognizer = false
+        usesOnDeviceRecognizer = false
+        usesBulosOnlineCapture = false
+        wasRecordingCancelled = true
+        cancelledGlowResetJob?.cancel()
+        cancelledGlowResetJob = viewModelScope.launch {
+            delay(CANCELLED_GLOW_DURATION_MS)
+            wasRecordingCancelled = false
         }
     }
 
@@ -1377,8 +1344,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         bulosWavFile = null
         voskModel?.close()
         voskModel = null
-        recorder?.release()
-        recorder = null
     }
 
     private companion object {

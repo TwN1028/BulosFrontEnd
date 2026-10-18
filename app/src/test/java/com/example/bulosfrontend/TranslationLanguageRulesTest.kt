@@ -144,6 +144,30 @@ class TranslationLanguageRulesTest {
         assertEquals("Bulos", TranslationLanguageRules.languageForUi(UiLanguage.BULOS))
     }
 
+    @Test
+    fun clearingTextTranslationContentPreservesTheSelectedLanguagePair() {
+        val originalPair = currentStatePair()
+        val originalInput = TranslationState.textToTranslate
+        val originalOutput = TranslationState.translatedText
+        try {
+            TranslationState.sourceLanguage = "Bulos"
+            TranslationState.targetLanguage = "Filipino"
+            TranslationState.textToTranslate = "Previous input"
+            TranslationState.translatedText = "Previous output"
+
+            TranslationState.clearTextTranslationContent()
+
+            assertEquals(TranslationLanguagePair("Bulos", "Filipino"), currentStatePair())
+            assertEquals("", TranslationState.textToTranslate)
+            assertEquals("", TranslationState.translatedText)
+        } finally {
+            TranslationState.sourceLanguage = originalPair.source
+            TranslationState.targetLanguage = originalPair.target
+            TranslationState.textToTranslate = originalInput
+            TranslationState.translatedText = originalOutput
+        }
+    }
+
     private fun currentStatePair() =
         TranslationLanguagePair(TranslationState.sourceLanguage, TranslationState.targetLanguage)
 }

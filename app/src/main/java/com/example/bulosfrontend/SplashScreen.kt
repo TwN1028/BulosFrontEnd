@@ -1,6 +1,5 @@
 package com.example.bulosfrontend
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
@@ -20,6 +19,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -37,13 +37,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
@@ -160,24 +163,25 @@ fun BrandedSplashScreen(
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.safeDrawing),
         ) {
+            // Match the Home microphone's circular container exactly.
+            val iconMountSize = 104.dp
             SplashLayeredGlow(Modifier.fillMaxSize())
             Canvas(Modifier.fillMaxSize()) {
                 val center = Offset(size.width / 2f, size.height * 0.32f)
                 drawCircle(
                     color = Color.White.copy(alpha = 0.25f),
-                    radius = size.width * 0.29f,
+                    radius = size.width * 0.23f,
                     center = center,
                     style = Stroke(width = 0.75.dp.toPx()),
                 )
                 drawCircle(
                     color = Color.White.copy(alpha = 0.10f),
-                    radius = size.width * 0.41f,
+                    radius = size.width * 0.32f,
                     center = center,
                     style = Stroke(width = 0.65.dp.toPx()),
                 )
             }
 
-            val iconMountSize = (maxWidth * 0.29f).coerceIn(104.dp, 128.dp)
             val progressWidth = (maxWidth * 0.58f).coerceIn(210.dp, 260.dp)
             Box(
                 modifier = Modifier
@@ -187,12 +191,22 @@ fun BrandedSplashScreen(
                     .background(SplashCream, RoundedCornerShape(50)),
                 contentAlignment = Alignment.Center,
             ) {
-                // This remains the dedicated placement for the final official app icon.
-                Image(
-                    painter = painterResource(R.drawable.ic_app_logo_placeholder),
+                Icon(
+                    painter = painterResource(R.drawable.ic_launcher_microphone_glyph),
                     contentDescription = stringResource(R.string.splash_logo_content_description),
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.size(iconMountSize * 0.58f),
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(iconMountSize * 0.42f)
+                        .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                        .drawWithCache {
+                            val glyphGradient = Brush.verticalGradient(
+                                colors = listOf(SplashForest, SplashSage),
+                            )
+                            onDrawWithContent {
+                                drawContent()
+                                drawRect(brush = glyphGradient, blendMode = BlendMode.SrcAtop)
+                            }
+                        },
                 )
             }
 
@@ -279,7 +293,7 @@ fun BrandedSplashScreen(
 }
 
 @Composable
-private fun SplashLayeredGlow(modifier: Modifier = Modifier) {
+internal fun SplashLayeredGlow(modifier: Modifier = Modifier) {
     val motion = rememberInfiniteTransition(label = "splashLayeredGlowMotion")
     val pulse by motion.animateFloat(
         initialValue = 0f,

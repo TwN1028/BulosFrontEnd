@@ -93,9 +93,10 @@ fun PreservationIntroScreen(
         iconScale.animateTo(1f, tween(durationMillis = 160))
     }
 
-    Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    // Use the same calm cream-and-forest hierarchy as the current tutorial screens.
+    Surface(modifier = modifier.fillMaxSize(), color = HomeContentCream) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
-            val headerHeight = if (maxHeight >= 800.dp) 208.dp else 196.dp
+            val headerHeight = if (maxHeight >= 800.dp) 232.dp else 220.dp
             val majorSpacing = if (maxHeight >= 800.dp) 28.dp else 24.dp
 
             LazyColumn(
@@ -109,18 +110,7 @@ fun PreservationIntroScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = headerHeight)
-                            .clip(
-                                RoundedCornerShape(
-                                    bottomStart = 28.dp,
-                                    bottomEnd = 28.dp,
-                                ),
-                            ),
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .background(appHeaderGradientBrush()),
-                        )
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -130,7 +120,7 @@ fun PreservationIntroScreen(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(60.dp)
+                                    .size(94.dp)
                                     .graphicsLayer {
                                         alpha = iconAlpha
                                         scaleX = iconScale.value
@@ -140,34 +130,45 @@ fun PreservationIntroScreen(
                             ) {
                                 Surface(
                                     modifier = Modifier
-                                        .size(60.dp)
-                                        .shadow(2.dp, CircleShape),
+                                        .size(94.dp)
+                                        .shadow(4.dp, CircleShape),
                                     shape = CircleShape,
-                                    color = SoftGreen.copy(alpha = 0.13f),
+                                    color = SoftGreen.copy(alpha = 0.32f),
                                 ) {}
                                 Surface(
-                                    modifier = Modifier.size(48.dp),
+                                    modifier = Modifier
+                                        .align(Alignment.Center)
+                                        .size(76.dp)
+                                        .shadow(6.dp, CircleShape),
                                     shape = CircleShape,
-                                    color = SoftGreen.copy(alpha = 0.25f),
-                                    contentColor = WarmWhiteCard,
+                                    color = WarmWhiteCard,
+                                    contentColor = DeepForestGreen,
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            imageVector = Icons.Default.Language,
-                                            contentDescription = stringResource(content.iconDescriptionRes),
-                                            modifier = Modifier.size(24.dp),
-                                        )
+                                        Surface(
+                                            modifier = Modifier.size(58.dp),
+                                            shape = CircleShape,
+                                            color = SoftGreen.copy(alpha = 0.56f),
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Language,
+                                                    contentDescription = stringResource(content.iconDescriptionRes),
+                                                    modifier = Modifier.size(30.dp),
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
-                            Spacer(Modifier.height(10.dp))
+                            Spacer(Modifier.height(14.dp))
                             Column(
                                 modifier = Modifier.graphicsLayer { alpha = titleAlpha },
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 Text(
                                     text = stringResource(content.titleRes),
-                                    color = WarmWhiteCard,
+                                    color = ForestGreen,
                                     style = MaterialTheme.typography.headlineMedium.copy(
                                         fontSize = 22.sp,
                                         lineHeight = 27.sp,
@@ -179,7 +180,7 @@ fun PreservationIntroScreen(
                                 Spacer(Modifier.height(5.dp))
                                 Text(
                                     text = stringResource(content.supportRes),
-                                    color = WarmWhiteCard.copy(alpha = 0.80f),
+                                    color = TranslationInputTextColor,
                                     style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 17.sp),
                                     textAlign = TextAlign.Center,
                                 )

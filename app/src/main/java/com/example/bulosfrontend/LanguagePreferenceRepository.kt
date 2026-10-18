@@ -20,6 +20,8 @@ class LanguagePreferenceRepository(private val context: Context) {
     private val fontSizeKey = stringPreferencesKey("selected_font_size")
     private val offlineModeKey = booleanPreferencesKey("offline_mode_enabled")
     private val preservationIntroCompletedKey = booleanPreferencesKey("has_completed_preservation_intro")
+    private val onboardingCompletedKey = booleanPreferencesKey("has_completed_onboarding")
+    private val sttWalkthroughCompletedKey = booleanPreferencesKey("has_completed_stt_walkthrough")
 
     val selectedLanguage: Flow<UiLanguage?> = context.languageDataStore.data
         .catch { exception ->
@@ -32,6 +34,23 @@ class LanguagePreferenceRepository(private val context: Context) {
             if (exception is IOException) emit(emptyPreferences()) else throw exception
         }
         .map { preferences: Preferences -> preferences[preservationIntroCompletedKey] ?: false }
+
+    /** Existing completed introductions remain completed after the guide replaces the old screen. */
+    val hasCompletedOnboarding: Flow<Boolean> = context.languageDataStore.data
+        .catch { exception ->
+            if (exception is IOException) emit(emptyPreferences()) else throw exception
+        }
+        .map { preferences: Preferences ->
+            preferences[onboardingCompletedKey]
+                ?: preferences[preservationIntroCompletedKey]
+                ?: false
+        }
+
+    val hasCompletedSttWalkthrough: Flow<Boolean> = context.languageDataStore.data
+        .catch { exception ->
+            if (exception is IOException) emit(emptyPreferences()) else throw exception
+        }
+        .map { preferences: Preferences -> preferences[sttWalkthroughCompletedKey] ?: false }
 
     val selectedFontSize: Flow<AppFontSize> = context.languageDataStore.data
         .catch { exception ->
@@ -66,6 +85,19 @@ class LanguagePreferenceRepository(private val context: Context) {
     suspend fun markPreservationIntroCompleted() {
         context.languageDataStore.edit { preferences ->
             preferences[preservationIntroCompletedKey] = true
+        }
+    }
+
+    suspend fun markOnboardingCompleted() {
+        context.languageDataStore.edit { preferences ->
+            preferences[onboardingCompletedKey] = true
+            preferences[preservationIntroCompletedKey] = true
+        }
+    }
+
+    suspend fun markSttWalkthroughCompleted() {
+        context.languageDataStore.edit { preferences ->
+            preferences[sttWalkthroughCompletedKey] = true
         }
     }
 }

@@ -2,7 +2,7 @@ package com.example.bulosfrontend
 
 object AppDestinations {
     const val LANGUAGE_SELECTION = "language_selection"
-    const val PRESERVATION_INTRO = "preservation_intro"
+    const val ONBOARDING = "onboarding"
     const val HOME = "home"
     const val HOME_RECORDING = "home_recording"
     const val TEXT = "text"

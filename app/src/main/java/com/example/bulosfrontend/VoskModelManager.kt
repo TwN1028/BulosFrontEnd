@@ -17,39 +17,6 @@ class VoskModelManager(
 ) {
     private val modelRoot = File(context.filesDir, "vosk_models")
 
-    init {
-        runCatching {
-            listOf("English", "Filipino", "Bulos").forEach { lang ->
-                val spec = modelSpec(lang) ?: return@forEach
-                val installedDirectory = File(modelRoot, spec.name)
-                val completionMarker = File(installedDirectory, COMPLETION_MARKER)
-                if (!completionMarker.isFile) {
-                    val assetPaths = listOf("vosk_models/${spec.name}.zip", "${spec.name}.zip")
-                    for (path in assetPaths) {
-                        val success = runCatching {
-                            context.assets.open(path).use { input ->
-                                modelRoot.mkdirs()
-                                val archive = File(modelRoot, "${spec.name}.zip.part")
-                                val stagingDirectory = File(modelRoot, "${spec.name}.installing")
-                                archive.delete()
-                                stagingDirectory.deleteRecursively()
-                                stagingDirectory.mkdirs()
-                                FileOutputStream(archive).use { output -> input.copyTo(output) }
-                                extract(spec, archive, stagingDirectory)
-                                File(stagingDirectory, COMPLETION_MARKER).writeText(spec.md5)
-                                installedDirectory.deleteRecursively()
-                                stagingDirectory.renameTo(installedDirectory)
-                                archive.delete()
-                            }
-                            true
-                        }.getOrDefault(false)
-                        if (success) break
-                    }
-                }
-            }
-        }
-    }
-
     fun supports(language: String): Boolean = modelSpec(language) != null
 
     fun isInstalled(language: String): Boolean {
@@ -84,7 +51,9 @@ class VoskModelManager(
         stagingDirectory.mkdirs()
 
         try {
-            download(spec, archive)
+            if (!copyBundledArchive(spec, archive)) {
+                download(spec, archive)
+            }
             extract(spec, archive, stagingDirectory)
             File(stagingDirectory, COMPLETION_MARKER).writeText(spec.md5)
             installedDirectory.deleteRecursively()
@@ -99,23 +68,26 @@ class VoskModelManager(
         }
     }
 
-    private fun download(spec: ModelSpec, destination: File) {
+    /**
+     * Uses a verified model archive packaged with the APK when one is available.  The extracted
+     * model structure is still checked by [extract]; a missing or invalid asset simply preserves
+     * the existing remote-download path.
+     */
+    private fun copyBundledArchive(spec: ModelSpec, destination: File): Boolean {
         val assetPaths = listOf("vosk_models/${spec.name}.zip", "${spec.name}.zip")
-        var copiedFromAsset = false
-        for (path in assetPaths) {
-            copiedFromAsset = runCatching {
-                context.assets.open(path).use { input ->
-                    FileOutputStream(destination).use { output ->
-                        input.copyTo(output)
-                    }
+        for (assetPath in assetPaths) {
+            val copied = runCatching {
+                context.assets.open(assetPath).use { input ->
+                    FileOutputStream(destination).use { output -> input.copyTo(output) }
                 }
-                true
-            }.getOrDefault(false)
-            if (copiedFromAsset) break
+            }.isSuccess
+            if (copied) return true
         }
+        destination.delete()
+        return false
+    }
 
-        if (copiedFromAsset) return
-
+    private fun download(spec: ModelSpec, destination: File) {
         val request = Request.Builder().url(spec.url).build()
         httpClient.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {

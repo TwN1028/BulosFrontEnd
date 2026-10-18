@@ -32,6 +32,10 @@ sealed interface OfflineLookupResult {
 
 internal class OfflineDictionary(entries: List<Map<String, String>>) {
     private data class Row(val values: Map<UiLanguage, String>, val isPhrase: Boolean)
+    private data class FuzzyCandidate(
+        val suggestion: OfflineTranslationSuggestion,
+        val isPhrase: Boolean,
+    )
 
     private val rows = entries.mapNotNull { rawRow ->
         val values = buildMap {
@@ -55,24 +59,27 @@ internal class OfflineDictionary(entries: List<Map<String, String>>) {
                 TranslationLanguageRules.languageForUi(source),
                 TranslationLanguageRules.languageForUi(target),
             )
-        ) {
-            if (source == UiLanguage.FILIPINO) {
-                return OfflineLookupResult.Translation(text, "offline_filipino_original", 1.0)
-            }
-            return OfflineLookupResult.Translation(text, "offline_original_fallback", 1.0)
+        ) return OfflineLookupResult.Translation(text, "offline_original_fallback", 1.0)
+        if (rows.isEmpty()) return OfflineLookupResult.Translation(text, "offline_original_fallback", 1.0)
+
+        val directResult = lookupDirect(text, source, target)
+        if (directResult is OfflineLookupResult.Translation) {
+            return directResult
         }
-        if (rows.isEmpty()) {
-            if (source == UiLanguage.FILIPINO) {
-                return OfflineLookupResult.Translation(text, "offline_filipino_original", 1.0)
-            }
-            return OfflineLookupResult.Translation(text, "offline_original_fallback", 1.0)
-        }
+
+        translateViaFilipino(text, source, target)?.let { return it }
+        if (directResult is OfflineLookupResult.Suggestions) return directResult
+        return OfflineLookupResult.Translation(text, "offline_original_fallback", 1.0)
+    }
+
+    /**
+     * Looks up a pair without applying the public supported-pair restriction.  This is used only
+     * for the English -> Filipino -> Bulos bridge; it never returns the source text as a match.
+     */
+    private fun lookupDirect(text: String, source: UiLanguage, target: UiLanguage): OfflineLookupResult? {
         val normalizedInput = TextNormalizer.normalizeForMatching(text)
-        if (normalizedInput.isEmpty()) {
-            return OfflineLookupResult.Translation(text, "offline_original_fallback", 1.0)
-        }
+        if (normalizedInput.isEmpty()) return null
         val punctuation = trailingSentencePunctuation(text)
-        val cleanedInput = TextNormalizer.cleanForDisplay(text)
 
         exact(normalizedInput, source, target, phrase = true)?.let {
             return OfflineLookupResult.Translation(it + punctuation, "offline_exact_phrase", 1.0)
@@ -81,146 +88,207 @@ internal class OfflineDictionary(entries: List<Map<String, String>>) {
             return OfflineLookupResult.Translation(it + punctuation, "offline_exact_dictionary", 1.0)
         }
 
-        // --- TIER 3: Subdividing Phrase-Based Chunk Match ---
-        var currentText = cleanedInput
-        val subdividedResult = subdivideAndTranslatePhrases(currentText, source, target)
-        if (subdividedResult != currentText) {
-            currentText = subdividedResult
+        template(text, source, target)?.let {
+            return OfflineLookupResult.Translation(it + punctuation, "offline_template_match", 1.0)
         }
 
-        // --- TIER 4, 5, & 6: Word-by-Word & Fuzzy Matching ---
-        val tokens = currentText.split(Regex("\\s+"))
-        val translatedTokens = tokens.map { token ->
-            if (token.startsWith("[[P") && token.endsWith("]]")) return@map token
+        translateCompleteKnownSequence(text, source, target)?.let {
+            return OfflineLookupResult.Translation(it + punctuation, "offline_exact_composite", 1.0)
+        }
 
-            val normToken = TextNormalizer.normalizeForMatching(token)
-            if (normToken.isEmpty()) return@map token
-
-            exact(normToken, source, target, phrase = false)?.let { return@map it }
-
-            val wordMatch = Regex("^(.+?)([,.!?]+)?$").find(token)
-            if (wordMatch != null) {
-                val coreWord = wordMatch.groupValues[1]
-                val punct = wordMatch.groupValues[2]
-                val coreNorm = TextNormalizer.normalizeForMatching(coreWord)
-                exact(coreNorm, source, target, phrase = false)?.let { return@map it + punct }
+        val candidates = rows.asSequence()
+            .mapNotNull { row ->
+                val sourceText = row.values[source] ?: return@mapNotNull null
+                val translatedText = row.values[target] ?: return@mapNotNull null
+                if (sourceText.contains('_')) return@mapNotNull null
+                val normalizedCandidate = TextNormalizer.normalizeForMatching(sourceText)
+                if (normalizedCandidate.isEmpty()) return@mapNotNull null
+                val distance = levenshteinDistance(normalizedInput, normalizedCandidate)
+                val longestLength = maxOf(normalizedInput.length, normalizedCandidate.length)
+                val similarity = if (longestLength == 0) 1.0 else 1.0 - distance.toDouble() / longestLength
+                FuzzyCandidate(
+                    suggestion = OfflineTranslationSuggestion(sourceText, translatedText, similarity, distance),
+                    isPhrase = row.isPhrase,
+                )
             }
+            .sortedWith(
+                compareByDescending<FuzzyCandidate> { it.suggestion.similarity }
+                    .thenBy { it.suggestion.editDistance }
+                    .thenBy { it.suggestion.sourceText },
+            )
+            .toList()
 
-            findFuzzyWord(normToken, source, target, 0.65)?.let { return@map it }
-            findFuzzyWord(normToken, source, target, 0.45)?.let { return@map it }
-
-            token
+        val best = candidates.firstOrNull()
+        val runnerUp = candidates.getOrNull(1)
+        if (
+            best != null &&
+            normalizedInput.length >= MIN_FUZZY_LENGTH &&
+            best.suggestion.similarity >= AUTO_TRANSLATE_SIMILARITY &&
+            best.suggestion.editDistance <= maximumAutomaticEdits(normalizedInput.length) &&
+            (runnerUp == null || best.suggestion.similarity - runnerUp.suggestion.similarity >= AMBIGUITY_MARGIN)
+        ) {
+            return OfflineLookupResult.Translation(
+                best.suggestion.translatedText + punctuation,
+                if (best.isPhrase) "offline_strict_fuzzy_phrase" else "offline_strict_fuzzy_dictionary",
+                best.suggestion.similarity,
+            )
         }
 
-        val finalResult = translatedTokens.joinToString(" ")
-        if (finalResult.isNotBlank() && finalResult != cleanedInput) {
-            return OfflineLookupResult.Translation(finalResult + punctuation, "offline_multi_tier_translation", 1.0)
-        }
-
-        // --- TIER 7: English -> Filipino -> Target Bridge ---
-        if (source == UiLanguage.ENGLISH && target != UiLanguage.FILIPINO) {
-            val filipinoResult = lookup(text, UiLanguage.ENGLISH, UiLanguage.FILIPINO)
-            val filipinoText = when (filipinoResult) {
-                is OfflineLookupResult.Translation -> filipinoResult.translatedText
-                else -> text
-            }
-            if (filipinoText != text) {
-                val finalResult = lookup(filipinoText, UiLanguage.FILIPINO, target)
-                if (finalResult is OfflineLookupResult.Translation) {
-                    return OfflineLookupResult.Translation(finalResult.translatedText + punctuation, "offline_bridge_english_filipino", 1.0)
-                }
-            }
-        }
-
-        return OfflineLookupResult.Translation(text, "offline_original_fallback", 1.0)
+        // Do not surface fuzzy candidate lists in the translation or dictionary experience.
+        // Only exact and uniquely safe automatic matches are eligible for translation.
+        return null
     }
 
-    private fun findFuzzyWord(normalizedInput: String, source: UiLanguage, target: UiLanguage, threshold: Double): String? {
-        if (normalizedInput.length < 2) return null
-        var bestMatch: String? = null
-        var highestSimilarity = threshold
-
-        rows.forEach { row ->
-            val sourceVal = row.values[source] ?: return@forEach
-            val targetVal = row.values[target] ?: return@forEach
-            val normCand = TextNormalizer.normalizeForMatching(sourceVal)
-            if (normCand.isEmpty()) return@forEach
-            val distance = levenshteinDistance(normalizedInput, normCand)
-            val maxLen = maxOf(normalizedInput.length, normCand.length)
-            if (maxLen == 0) return@forEach
-            val similarity = 1.0 - (distance.toDouble() / maxLen.toDouble())
-            if (similarity >= highestSimilarity) {
-                highestSimilarity = similarity
-                bestMatch = targetVal
-            }
-        }
-        return bestMatch
-    }
-
-    private fun subdivideAndTranslatePhrases(
+    /** Fills corresponding underscore placeholders only when the full template matches. */
+    private fun template(
         text: String,
         source: UiLanguage,
         target: UiLanguage,
-    ): String {
-        val words = text.split(Regex("\\s+"))
-        if (words.size <= 1) return text
+    ): String? = rows.asSequence().mapNotNull { row ->
+        val sourceTemplate = row.values[source] ?: return@mapNotNull null
+        val targetTemplate = row.values[target] ?: return@mapNotNull null
+        if (!sourceTemplate.contains('_') || !targetTemplate.contains('_')) return@mapNotNull null
 
-        for (windowSize in words.size downTo 2) {
-            for (i in 0..words.size - windowSize) {
-                val subPhrase = words.subList(i, i + windowSize).joinToString(" ")
-                val normSub = TextNormalizer.normalizeForMatching(subPhrase)
-                val match = exact(normSub, source, target, phrase = true)
-                    ?: exact(normSub, source, target, phrase = false)
-                if (match != null) {
-                    val leftPart = if (i > 0) words.subList(0, i).joinToString(" ") else ""
-                    val rightPart = if (i + windowSize < words.size) words.subList(i + windowSize, words.size).joinToString(" ") else ""
+        val template = TextNormalizer.cleanForDisplay(sourceTemplate)
+            .replace(Regex("[,.;:!?…]+$"), "")
+        val input = TextNormalizer.cleanForDisplay(text)
+            .replace(Regex("[,.;:!?…]+$"), "")
+        val pattern = Regex(
+            "^" + template.split(Regex("_+")).joinToString("(.+?)") { Regex.escape(it) } + "$",
+            RegexOption.IGNORE_CASE,
+        )
+        val match = pattern.matchEntire(input) ?: return@mapNotNull null
+        val captures = match.groupValues.drop(1).map(String::trim)
+        if (captures.any(String::isBlank)) return@mapNotNull null
 
-                    val translatedLeft = if (leftPart.isNotEmpty()) subdivideAndTranslatePhrases(leftPart, source, target) else ""
-                    val translatedRight = if (rightPart.isNotEmpty()) subdivideAndTranslatePhrases(rightPart, source, target) else ""
+        var captureIndex = 0
+        targetTemplate.trim().removeSuffix(".").replace(Regex("_+")) {
+            captures.getOrNull(captureIndex++) ?: return@replace it.value
+        }.takeIf { captureIndex == captures.size }
+    }.distinct().singleOrNull()
 
-                    return listOfNotNull(
-                        translatedLeft.takeIf { it.isNotEmpty() },
-                        match,
-                        translatedRight.takeIf { it.isNotEmpty() },
-                    ).joinToString(" ")
-                }
+    private fun translateViaFilipino(
+        text: String,
+        source: UiLanguage,
+        target: UiLanguage,
+    ): OfflineLookupResult.Translation? {
+        if (source != UiLanguage.ENGLISH || target != UiLanguage.BULOS) return null
+
+        // Match the backend's safe English -> Filipino -> Bulos fallback.  Work token by
+        // token and only use verified exact dictionary rows: a translated Bulos term must never
+        // be sent through a second fuzzy pass and numbers must pass through unchanged.
+        val tokens = TextNormalizer.cleanForDisplay(text)
+            .split(Regex("\\s+"))
+            .filter(String::isNotBlank)
+        if (tokens.isEmpty()) return null
+
+        var resolvedTokenCount = 0
+        val translated = mutableListOf<String>()
+        var index = 0
+        while (index < tokens.size) {
+            // Keep verified direct phrases intact before considering individual words.
+            val directPhrase = (tokens.size downTo index + 2).firstNotNullOfOrNull { endExclusive ->
+                val phrase = tokens.subList(index, endExclusive).joinToString(" ")
+                exact(
+                    TextNormalizer.normalizeForMatching(phrase),
+                    UiLanguage.ENGLISH,
+                    UiLanguage.BULOS,
+                    phrase = true,
+                )?.let { translation -> endExclusive to translation }
             }
+            if (directPhrase != null) {
+                val (endExclusive, translation) = directPhrase
+                translated += translation + trailingSentencePunctuation(tokens[endExclusive - 1])
+                resolvedTokenCount += endExclusive - index
+                index = endExclusive
+                continue
+            }
+
+            val token = tokens[index]
+            if (token.matches(Regex("\\d+(?:[.,]\\d+)?"))) {
+                translated += token
+                index += 1
+                continue
+            }
+
+            val punctuation = trailingSentencePunctuation(token)
+            val normalizedToken = TextNormalizer.normalizeForMatching(token)
+            if (normalizedToken.isEmpty()) {
+                translated += token
+                index += 1
+                continue
+            }
+
+            val directBulos = exact(normalizedToken, UiLanguage.ENGLISH, UiLanguage.BULOS, phrase = false)
+            if (directBulos != null) {
+                resolvedTokenCount += 1
+                translated += directBulos + punctuation
+                index += 1
+                continue
+            }
+
+            val filipino = exact(normalizedToken, UiLanguage.ENGLISH, UiLanguage.FILIPINO, phrase = false)
+            if (filipino == null) {
+                translated += token
+            } else {
+                val bulos = exact(
+                    TextNormalizer.normalizeForMatching(filipino),
+                    UiLanguage.FILIPINO,
+                    UiLanguage.BULOS,
+                    phrase = false,
+                )
+                resolvedTokenCount += 1
+                translated += (bulos ?: filipino) + punctuation
+            }
+            index += 1
         }
-        return text
+        if (resolvedTokenCount == 0) return null
+
+        return OfflineLookupResult.Translation(
+            translatedText = translated.joinToString(" "),
+            method = "offline_bridge_english_filipino",
+            confidence = resolvedTokenCount.toDouble() / tokens.size,
+        )
     }
 
-    fun matchPhraseToBulos(text: String): Pair<String, Double>? {
-        val norm = TextNormalizer.normalizeForMatching(text)
-        return rows.asSequence()
-            .filter { it.isPhrase }
-            .mapNotNull { row ->
-                val bulos = row.values[UiLanguage.BULOS]?.let(TextNormalizer::normalizeForMatching) ?: return@mapNotNull null
-                val sim = 1.0 - (levenshteinDistance(norm, bulos).toDouble() / maxOf(norm.length, bulos.length, 1))
-                Pair(row.values[UiLanguage.BULOS] ?: "", sim)
-            }
-            .maxByOrNull { it.second }
-    }
+    /**
+     * Composes a result only when the whole input is covered by verified exact phrase or word rows.
+     * It never translates an unmatched token and does not use fuzzy matching for any phrase segment.
+     */
+    private fun translateCompleteKnownSequence(
+        text: String,
+        source: UiLanguage,
+        target: UiLanguage,
+    ): String? {
+        val tokens = TextNormalizer.cleanForDisplay(text).split(Regex("\\s+")).filter(String::isNotBlank)
+        if (tokens.size < 2) return null
 
-    fun findBulosViaFilipino(text: String): Pair<String, Double>? {
-        val norm = TextNormalizer.normalizeForMatching(text)
-        return rows.asSequence()
-            .mapNotNull { row ->
-                val filipino = row.values[UiLanguage.FILIPINO]?.let(TextNormalizer::normalizeForMatching) ?: return@mapNotNull null
-                val sim = 1.0 - (levenshteinDistance(norm, filipino).toDouble() / maxOf(norm.length, filipino.length, 1))
-                Pair(row.values[UiLanguage.BULOS] ?: "", sim)
-            }
-            .maxByOrNull { it.second }
-    }
+        fun translateFrom(index: Int): List<String>? {
+            if (index == tokens.size) return emptyList()
 
-    fun findClosestBulosWord(text: String): Pair<String, Double>? {
-        val norm = TextNormalizer.normalizeForMatching(text)
-        return rows.asSequence()
-            .mapNotNull { row ->
-                val bulos = row.values[UiLanguage.BULOS]?.let(TextNormalizer::normalizeForMatching) ?: return@mapNotNull null
-                val sim = 1.0 - (levenshteinDistance(norm, bulos).toDouble() / maxOf(norm.length, bulos.length, 1))
-                Pair(row.values[UiLanguage.BULOS] ?: "", sim)
+            for (endExclusive in tokens.size downTo index + 2) {
+                val phrase = tokens.subList(index, endExclusive).joinToString(" ")
+                val translatedPhrase = exact(
+                    TextNormalizer.normalizeForMatching(phrase),
+                    source,
+                    target,
+                    phrase = true,
+                ) ?: continue
+                val remaining = translateFrom(endExclusive) ?: continue
+                return listOf(translatedPhrase) + remaining
             }
-            .maxByOrNull { it.second }
+
+            val word = exact(
+                TextNormalizer.normalizeForMatching(tokens[index]),
+                source,
+                target,
+                phrase = false,
+            ) ?: return null
+            val remaining = translateFrom(index + 1) ?: return null
+            return listOf(word) + remaining
+        }
+
+        return translateFrom(0)?.joinToString(" ")
     }
 
     fun displayEntries(): List<DictionaryEntry> = rows.map { row ->
@@ -240,15 +308,14 @@ internal class OfflineDictionary(entries: List<Map<String, String>>) {
             .mapNotNull { it.values[target] }
             .distinct()
             .toList()
-        return translations.firstOrNull()
+        // A normalized source key with conflicting target values must never choose an arbitrary first row.
+        return translations.singleOrNull()
     }
 
     companion object {
         const val CATEGORY_KEY = "_category"
         const val AUTO_TRANSLATE_SIMILARITY = 0.88
-        const val SUGGESTION_SIMILARITY = 0.65
         const val AMBIGUITY_MARGIN = 0.08
-        const val MAX_SUGGESTIONS = 3
         private const val MIN_FUZZY_LENGTH = 4
 
         private fun maximumAutomaticEdits(length: Int): Int = when {
@@ -291,39 +358,25 @@ internal class OfflineDictionary(entries: List<Map<String, String>>) {
 
 class OfflineDictionaryManager(private val context: Context) {
     private val dictionaryFile = File(context.filesDir, "custom_dictionary.json")
-    @Volatile private var dictionary: OfflineDictionary
-    @Volatile var isLoaded: Boolean
-
-    init {
-        val initialAdditions = runCatching { readVerifiedAdditions() }.getOrDefault(emptyList())
-        val fallbackEntries = if (initialAdditions.isEmpty()) {
-            listOf(
-                mapOf("English" to "good morning", "Filipino" to "magandang umaga", "Bulos" to "maabig a buklas"),
-                mapOf("English" to "I am ___", "Filipino" to "Ako si ___.", "Bulos" to "Aku i ___."),
-                mapOf("English" to "I", "Filipino" to "Ako", "Bulos" to "Aku"),
-                mapOf("English" to "is / are", "Filipino" to "si", "Bulos" to "i"),
-                mapOf("English" to "how are you", "Filipino" to "kamusta ka", "Bulos" to "magiano kamu di"),
-            )
-        } else {
-            initialAdditions
-        }
-        dictionary = OfflineDictionary(fallbackEntries)
-        isLoaded = fallbackEntries.isNotEmpty()
-    }
+    @Volatile private var dictionary = OfflineDictionary(emptyList())
+    @Volatile var isLoaded = false
+        private set
 
     suspend fun load(): Unit = withContext(Dispatchers.IO) {
         val cachedEntries = if (dictionaryFile.exists()) {
-            runCatching { readEntries(dictionaryFile) }.getOrElse { emptyList() }
+            runCatching { readEntries(dictionaryFile) }.getOrElse {
+                isLoaded = false
+                return@withContext
+            }
         } else {
             emptyList()
         }
         runCatching { mergeVerifiedDictionaryAdditions(cachedEntries, readVerifiedAdditions()) }
             .onSuccess { entries ->
-                if (entries.isNotEmpty()) {
-                    dictionary = OfflineDictionary(entries)
-                    isLoaded = true
-                }
+                dictionary = OfflineDictionary(entries)
+                isLoaded = entries.isNotEmpty()
             }
+            .onFailure { isLoaded = false }
     }
 
     suspend fun replace(entries: List<Map<String, String>>) = withContext(Dispatchers.IO) {
@@ -347,10 +400,6 @@ class OfflineDictionaryManager(private val context: Context) {
 
     fun lookup(text: String, source: UiLanguage, target: UiLanguage): OfflineLookupResult =
         dictionary.lookup(text, source, target)
-
-    fun matchPhraseToBulos(text: String): Pair<String, Double>? = dictionary.matchPhraseToBulos(text)
-    fun findBulosViaFilipino(text: String): Pair<String, Double>? = dictionary.findBulosViaFilipino(text)
-    fun findClosestBulosWord(text: String): Pair<String, Double>? = dictionary.findClosestBulosWord(text)
 
     fun entries(): List<DictionaryEntry> = dictionary.displayEntries()
 

@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.bulosfrontend"
-        minSdk = 26
+        minSdk = 23
         @Suppress("OldTargetApi")
         targetSdk = 36
         versionCode = 1
@@ -59,15 +59,11 @@ dependencies {
     implementation(libs.retrofit.converter.gson)
     implementation(libs.okhttp)
     implementation(libs.vosk.android)
-    implementation(libs.poi)
-    implementation(libs.poi.ooxml)
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
     implementation(libs.material)
     testImplementation(libs.junit)
     testImplementation(libs.okhttp.mockwebserver)
-    testImplementation(libs.poi)
-    testImplementation(libs.poi.ooxml)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)

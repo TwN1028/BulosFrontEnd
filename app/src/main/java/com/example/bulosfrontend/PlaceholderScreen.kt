@@ -23,8 +23,17 @@ import com.example.bulosfrontend.ui.theme.SoftGreen
 import com.example.bulosfrontend.ui.theme.WarmWhiteCard
 
 @Composable
-fun HelpOnboardingScreen(viewModel: MainViewModel, onBack: () -> Unit) {
+fun HelpOnboardingScreen(
+    viewModel: MainViewModel,
+    onBack: () -> Unit,
+    onOpenGuide: () -> Unit,
+) {
     val help = viewModel.content.help
+    val guideLabelRes = when (viewModel.uiLanguage) {
+        UiLanguage.ENGLISH -> R.string.ui_onboarding_guide_eng
+        UiLanguage.FILIPINO -> R.string.ui_onboarding_guide_fil
+        UiLanguage.BULOS -> R.string.ui_onboarding_guide_bul
+    }
     Surface(Modifier.fillMaxSize(), color = HomeContentCream) {
         Column(Modifier.fillMaxSize()) {
             FeaturePatternHeader(
@@ -81,6 +90,17 @@ fun HelpOnboardingScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                                 textAlign = TextAlign.Center,
                             )
                         }
+                    }
+                }
+                item {
+                    OutlinedButton(
+                        onClick = onOpenGuide,
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape = RoundedCornerShape(17.dp),
+                        border = BorderStroke(1.dp, ForestGreen),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = ForestGreen),
+                    ) {
+                        Text(stringResource(guideLabelRes), fontWeight = FontWeight.SemiBold)
                     }
                 }
                 item {

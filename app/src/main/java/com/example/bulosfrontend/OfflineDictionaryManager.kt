@@ -299,6 +299,40 @@ internal class OfflineDictionary(entries: List<Map<String, String>>) {
         )
     }
 
+    fun matchPhraseToBulos(text: String): Pair<String, Double>? {
+        val norm = TextNormalizer.normalizeForMatching(text)
+        return rows.asSequence()
+            .filter { it.isPhrase }
+            .mapNotNull { row ->
+                val bulos = row.values[UiLanguage.BULOS]?.let(TextNormalizer::normalizeForMatching) ?: return@mapNotNull null
+                val sim = 1.0 - (levenshteinDistance(norm, bulos).toDouble() / maxOf(norm.length, bulos.length, 1))
+                Pair(row.values[UiLanguage.BULOS] ?: "", sim)
+            }
+            .maxByOrNull { it.second }
+    }
+
+    fun findBulosViaFilipino(text: String): Pair<String, Double>? {
+        val norm = TextNormalizer.normalizeForMatching(text)
+        return rows.asSequence()
+            .mapNotNull { row ->
+                val filipino = row.values[UiLanguage.FILIPINO]?.let(TextNormalizer::normalizeForMatching) ?: return@mapNotNull null
+                val sim = 1.0 - (levenshteinDistance(norm, filipino).toDouble() / maxOf(norm.length, filipino.length, 1))
+                Pair(row.values[UiLanguage.BULOS] ?: "", sim)
+            }
+            .maxByOrNull { it.second }
+    }
+
+    fun findClosestBulosWord(text: String): Pair<String, Double>? {
+        val norm = TextNormalizer.normalizeForMatching(text)
+        return rows.asSequence()
+            .mapNotNull { row ->
+                val bulos = row.values[UiLanguage.BULOS]?.let(TextNormalizer::normalizeForMatching) ?: return@mapNotNull null
+                val sim = 1.0 - (levenshteinDistance(norm, bulos).toDouble() / maxOf(norm.length, bulos.length, 1))
+                Pair(row.values[UiLanguage.BULOS] ?: "", sim)
+            }
+            .maxByOrNull { it.second }
+    }
+
     private fun exact(normalizedInput: String, source: UiLanguage, target: UiLanguage, phrase: Boolean): String? {
         val translations = rows.asSequence()
             .filter { row ->
@@ -400,6 +434,10 @@ class OfflineDictionaryManager(private val context: Context) {
 
     fun lookup(text: String, source: UiLanguage, target: UiLanguage): OfflineLookupResult =
         dictionary.lookup(text, source, target)
+
+    fun matchPhraseToBulos(text: String): Pair<String, Double>? = dictionary.matchPhraseToBulos(text)
+    fun findBulosViaFilipino(text: String): Pair<String, Double>? = dictionary.findBulosViaFilipino(text)
+    fun findClosestBulosWord(text: String): Pair<String, Double>? = dictionary.findClosestBulosWord(text)
 
     fun entries(): List<DictionaryEntry> = dictionary.displayEntries()
 

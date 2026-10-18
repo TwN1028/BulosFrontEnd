@@ -728,11 +728,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (!voskModelManager.supports(modelLanguage) ||
             offlineSpeechResourceState(language) == OfflineSpeechResourceState.READY
         ) return
-        if (offlineSpeechResourceStates.values.any { it == OfflineSpeechResourceState.DOWNLOADING }) return
-        if (!NetworkUtils.isOnline(getApplication())) {
-            updateOfflineSpeechResourceState(language, OfflineSpeechResourceState.FAILED)
-            return
-        }
+        if (offlineSpeechResourceState(language) == OfflineSpeechResourceState.DOWNLOADING) return
+
+        voskPreloadJob?.cancel()
         val previousPreload = voskPreloadJob
         voskPreloadJob = viewModelScope.launch {
             updateOfflineSpeechResourceState(language, OfflineSpeechResourceState.DOWNLOADING)

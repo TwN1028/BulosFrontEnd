@@ -536,6 +536,8 @@ fun FeaturePatternHeader(
                 }
             }
             trailingContent()
+            Spacer(Modifier.width(8.dp))
+            ConnectionStatusIndicator()
         }
         Spacer(Modifier.height(headerBottomExtension))
         }

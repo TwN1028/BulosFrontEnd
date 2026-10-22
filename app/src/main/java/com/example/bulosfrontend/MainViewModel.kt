@@ -363,6 +363,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun selectOfflineMode(enabled: Boolean) {
+        if (offlineModeEnabled == enabled) return
+        offlineModeEnabled = enabled
         translationRepository.setOfflineModeEnabled(enabled)
         viewModelScope.launch { languagePreferences.saveOfflineMode(enabled) }
         if (enabled) {

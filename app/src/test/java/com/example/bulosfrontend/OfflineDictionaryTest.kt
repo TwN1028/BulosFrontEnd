@@ -215,6 +215,69 @@ class OfflineDictionaryTest {
         assertEquals(0.5, result.confidence, 0.0)
     }
 
+    @Test
+    fun grammarRulesRemainDisabledByDefaultAndDoNotInterfere() {
+        BulosGrammarRuleRegistry.clear()
+        BulosGrammarRuleRegistry.register(
+            BulosGrammarRule(
+                id = "default-disabled",
+                direction = RuleTranslationDirection.ENGLISH_TO_BULOS,
+                description = "Disabled rule",
+                condition = { it.contains("coat") },
+                transformation = { "overridden-coat" },
+                priority = 1,
+                isEnabled = false,
+            ),
+        )
+
+        val result = dictionary.lookup("coat", UiLanguage.ENGLISH, UiLanguage.BULOS)
+        assertEquals("coat-bul", (result as OfflineLookupResult.Translation).translatedText)
+        assertEquals("offline_exact_dictionary", result.method)
+        BulosGrammarRuleRegistry.clear()
+    }
+
+    @Test
+    fun explicitlyEnabledGrammarRuleAppliesWhenExactMatchMisses() {
+        BulosGrammarRuleRegistry.clear()
+        BulosGrammarRuleRegistry.register(
+            BulosGrammarRule(
+                id = "enabled-test-rule",
+                direction = RuleTranslationDirection.ENGLISH_TO_BULOS,
+                description = "Enabled test rule",
+                condition = { it.equals("unknown-term", ignoreCase = true) },
+                transformation = { "rule-transformed-term" },
+                priority = 1,
+                isEnabled = true,
+            ),
+        )
+
+        val result = dictionary.lookup("unknown-term", UiLanguage.ENGLISH, UiLanguage.BULOS)
+        assertEquals("rule-transformed-term", (result as OfflineLookupResult.Translation).translatedText)
+        assertEquals("offline_grammar_rule", result.method)
+        BulosGrammarRuleRegistry.clear()
+    }
+
+    @Test
+    fun exactMatchTakesPrecedenceOverEnabledGrammarRule() {
+        BulosGrammarRuleRegistry.clear()
+        BulosGrammarRuleRegistry.register(
+            BulosGrammarRule(
+                id = "rule-override-attempt",
+                direction = RuleTranslationDirection.ENGLISH_TO_BULOS,
+                description = "Rule override attempt",
+                condition = { it.contains("beautiful") },
+                transformation = { "rule-overridden" },
+                priority = 1,
+                isEnabled = true,
+            ),
+        )
+
+        val result = dictionary.lookup("beautiful", UiLanguage.ENGLISH, UiLanguage.BULOS)
+        assertEquals("masampat", (result as OfflineLookupResult.Translation).translatedText)
+        assertEquals("offline_exact_dictionary", result.method)
+        BulosGrammarRuleRegistry.clear()
+    }
+
     private fun assertExactComposite(
         input: String,
         source: UiLanguage,

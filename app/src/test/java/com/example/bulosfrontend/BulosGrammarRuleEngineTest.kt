@@ -97,4 +97,21 @@ class BulosGrammarRuleEngineTest {
         val result = engine.applyRules("unrelated input text 123", RuleTranslationDirection.ENGLISH_TO_BULOS)
         assertEquals("unrelated input text 123", result)
     }
+
+    @Test
+    fun `batch 3 possessive rules B1 to B4 transform correctly`() {
+        BulosGrammarRuleLoader.loadRules()
+
+        val r1 = engine.applyRules("Dēku i beloy a oyo", RuleTranslationDirection.BULOS_TO_FILIPINO)
+        assertEquals("Sa akin ang beloy na ito", r1)
+
+        val r2 = engine.applyRules("Dikaw i silpon", RuleTranslationDirection.BULOS_TO_FILIPINO)
+        assertEquals("Sa iyo ang cellphone", r2)
+
+        val r3 = engine.applyRules("Dikami i demit a iwina", RuleTranslationDirection.BULOS_TO_FILIPINO)
+        assertEquals("Sa amin ang demit na iyan", r3)
+
+        val r4 = engine.applyRules("Diya i bengka", RuleTranslationDirection.BULOS_TO_FILIPINO)
+        assertEquals("Sa kaniya ang bengka", r4)
+    }
 }

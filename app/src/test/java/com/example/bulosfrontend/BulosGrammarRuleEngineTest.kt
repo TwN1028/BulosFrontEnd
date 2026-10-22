@@ -125,4 +125,29 @@ class BulosGrammarRuleEngineTest {
         val nearMiss2 = engine.applyRules("Dikaw i beloy a invalid", RuleTranslationDirection.BULOS_TO_FILIPINO)
         assertEquals("Dikaw i beloy a invalid", nearMiss2)
     }
+
+    @Test
+    fun `batch 4 sentence structure rules transform correctly`() {
+        BulosGrammarRuleLoader.loadRules()
+
+        val r1 = engine.applyRules("Mokpal i samoy ni Masampat", RuleTranslationDirection.BULOS_TO_FILIPINO)
+        assertEquals("Makapal ang buhok ni Masampat", r1)
+
+        val r2 = engine.applyRules("Dikitam i beloy de Tumagtag", RuleTranslationDirection.BULOS_TO_ENGLISH)
+        assertEquals("The house in Tumagtag is ours", r2)
+
+        val r3 = engine.applyRules("Dikamu i beloy de Sinilaben", RuleTranslationDirection.BULOS_TO_FILIPINO)
+        assertEquals("Sa inyo ang bahay sa Sinilaban", r3)
+
+        val r4 = engine.applyRules("Didē i beloy a inon", RuleTranslationDirection.BULOS_TO_ENGLISH)
+        assertEquals("That house is theirs", r4)
+    }
+
+    @Test
+    fun `batch 4 sentence structure rules reject near misses`() {
+        BulosGrammarRuleLoader.loadRules()
+
+        val nearMiss = engine.applyRules("Mokpal i samoy ni Unknown", RuleTranslationDirection.BULOS_TO_FILIPINO)
+        assertEquals("Mokpal i samoy ni Unknown", nearMiss)
+    }
 }

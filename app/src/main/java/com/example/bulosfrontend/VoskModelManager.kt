@@ -51,10 +51,12 @@ class VoskModelManager(
         stagingDirectory.mkdirs()
 
         try {
-            if (!copyBundledArchive(spec, archive)) {
-                download(spec, archive)
+            if (!copyBundledDirectory(spec, stagingDirectory)) {
+                if (!copyBundledArchive(spec, archive)) {
+                    download(spec, archive)
+                }
+                extract(spec, archive, stagingDirectory)
             }
-            extract(spec, archive, stagingDirectory)
             File(stagingDirectory, COMPLETION_MARKER).writeText(spec.md5)
             installedDirectory.deleteRecursively()
             if (!stagingDirectory.renameTo(installedDirectory)) {
@@ -66,6 +68,43 @@ class VoskModelManager(
         } finally {
             archive.delete()
         }
+    }
+
+    private fun copyBundledDirectory(spec: ModelSpec, destination: File): Boolean {
+        val possibleAssetDirs = listOf("vosk_models/${spec.name}", spec.name)
+        for (assetDir in possibleAssetDirs) {
+            val copied = runCatching {
+                val list = context.assets.list(assetDir)
+                if (!list.isNullOrEmpty()) {
+                    destination.mkdirs()
+                    copyAssetDirRecursive(assetDir, destination)
+                    true
+                } else {
+                    false
+                }
+            }.getOrDefault(false)
+            if (copied) return true
+        }
+        return false
+    }
+
+    private fun copyAssetDirRecursive(assetPath: String, targetDir: File): Boolean {
+        return runCatching {
+            val list = context.assets.list(assetPath)
+            if (list.isNullOrEmpty()) {
+                context.assets.open(assetPath).use { input ->
+                    FileOutputStream(targetDir).use { output -> input.copyTo(output) }
+                }
+            } else {
+                targetDir.mkdirs()
+                for (item in list) {
+                    val subPath = "$assetPath/$item"
+                    val subTarget = File(targetDir, item)
+                    copyAssetDirRecursive(subPath, subTarget)
+                }
+            }
+            true
+        }.getOrDefault(false)
     }
 
     /**

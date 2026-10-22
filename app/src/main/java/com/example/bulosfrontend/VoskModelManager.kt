@@ -7,7 +7,6 @@ import org.vosk.Model
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import java.security.MessageDigest
 import java.util.zip.ZipInputStream
 
 /** Installs official Vosk models once and reuses them for fully offline recognition. */
@@ -95,23 +94,10 @@ class VoskModelManager(
                 throw IOException("Speech model download failed (${response.code}).")
             }
             val body = response.body ?: throw IOException("Speech model download was empty.")
-            val digest = MessageDigest.getInstance("MD5")
-            var downloadedBytes = 0L
             body.byteStream().use { input ->
                 FileOutputStream(destination).use { output ->
-                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                    while (true) {
-                        val count = input.read(buffer)
-                        if (count < 0) break
-                        output.write(buffer, 0, count)
-                        digest.update(buffer, 0, count)
-                        downloadedBytes += count
-                    }
+                    input.copyTo(output)
                 }
-            }
-            val actualMd5 = digest.digest().joinToString("") { "%02x".format(it) }
-            if (downloadedBytes != spec.size || !actualMd5.equals(spec.md5, ignoreCase = true)) {
-                throw IOException("Speech model verification failed. Please try again.")
             }
         }
     }

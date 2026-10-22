@@ -114,4 +114,15 @@ class BulosGrammarRuleEngineTest {
         val r4 = engine.applyRules("Diya i bengka", RuleTranslationDirection.BULOS_TO_FILIPINO)
         assertEquals("Sa kaniya ang bengka", r4)
     }
+
+    @Test
+    fun `batch 3 possessive rules reject near misses and unsupported nouns`() {
+        BulosGrammarRuleLoader.loadRules()
+
+        val nearMiss1 = engine.applyRules("Dēku i kotse a oyo", RuleTranslationDirection.BULOS_TO_FILIPINO)
+        assertEquals("Dēku i kotse a oyo", nearMiss1)
+
+        val nearMiss2 = engine.applyRules("Dikaw i beloy a invalid", RuleTranslationDirection.BULOS_TO_FILIPINO)
+        assertEquals("Dikaw i beloy a invalid", nearMiss2)
+    }
 }

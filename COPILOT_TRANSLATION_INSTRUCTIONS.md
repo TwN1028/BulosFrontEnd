@@ -10,22 +10,22 @@ This document provides instructions for GitHub Copilot (and any assistant workin
 
 ---
 
-## 2. 7-Tier Offline Translation Pipeline (`OfflineDictionary`)
+## 2. Offline Translation Pipeline (`OfflineDictionary`)
 All offline translations must strictly follow this execution order:
 1. **Tier 1 (Exact Sentence / Phrase Match)**: Complete normalized sentence or multiword expression match.
 2. **Tier 2 (Template / Blank Match)**: Wildcard template matching supporting `___` variable substitution.
 3. **Tier 3 (Recursive Chunk / Subdividing Phrase Match)**: Longest-to-shortest n-gram phrase chunk matching for compound sentences.
 4. **Tier 4 (Word-by-Word Match)**: Token-by-token exact dictionary lookup with punctuation preservation.
-5. **Tier 5 (Strict Fuzzy Match)**: Levenshtein distance matching with high similarity ($\ge 0.65$).
-6. **Tier 6 (Lenient Fuzzy Match)**: Levenshtein distance matching with fallback similarity ($\ge 0.45$).
-7. **Tier 7 (Pivot-Language Bridge)**: English $\rightarrow$ Filipino $\rightarrow$ Bulos bridging when direct English-to-Bulos matches are partial or missing.
+5. **Tier 5 (Pivot-Language Bridge)**: English $\rightarrow$ Filipino $\rightarrow$ Bulos bridging when direct English-to-Bulos matches are partial or missing.
+- **Fuzzy Matching**: **Permanently disabled** to prevent hallucinations and word mismatches. Unmatched tokens/sentences correctly fall back to original text (`offline_original_fallback`).
+- **Capitalization**: Automatic sentence-initial capitalization preservation (if input starts with an uppercase letter and output starts with a lowercase letter, the output's first character is capitalized).
 
 ---
 
 ## 3. Grammar Rule Engine (`BulosGrammarRuleEngine`)
 - **Structure**: `BulosGrammarRule` data class with ID, direction, description, condition lambda, transformation lambda, priority, and `isEnabled` state.
 - **Default State**: All rules **must remain disabled by default** (`isEnabled = false`).
-- **Precedence**: Exact dataset matching (`Tier 1-4`) always takes strict precedence over grammar rules. Rules only apply when exact matching misses and when explicitly enabled and matching the requested translation direction.
+- **Precedence**: Exact dataset matching always takes strict precedence over grammar rules. Rules only apply when exact matching misses and when explicitly enabled and matching the requested translation direction.
 
 ---
 

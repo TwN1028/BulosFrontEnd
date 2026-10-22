@@ -24,7 +24,7 @@ class VerifiedDictionaryAdditionsTest {
         val phrase = bundledAdditions().first {
             val en = it["English"].orEmpty()
             val bul = it["Bulos"].orEmpty()
-            en.isNotBlank() && bul.isNotBlank() && !en.endsWith(".") && !bul.endsWith(".") && it[OfflineDictionary.CATEGORY_KEY]?.contains("phrase", true) == true
+            en.isNotBlank() && bul.isNotBlank() && en != "—" && bul != "—" && !en.endsWith(".") && !bul.endsWith(".")
         }
         val dictionary = OfflineDictionary(mergeVerifiedDictionaryAdditions(emptyList(), listOf(phrase)))
 

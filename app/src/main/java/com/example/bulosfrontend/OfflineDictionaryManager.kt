@@ -93,62 +93,22 @@ internal class OfflineDictionary(entries: List<Map<String, String>>) {
         if (normalizedInput.isEmpty()) return null
         val punctuation = trailingSentencePunctuation(text)
 
-        exact(normalizedInput, source, target, phrase = true)?.let {
-            return OfflineLookupResult.Translation(it + punctuation, "offline_exact_phrase", 1.0)
-        }
-        exact(normalizedInput, source, target, phrase = false)?.let {
-            return OfflineLookupResult.Translation(it + punctuation, "offline_exact_dictionary", 1.0)
-        }
+        val rawTranslation = exact(normalizedInput, source, target, phrase = true)
+            ?: exact(normalizedInput, source, target, phrase = false)
+            ?: template(text, source, target)
+            ?: translateCompleteKnownSequence(text, source, target)
+            ?: return null
 
-        template(text, source, target)?.let {
-            return OfflineLookupResult.Translation(it + punctuation, "offline_template_match", 1.0)
-        }
+        val formattedText = rawTranslation.trim().replaceFirstChar { if (it.isLowerCase()) it.uppercaseChar() else it }
 
-        translateCompleteKnownSequence(text, source, target)?.let {
-            return OfflineLookupResult.Translation(it + punctuation, "offline_exact_composite", 1.0)
-        }
-
-        val candidates = rows.asSequence()
-            .mapNotNull { row ->
-                val sourceText = row.values[source] ?: return@mapNotNull null
-                val translatedText = row.values[target] ?: return@mapNotNull null
-                if (sourceText.contains('_')) return@mapNotNull null
-                val normalizedCandidate = TextNormalizer.normalizeForMatching(sourceText)
-                if (normalizedCandidate.isEmpty()) return@mapNotNull null
-                val distance = levenshteinDistance(normalizedInput, normalizedCandidate)
-                val longestLength = maxOf(normalizedInput.length, normalizedCandidate.length)
-                val similarity = if (longestLength == 0) 1.0 else 1.0 - distance.toDouble() / longestLength
-                FuzzyCandidate(
-                    suggestion = OfflineTranslationSuggestion(sourceText, translatedText, similarity, distance),
-                    isPhrase = row.isPhrase,
-                )
-            }
-            .sortedWith(
-                compareByDescending<FuzzyCandidate> { it.suggestion.similarity }
-                    .thenBy { it.suggestion.editDistance }
-                    .thenBy { it.suggestion.sourceText },
-            )
-            .toList()
-
-        val best = candidates.firstOrNull()
-        val runnerUp = candidates.getOrNull(1)
-        if (
-            best != null &&
-            normalizedInput.length >= MIN_FUZZY_LENGTH &&
-            best.suggestion.similarity >= AUTO_TRANSLATE_SIMILARITY &&
-            best.suggestion.editDistance <= maximumAutomaticEdits(normalizedInput.length) &&
-            (runnerUp == null || best.suggestion.similarity - runnerUp.suggestion.similarity >= AMBIGUITY_MARGIN)
-        ) {
-            return OfflineLookupResult.Translation(
-                best.suggestion.translatedText + punctuation,
-                if (best.isPhrase) "offline_strict_fuzzy_phrase" else "offline_strict_fuzzy_dictionary",
-                best.suggestion.similarity,
-            )
+        val method = when {
+            exact(normalizedInput, source, target, phrase = true) != null -> "offline_exact_phrase"
+            exact(normalizedInput, source, target, phrase = false) != null -> "offline_exact_dictionary"
+            template(text, source, target) != null -> "offline_template_match"
+            else -> "offline_exact_composite"
         }
 
-        // Do not surface fuzzy candidate lists in the translation or dictionary experience.
-        // Only exact and uniquely safe automatic matches are eligible for translation.
-        return null
+        return OfflineLookupResult.Translation(formattedText + punctuation, method, 1.0)
     }
 
     /** Fills corresponding underscore placeholders only when the full template matches. */
@@ -256,8 +216,11 @@ internal class OfflineDictionary(entries: List<Map<String, String>>) {
         }
         if (resolvedTokenCount == 0) return null
 
+        val rawResult = translated.joinToString(" ")
+        val formattedResult = rawResult.trim().replaceFirstChar { if (it.isLowerCase()) it.uppercaseChar() else it }
+
         return OfflineLookupResult.Translation(
-            translatedText = translated.joinToString(" "),
+            translatedText = formattedResult,
             method = "offline_bridge_english_filipino",
             confidence = resolvedTokenCount.toDouble() / tokens.size,
         )

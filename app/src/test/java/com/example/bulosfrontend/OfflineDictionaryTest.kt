@@ -1,7 +1,6 @@
 package com.example.bulosfrontend
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class OfflineDictionaryTest {
@@ -24,7 +23,7 @@ class OfflineDictionaryTest {
     fun normalizedExactPhrasePrecedesDictionaryLookup() {
         val result = dictionary.lookup("  GOOD   MORNING?  ", UiLanguage.ENGLISH, UiLanguage.BULOS)
 
-        assertEquals("maabig a buklas?", (result as OfflineLookupResult.Translation).translatedText)
+        assertEquals("Maabig a buklas?", (result as OfflineLookupResult.Translation).translatedText)
         assertEquals("offline_exact_phrase", result.method)
     }
 
@@ -32,26 +31,22 @@ class OfflineDictionaryTest {
     fun normalizedExactDictionaryMatchHandlesCaseAndPunctuation() {
         val result = dictionary.lookup("BEAUTIFUL!", UiLanguage.ENGLISH, UiLanguage.BULOS)
 
-        assertEquals("masampat!", (result as OfflineLookupResult.Translation).translatedText)
+        assertEquals("Masampat!", (result as OfflineLookupResult.Translation).translatedText)
         assertEquals("offline_exact_dictionary", result.method)
     }
 
     @Test
-    fun strictUniqueMinorTypoCanTranslateAutomatically() {
+    fun typoResultsInOriginalTextFallbackDueToDisabledFuzzyMatching() {
         val result = dictionary.lookup("beautifol", UiLanguage.ENGLISH, UiLanguage.BULOS)
 
-        assertEquals("masampat", (result as OfflineLookupResult.Translation).translatedText)
-        assertEquals("offline_strict_fuzzy_dictionary", result.method)
-        assertTrue(result.confidence >= OfflineDictionary.AUTO_TRANSLATE_SIMILARITY)
+        assertFallback(result, "beautifol")
     }
 
     @Test
-    fun strictUniquePhraseTypoCanTranslateAutomatically() {
+    fun phraseTypoResultsInOriginalTextFallbackDueToDisabledFuzzyMatching() {
         val result = dictionary.lookup("good mornin", UiLanguage.ENGLISH, UiLanguage.BULOS)
 
-        assertEquals("maabig a buklas", (result as OfflineLookupResult.Translation).translatedText)
-        assertEquals("offline_strict_fuzzy_phrase", result.method)
-        assertTrue(result.confidence >= OfflineDictionary.AUTO_TRANSLATE_SIMILARITY)
+        assertFallback(result, "good mornin")
     }
 
     @Test
@@ -74,25 +69,25 @@ class OfflineDictionaryTest {
             "good morning beautiful friend",
             UiLanguage.ENGLISH,
             UiLanguage.BULOS,
-            "maabig a buklas masampat gayyem",
+            "Maabig a buklas masampat gayyem",
         )
         assertExactComposite(
             "magandang umaga maganda kaibigan",
             UiLanguage.FILIPINO,
             UiLanguage.BULOS,
-            "maabig a buklas masampat gayyem",
+            "Maabig a buklas masampat gayyem",
         )
         assertExactComposite(
             "maabig a buklas masampat gayyem",
             UiLanguage.BULOS,
             UiLanguage.ENGLISH,
-            "good morning beautiful friend",
+            "Good morning beautiful friend",
         )
         assertExactComposite(
             "maabig a buklas masampat gayyem",
             UiLanguage.BULOS,
             UiLanguage.FILIPINO,
-            "magandang umaga maganda kaibigan",
+            "Magandang umaga maganda kaibigan",
         )
     }
 
@@ -101,7 +96,7 @@ class OfflineDictionaryTest {
         val result = dictionary.lookup("good morning beautiful unknown", UiLanguage.ENGLISH, UiLanguage.BULOS)
 
         assertEquals(
-            "maabig a buklas masampat unknown",
+            "Maabig a buklas masampat unknown",
             (result as OfflineLookupResult.Translation).translatedText,
         )
         assertEquals("offline_bridge_english_filipino", result.method)
@@ -189,7 +184,7 @@ class OfflineDictionaryTest {
 
         val result = bridge.lookup("rain", UiLanguage.ENGLISH, UiLanguage.BULOS)
 
-        assertEquals("oran", (result as OfflineLookupResult.Translation).translatedText)
+        assertEquals("Oran", (result as OfflineLookupResult.Translation).translatedText)
         assertEquals("offline_bridge_english_filipino", result.method)
     }
 
@@ -208,7 +203,7 @@ class OfflineDictionaryTest {
         val result = bridge.lookup("the iron house 100", UiLanguage.ENGLISH, UiLanguage.BULOS)
 
         assertEquals(
-            "the palansa bahay 100",
+            "The palansa bahay 100",
             (result as OfflineLookupResult.Translation).translatedText,
         )
         assertEquals("offline_bridge_english_filipino", result.method)
@@ -231,7 +226,7 @@ class OfflineDictionaryTest {
         )
 
         val result = dictionary.lookup("coat", UiLanguage.ENGLISH, UiLanguage.BULOS)
-        assertEquals("coat-bul", (result as OfflineLookupResult.Translation).translatedText)
+        assertEquals("Coat-bul", (result as OfflineLookupResult.Translation).translatedText)
         assertEquals("offline_exact_dictionary", result.method)
         BulosGrammarRuleRegistry.clear()
     }
@@ -273,7 +268,7 @@ class OfflineDictionaryTest {
         )
 
         val result = dictionary.lookup("beautiful", UiLanguage.ENGLISH, UiLanguage.BULOS)
-        assertEquals("masampat", (result as OfflineLookupResult.Translation).translatedText)
+        assertEquals("Masampat", (result as OfflineLookupResult.Translation).translatedText)
         assertEquals("offline_exact_dictionary", result.method)
         BulosGrammarRuleRegistry.clear()
     }

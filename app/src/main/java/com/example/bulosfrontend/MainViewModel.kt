@@ -730,14 +730,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 refreshOfflineSpeechModelStatus()
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
-                if (needsInstallation) updateOfflineSpeechResourceState(
-                    uiLanguage,
-                    OfflineSpeechResourceState.FAILED,
-                )
-            } finally {
-                if (offlineSpeechResourceState(uiLanguage) == OfflineSpeechResourceState.DOWNLOADING) {
-                    refreshOfflineSpeechModelStatus()
+                refreshOfflineSpeechModelStatus()
+                if (offlineSpeechResourceState(uiLanguage) != OfflineSpeechResourceState.READY) {
+                    updateOfflineSpeechResourceState(uiLanguage, OfflineSpeechResourceState.FAILED)
                 }
+            } finally {
+                refreshOfflineSpeechModelStatus()
             }
         }
     }
@@ -766,11 +764,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 refreshOfflineSpeechModelStatus()
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
-                updateOfflineSpeechResourceState(language, OfflineSpeechResourceState.FAILED)
-            } finally {
-                if (offlineSpeechResourceState(language) == OfflineSpeechResourceState.DOWNLOADING) {
-                    refreshOfflineSpeechModelStatus()
+                refreshOfflineSpeechModelStatus()
+                if (offlineSpeechResourceState(language) != OfflineSpeechResourceState.READY) {
+                    updateOfflineSpeechResourceState(language, OfflineSpeechResourceState.FAILED)
                 }
+            } finally {
+                refreshOfflineSpeechModelStatus()
             }
         }
     }

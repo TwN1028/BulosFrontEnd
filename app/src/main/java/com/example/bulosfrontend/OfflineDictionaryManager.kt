@@ -67,6 +67,10 @@ internal class OfflineDictionary(entries: List<Map<String, String>>) {
             return directResult
         }
 
+        if (source == UiLanguage.ENGLISH && target == UiLanguage.BULOS) {
+            translateViaFilipino(text, source, target)?.let { return it }
+        }
+
         val ruleDirection = when {
             source == UiLanguage.ENGLISH && target == UiLanguage.BULOS -> RuleTranslationDirection.ENGLISH_TO_BULOS
             source == UiLanguage.FILIPINO && target == UiLanguage.BULOS -> RuleTranslationDirection.FILIPINO_TO_BULOS
@@ -79,7 +83,6 @@ internal class OfflineDictionary(entries: List<Map<String, String>>) {
             return OfflineLookupResult.Translation(ruleAppliedText, "offline_grammar_rule", 0.95)
         }
 
-        translateViaFilipino(text, source, target)?.let { return it }
         translateWordByWord(text, source, target)?.let { return it }
         if (directResult is OfflineLookupResult.Suggestions) return directResult
         return OfflineLookupResult.Translation(text, "offline_original_fallback", 1.0)

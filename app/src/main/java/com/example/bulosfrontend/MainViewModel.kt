@@ -784,11 +784,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         offlineSpeechResourceStates[language] ?: OfflineSpeechResourceState.NOT_DOWNLOADED
 
     private fun refreshOfflineSpeechModelStatus() {
-        offlineSpeechResourceStates = listOf(UiLanguage.ENGLISH, UiLanguage.FILIPINO).associateWith {
-            if (voskModelManager.isInstalled(TranslationLanguageRules.languageForUi(it))) {
-                OfflineSpeechResourceState.READY
-            } else {
-                OfflineSpeechResourceState.NOT_DOWNLOADED
+        offlineSpeechResourceStates = listOf(UiLanguage.ENGLISH, UiLanguage.FILIPINO).associateWith { lang ->
+            val isReady = voskModelManager.isInstalled(TranslationLanguageRules.languageForUi(lang))
+            when {
+                isReady -> OfflineSpeechResourceState.READY
+                offlineSpeechResourceState(lang) == OfflineSpeechResourceState.FAILED -> OfflineSpeechResourceState.FAILED
+                offlineSpeechResourceState(lang) == OfflineSpeechResourceState.DOWNLOADING -> OfflineSpeechResourceState.DOWNLOADING
+                else -> OfflineSpeechResourceState.NOT_DOWNLOADED
             }
         }
     }

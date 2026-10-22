@@ -293,6 +293,21 @@ class HybridTranslationRepository(
             return networkResult
         }
 
+        if (source == UiLanguage.ENGLISH && target == UiLanguage.BULOS) {
+            val mlKitFilipino = MlKitEnglishFilipinoPivot(context).translateEnglishToFilipino(text)
+            if (!mlKitFilipino.isNullOrBlank()) {
+                val bulosResult = offlineDictionary.lookup(mlKitFilipino, UiLanguage.FILIPINO, UiLanguage.BULOS)
+                if (bulosResult is OfflineLookupResult.Translation) {
+                    return offlineTranslationSuccess(
+                        OfflineLookupResult.Translation(bulosResult.translatedText, "offline_mlkit_pivot", bulosResult.confidence),
+                        text,
+                        sourceLanguage,
+                        targetLanguage,
+                    )
+                }
+            }
+        }
+
         return when (val offlineResult = offlineDictionary.lookup(text, source, target)) {
             is OfflineLookupResult.Translation ->
                 offlineTranslationSuccess(offlineResult, text, sourceLanguage, targetLanguage)

@@ -59,6 +59,8 @@ dependencies {
     implementation(libs.retrofit.converter.gson)
     implementation(libs.okhttp)
     implementation(libs.vosk.android)
+    implementation("com.google.mlkit:translate:17.0.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
     implementation(libs.poi)
     implementation(libs.poi.ooxml)
     implementation(libs.androidx.navigation.fragment.ktx)

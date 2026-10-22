@@ -60,6 +60,11 @@ class MainActivity : ComponentActivity() {
                 SideEffect { applyWhiteStatusBarContent() }
                 var showStartupSplash by remember { mutableStateOf(true) }
                 var isStartupProgressComplete by remember { mutableStateOf(false) }
+                LaunchedEffect(Unit) {
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        DatasetConverter.convertWorkbookToJson(applicationContext)
+                    }
+                }
                 LaunchedEffect(
                     TranslationState.sourceLanguage,
                     viewModel.isOfflineModePreferenceLoaded,

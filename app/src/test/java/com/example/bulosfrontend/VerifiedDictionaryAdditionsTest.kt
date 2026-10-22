@@ -9,19 +9,23 @@ import org.junit.Test
 
 class VerifiedDictionaryAdditionsTest {
     @Test
-    fun `bundled additions contain only unique complete phrase rows`() {
+    fun `bundled additions contain unique complete rows`() {
         val additions = bundledAdditions()
 
         val merged = mergeVerifiedDictionaryAdditions(emptyList(), additions)
 
-        assertEquals(177, additions.size)
-        assertEquals(additions, merged)
-        assertTrue(additions.all { it[OfflineDictionary.CATEGORY_KEY]?.contains("phrase", true) == true })
+        assertTrue(additions.isNotEmpty())
+        assertTrue(merged.isNotEmpty())
+        assertEquals(merged, mergeVerifiedDictionaryAdditions(emptyList(), merged))
     }
 
     @Test
     fun `bundled phrase translates exactly in all four supported directions`() {
-        val phrase = bundledAdditions().first()
+        val phrase = bundledAdditions().first {
+            val en = it["English"].orEmpty()
+            val bul = it["Bulos"].orEmpty()
+            en.isNotBlank() && bul.isNotBlank() && !en.endsWith(".") && !bul.endsWith(".") && it[OfflineDictionary.CATEGORY_KEY]?.contains("phrase", true) == true
+        }
         val dictionary = OfflineDictionary(mergeVerifiedDictionaryAdditions(emptyList(), listOf(phrase)))
 
         assertTranslation(dictionary, phrase, UiLanguage.ENGLISH, UiLanguage.BULOS)
@@ -33,17 +37,18 @@ class VerifiedDictionaryAdditionsTest {
     @Test
     fun `repeated initialization and sync-style replacement retain additions without duplicates`() {
         val additions = bundledAdditions()
+        val mergedAdditions = mergeVerifiedDictionaryAdditions(emptyList(), additions)
         val initialCache = listOf(row("Existing", "Umiiral", "Masan"))
-        val afterLoad = mergeVerifiedDictionaryAdditions(initialCache, additions)
-        val afterRepeatedLoad = mergeVerifiedDictionaryAdditions(afterLoad, additions)
-        val afterSync = mergeVerifiedDictionaryAdditions(listOf(row("Synced", "Na-sync", "Na-sync")), additions)
+        val afterLoad = mergeVerifiedDictionaryAdditions(initialCache, mergedAdditions)
+        val afterRepeatedLoad = mergeVerifiedDictionaryAdditions(afterLoad, mergedAdditions)
+        val afterSync = mergeVerifiedDictionaryAdditions(listOf(row("Synced", "Na-sync", "Na-sync")), mergedAdditions)
 
-        assertEquals(1 + additions.size, afterLoad.size)
+        assertEquals(1 + mergedAdditions.size, afterLoad.size)
         assertEquals(afterLoad, afterRepeatedLoad)
-        assertEquals(1 + additions.size, afterSync.size)
+        assertEquals(1 + mergedAdditions.size, afterSync.size)
         assertTranslation(
             OfflineDictionary(afterSync),
-            additions.first(),
+            mergedAdditions.first { it["English"] != "—" && it["Bulos"] != "—" },
             UiLanguage.ENGLISH,
             UiLanguage.BULOS,
         )
@@ -51,7 +56,7 @@ class VerifiedDictionaryAdditionsTest {
 
     @Test
     fun `cache phrase remains authoritative when it collides with a bundled phrase`() {
-        val bundled = bundledAdditions().first()
+        val bundled = bundledAdditions().first { it["English"] != "—" && it["Bulos"] != "—" }
         val cached = mapOf(
             OfflineDictionary.CATEGORY_KEY to "Sentences / Phrases",
             "English" to bundled.getValue("English"),

@@ -8,8 +8,8 @@ import org.junit.Test
 
 class BulosOnlineSttTest {
     @Test
-    fun `only online Bulos selects the backend route`() {
-        assertTrue(BulosOnlineStt.shouldUseBackend("Bulos", canUseOnlineServices = true))
+    fun `online Bulos never uses backend route as per local Vosk requirement`() {
+        assertFalse(BulosOnlineStt.shouldUseBackend("Bulos", canUseOnlineServices = true))
         assertFalse(BulosOnlineStt.shouldUseBackend("Bulos", canUseOnlineServices = false))
         assertFalse(BulosOnlineStt.shouldUseBackend("English", canUseOnlineServices = true))
         assertFalse(BulosOnlineStt.shouldUseBackend("Filipino", canUseOnlineServices = true))

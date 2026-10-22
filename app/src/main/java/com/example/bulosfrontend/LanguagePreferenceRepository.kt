@@ -19,6 +19,8 @@ class LanguagePreferenceRepository(private val context: Context) {
     private val languageKey = stringPreferencesKey("selected_ui_language")
     private val fontSizeKey = stringPreferencesKey("selected_font_size")
     private val offlineModeKey = booleanPreferencesKey("offline_mode_enabled")
+    private val skipTranscriptionScreenKey = booleanPreferencesKey("skip_transcription_screen")
+    private val autoSaveEnabledKey = booleanPreferencesKey("auto_save_enabled")
     private val preservationIntroCompletedKey = booleanPreferencesKey("has_completed_preservation_intro")
     private val onboardingCompletedKey = booleanPreferencesKey("has_completed_onboarding")
     private val sttWalkthroughCompletedKey = booleanPreferencesKey("has_completed_stt_walkthrough")
@@ -64,6 +66,18 @@ class LanguagePreferenceRepository(private val context: Context) {
         }
         .map { preferences: Preferences -> preferences[offlineModeKey] ?: false }
 
+    val skipTranscriptionScreen: Flow<Boolean> = context.languageDataStore.data
+        .catch { exception ->
+            if (exception is IOException) emit(emptyPreferences()) else throw exception
+        }
+        .map { preferences: Preferences -> preferences[skipTranscriptionScreenKey] ?: true }
+
+    val autoSaveEnabled: Flow<Boolean> = context.languageDataStore.data
+        .catch { exception ->
+            if (exception is IOException) emit(emptyPreferences()) else throw exception
+        }
+        .map { preferences: Preferences -> preferences[autoSaveEnabledKey] ?: true }
+
     suspend fun saveLanguage(language: UiLanguage) {
         context.languageDataStore.edit { preferences ->
             preferences[languageKey] = language.name
@@ -79,6 +93,18 @@ class LanguagePreferenceRepository(private val context: Context) {
     suspend fun saveOfflineMode(enabled: Boolean) {
         context.languageDataStore.edit { preferences ->
             preferences[offlineModeKey] = enabled
+        }
+    }
+
+    suspend fun saveSkipTranscriptionScreen(skip: Boolean) {
+        context.languageDataStore.edit { preferences ->
+            preferences[skipTranscriptionScreenKey] = skip
+        }
+    }
+
+    suspend fun saveAutoSaveEnabled(enabled: Boolean) {
+        context.languageDataStore.edit { preferences ->
+            preferences[autoSaveEnabledKey] = enabled
         }
     }
 

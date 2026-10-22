@@ -80,6 +80,7 @@ internal class OfflineDictionary(entries: List<Map<String, String>>) {
         }
 
         translateViaFilipino(text, source, target)?.let { return it }
+        translateWordByWord(text, source, target)?.let { return it }
         if (directResult is OfflineLookupResult.Suggestions) return directResult
         return OfflineLookupResult.Translation(text, "offline_original_fallback", 1.0)
     }
@@ -223,6 +224,46 @@ internal class OfflineDictionary(entries: List<Map<String, String>>) {
             translatedText = formattedResult,
             method = "offline_bridge_english_filipino",
             confidence = resolvedTokenCount.toDouble() / tokens.size,
+        )
+    }
+
+    private fun translateWordByWord(
+        text: String,
+        source: UiLanguage,
+        target: UiLanguage,
+    ): OfflineLookupResult.Translation? {
+        val tokens = TextNormalizer.cleanForDisplay(text).split(Regex("\\s+")).filter(String::isNotBlank)
+        if (tokens.isEmpty()) return null
+
+        var resolvedCount = 0
+        val translated = mutableListOf<String>()
+        for (token in tokens) {
+            if (token.matches(Regex("\\d+(?:[.,]\\d+)?"))) {
+                translated += token
+                continue
+            }
+            val punctuation = trailingSentencePunctuation(token)
+            val normalized = TextNormalizer.normalizeForMatching(token)
+            if (normalized.isEmpty()) {
+                translated += token
+                continue
+            }
+            val direct = exact(normalized, source, target, phrase = false)
+            if (direct != null) {
+                resolvedCount++
+                translated += direct + punctuation
+            } else {
+                translated += token
+            }
+        }
+        if (resolvedCount == 0) return null
+
+        val rawResult = translated.joinToString(" ")
+        val formattedResult = rawResult.trim().replaceFirstChar { if (it.isLowerCase()) it.uppercaseChar() else it }
+        return OfflineLookupResult.Translation(
+            translatedText = formattedResult,
+            method = "offline_word_by_word_fallback",
+            confidence = resolvedCount.toDouble() / tokens.size,
         )
     }
 

@@ -65,6 +65,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private set
     var offlineModeEnabled by mutableStateOf(false)
         private set
+    var skipTranscriptionScreen by mutableStateOf(true)
+        private set
+    var autoSaveEnabled by mutableStateOf(true)
+        private set
     var isOfflineModePreferenceLoaded by mutableStateOf(false)
         private set
     var hasCompletedPreservationIntro by mutableStateOf<Boolean?>(null)
@@ -213,6 +217,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         if (!isOfflineModePreferenceLoaded) load {
             offlineModeEnabled = languagePreferences.offlineModeEnabled.first()
+            skipTranscriptionScreen = languagePreferences.skipTranscriptionScreen.first()
+            autoSaveEnabled = languagePreferences.autoSaveEnabled.first()
             translationRepository.setOfflineModeEnabled(offlineModeEnabled)
             isOfflineModePreferenceLoaded = true
             networkMonitor.start()
@@ -344,9 +350,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { languagePreferences.saveFontSize(fontSize) }
     }
 
+    fun selectSkipTranscriptionScreen(skip: Boolean) {
+        if (skipTranscriptionScreen == skip) return
+        skipTranscriptionScreen = skip
+        viewModelScope.launch { languagePreferences.saveSkipTranscriptionScreen(skip) }
+    }
+
+    fun selectAutoSaveEnabled(enabled: Boolean) {
+        if (autoSaveEnabled == enabled) return
+        autoSaveEnabled = enabled
+        viewModelScope.launch { languagePreferences.saveAutoSaveEnabled(enabled) }
+    }
+
     fun selectOfflineMode(enabled: Boolean) {
-        if (offlineModeEnabled == enabled) return
-        offlineModeEnabled = enabled
         translationRepository.setOfflineModeEnabled(enabled)
         viewModelScope.launch { languagePreferences.saveOfflineMode(enabled) }
         if (enabled) {

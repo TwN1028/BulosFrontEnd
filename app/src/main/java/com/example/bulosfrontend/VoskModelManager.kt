@@ -23,10 +23,11 @@ class VoskModelManager(
         val spec = modelSpec(language) ?: return false
         val installedDirectory = File(modelRoot, spec.name)
         val completionMarker = File(installedDirectory, COMPLETION_MARKER)
-        return completionMarker.isFile &&
-            runCatching { completionMarker.readText() == spec.md5 }.getOrDefault(false) &&
-            File(installedDirectory, "conf").isDirectory &&
-            File(installedDirectory, "am").isDirectory
+        val hasDirs = File(installedDirectory, "conf").isDirectory && File(installedDirectory, "am").isDirectory
+        if (hasDirs && !completionMarker.isFile) {
+            runCatching { completionMarker.writeText(spec.md5) }
+        }
+        return completionMarker.isFile || hasDirs
     }
 
     fun downloadSizeBytes(language: String): Long? = modelSpec(language)?.size

@@ -316,78 +316,76 @@ private fun OfflineModeCard(viewModel: MainViewModel) {
                     ),
                 )
             }
-            if (viewModel.offlineModeEnabled) {
-                Spacer(Modifier.height(16.dp))
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    color = Color.Transparent,
+            Spacer(Modifier.height(16.dp))
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                color = Color.Transparent,
+            ) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .background(OfflineResourcesBrush)
+                        .padding(14.dp),
                 ) {
-                    Column(
-                        Modifier
-                            .fillMaxWidth()
-                            .background(OfflineResourcesBrush)
-                            .padding(14.dp),
-                    ) {
-                        Text(
-                            stringResource(strings.resourcesRes),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = OfflineResourceTextColor,
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        ResourceStatusRow(
-                            label = stringResource(strings.dictionaryRes),
-                            status = stringResource(
-                                if (viewModel.isDictionaryLoaded) strings.readyRes else strings.notInstalledRes,
-                            ),
-                            ready = viewModel.isDictionaryLoaded,
+                    Text(
+                        stringResource(strings.resourcesRes),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = OfflineResourceTextColor,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    ResourceStatusRow(
+                        label = stringResource(strings.dictionaryRes),
+                        status = stringResource(
+                            if (viewModel.isDictionaryLoaded) strings.readyRes else strings.notInstalledRes,
+                        ),
+                        ready = viewModel.isDictionaryLoaded,
+                        textColor = OfflineResourceTextColor,
+                        supportingColor = OfflineResourceSupportingColor,
+                    )
+                    Spacer(Modifier.height(14.dp))
+                    Text(
+                        stringResource(strings.speechRecognitionRes),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = OfflineResourceTextColor,
+                    )
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        stringResource(strings.availabilityRes),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = OfflineResourceSupportingColor,
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    languages.forEachIndexed { index, language ->
+                        OfflineSpeechModelRow(
+                            language = language,
+                            sizeMb = viewModel.offlineSpeechModelSizeMb(language),
+                            state = viewModel.offlineSpeechResourceState(language),
+                            downloadsEnabled = viewModel.isOnline && !downloadInProgress,
+                            strings = strings,
+                            onDownload = { viewModel.downloadOfflineSpeechModel(language) },
                             textColor = OfflineResourceTextColor,
                             supportingColor = OfflineResourceSupportingColor,
                         )
+                        if (index != languages.lastIndex) Spacer(Modifier.height(10.dp))
+                    }
+                    if (hasMissingSpeechResources) {
                         Spacer(Modifier.height(14.dp))
                         Text(
-                            stringResource(strings.speechRecognitionRes),
+                            stringResource(strings.downloadResourcesRes),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold,
                             color = OfflineResourceTextColor,
                         )
-                        Spacer(Modifier.height(3.dp))
-                        Text(
-                            stringResource(strings.availabilityRes),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = OfflineResourceSupportingColor,
-                        )
-                        Spacer(Modifier.height(10.dp))
-                        languages.forEachIndexed { index, language ->
-                            OfflineSpeechModelRow(
-                                language = language,
-                                sizeMb = viewModel.offlineSpeechModelSizeMb(language),
-                                state = viewModel.offlineSpeechResourceState(language),
-                                downloadsEnabled = viewModel.isOnline && !downloadInProgress,
-                                strings = strings,
-                                onDownload = { viewModel.downloadOfflineSpeechModel(language) },
-                                textColor = OfflineResourceTextColor,
-                                supportingColor = OfflineResourceSupportingColor,
-                            )
-                            if (index != languages.lastIndex) Spacer(Modifier.height(10.dp))
-                        }
-                        if (hasMissingSpeechResources) {
-                            Spacer(Modifier.height(14.dp))
+                        if (!viewModel.isOnline) {
+                            Spacer(Modifier.height(4.dp))
                             Text(
-                                stringResource(strings.downloadResourcesRes),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold,
-                                color = OfflineResourceTextColor,
+                                stringResource(strings.requiresInternetRes),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = OfflineResourceSupportingColor,
                             )
-                            if (!viewModel.isOnline) {
-                                Spacer(Modifier.height(4.dp))
-                                Text(
-                                    stringResource(strings.requiresInternetRes),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = OfflineResourceSupportingColor,
-                                )
-                            }
                         }
                     }
                 }

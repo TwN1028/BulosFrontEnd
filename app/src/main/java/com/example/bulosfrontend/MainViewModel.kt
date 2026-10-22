@@ -179,6 +179,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         TranslationState.ensureValidLanguagePair()
         refreshOfflineSpeechModelStatus()
         loadRequiredStartupData()
+        BulosGrammarRuleLoader.loadRules()
     }
 
     fun retryStartup() {

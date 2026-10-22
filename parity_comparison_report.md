@@ -1,4 +1,4 @@
-# Filipino-to-Bulos Parity Report (Android vs Backend)
+# Filipino-to-Bulos Parity Report (Android vs Backend - October 22, 2026 Dataset)
 
 | # | Filipino Input | Android / Backend Output | Expected Backend Output | Status |
 |---|---|---|---|---|

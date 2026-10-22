@@ -242,26 +242,19 @@ class HybridTranslationRepository(
             return
         }
 
-        for (retryDelayMs in BACKEND_HEALTH_RETRY_DELAYS_MS) {
-            if (retryDelayMs > 0L) delay(retryDelayMs)
-            if (!canUseOnlineServices(NetworkUtils.isOnline(context), offlineModeEnabled)) {
-                isServerReady = false
-                return
-            }
+        isServerReady = true
 
-            val ready = try {
-                healthApi.healthCheck().isSuccessful
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                false
-            }
-            if (ready) {
-                isServerReady = true
-                return
+        runCatching {
+            for (retryDelayMs in BACKEND_HEALTH_RETRY_DELAYS_MS) {
+                if (retryDelayMs > 0L) delay(retryDelayMs)
+                if (!canUseOnlineServices(NetworkUtils.isOnline(context), offlineModeEnabled)) return
+                val ready = healthApi.healthCheck().isSuccessful
+                if (ready) {
+                    isServerReady = true
+                    return
+                }
             }
         }
-        isServerReady = false
     }
 
     override suspend fun translate(

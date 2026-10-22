@@ -295,10 +295,26 @@ class MainActivity : ComponentActivity() {
                                 onRecordingFinished = {
                                     if (sttTutorialActive) {
                                         sttTutorialStepName = SttTutorialStep.TRANSCRIPT.name
-                                    }
-                                    navController.navigate(AppDestinations.VOICE) {
-                                        launchSingleTop = true
-                                        popUpTo(AppDestinations.HOME_RECORDING) { inclusive = true }
+                                        navController.navigate(AppDestinations.VOICE) {
+                                            launchSingleTop = true
+                                            popUpTo(AppDestinations.HOME_RECORDING) { inclusive = true }
+                                        }
+                                    } else if (viewModel.skipTranscriptionScreen) {
+                                        val textToTranslate = TranslationState.sttTranscript.trim()
+                                        if (textToTranslate.isNotBlank()) {
+                                            TranslationState.textToTranslate = textToTranslate
+                                            viewModel.translateVoiceText(textToTranslate)
+                                        }
+                                        resultOriginRoute = AppDestinations.HOME
+                                        navController.navigate(AppDestinations.RESULT) {
+                                            launchSingleTop = true
+                                            popUpTo(AppDestinations.HOME_RECORDING) { inclusive = true }
+                                        }
+                                    } else {
+                                        navController.navigate(AppDestinations.VOICE) {
+                                            launchSingleTop = true
+                                            popUpTo(AppDestinations.HOME_RECORDING) { inclusive = true }
+                                        }
                                     }
                                 },
                             )

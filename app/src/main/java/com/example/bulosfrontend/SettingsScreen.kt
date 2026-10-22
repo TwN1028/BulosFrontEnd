@@ -136,6 +136,10 @@ fun SettingsScreen(
                 }
             }
             Spacer(Modifier.height(24.dp))
+            SettingsSectionHeader("Workflow & Translation Settings")
+            Spacer(Modifier.height(10.dp))
+            WorkflowSettingsCard(viewModel)
+            Spacer(Modifier.height(24.dp))
             SettingsSectionHeader(stringResource(home.aboutRes))
             Spacer(Modifier.height(10.dp))
             AboutSettingsCard(
@@ -544,6 +548,67 @@ private fun offlineSpeechResourceStrings(language: UiLanguage) = when (language)
         R.string.ui_download_offline_speech_resources_eng,
         R.string.ui_speech_model_requires_internet_eng,
     )
+}
+
+@Composable
+private fun WorkflowSettingsCard(viewModel: MainViewModel) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = HomeCardShape,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = HomeSupportingCardBorder,
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(18.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SettingsIcon(R.drawable.ic_lucide_mic)
+                Spacer(Modifier.width(12.dp))
+                SettingsTitleAndSubtitle(
+                    title = "Skip transcription screen",
+                    subtitle = "Go straight from recording to output screen",
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(Modifier.width(12.dp))
+                Switch(
+                    checked = viewModel.skipTranscriptionScreen,
+                    onCheckedChange = viewModel::selectSkipTranscriptionScreen,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = WarmWhite,
+                        checkedTrackColor = SharedActiveButtonColor,
+                        checkedBorderColor = SharedActiveButtonColor,
+                        uncheckedThumbColor = WarmWhite,
+                        uncheckedTrackColor = Color(0xFFF1E8DA),
+                        uncheckedBorderColor = Color(0xFFE5DDD2).copy(alpha = 0.65f),
+                    ),
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider(color = Color(0xFFE5DDD2).copy(alpha = 0.65f))
+            Spacer(Modifier.height(16.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SettingsIcon(R.drawable.ic_saved_history_reference)
+                Spacer(Modifier.width(12.dp))
+                SettingsTitleAndSubtitle(
+                    title = "Save entries by default",
+                    subtitle = "Automatically save translation history entries",
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(Modifier.width(12.dp))
+                Switch(
+                    checked = viewModel.autoSaveEnabled,
+                    onCheckedChange = viewModel::selectAutoSaveEnabled,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = WarmWhite,
+                        checkedTrackColor = SharedActiveButtonColor,
+                        checkedBorderColor = SharedActiveButtonColor,
+                        uncheckedThumbColor = WarmWhite,
+                        uncheckedTrackColor = Color(0xFFF1E8DA),
+                        uncheckedBorderColor = Color(0xFFE5DDD2).copy(alpha = 0.65f),
+                    ),
+                )
+            }
+        }
+    }
 }
 
 @Composable

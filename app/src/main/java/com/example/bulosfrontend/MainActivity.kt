@@ -415,7 +415,7 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate(AppDestinations.LANGUAGE_SETTINGS)
                                 },
                                 onHelpClick = {
-                                    navController.navigate(AppDestinations.HELP)
+                                    navController.navigate(AppDestinations.ONBOARDING)
                                 },
                                 onBack = { navController.popBackStack() },
                             )

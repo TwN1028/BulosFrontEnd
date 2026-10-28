@@ -1012,6 +1012,7 @@ fun RecentTranslationScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                             items(recentItems, key = { it.timestamp }) { item ->
                                 HistoryCard(
                                     item = item,
+                                    uiLanguage = viewModel.uiLanguage,
                                     showFavorite = false,
                                     showSaveAction = true,
                                     selected = item.timestamp in selectedTimestamps,
@@ -1235,6 +1236,7 @@ private fun HistoryFavoritesEmptyState(uiLanguage: UiLanguage) {
 @Composable
 fun HistoryCard(
     item: HistoryItem,
+    uiLanguage: UiLanguage = UiLanguage.ENGLISH,
     selected: Boolean = false,
     selectionEnabled: Boolean = false,
     showFavorite: Boolean = true,

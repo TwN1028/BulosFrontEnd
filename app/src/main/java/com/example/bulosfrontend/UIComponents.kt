@@ -16,7 +16,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.draw.*
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -38,44 +43,43 @@ fun ConnectionStatusIndicator(
     val labelRes = when (language) {
         UiLanguage.ENGLISH -> when (status) {
             ConnectionStatus.ONLINE -> R.string.connection_online
-            ConnectionStatus.OFFLINE -> R.string.connection_offline
             ConnectionStatus.OFFLINE_MODE -> R.string.connection_offline_mode
             ConnectionStatus.WAKING_UP -> R.string.connection_waking_up
             ConnectionStatus.SERVER_UNAVAILABLE -> R.string.connection_server_unavailable
+            ConnectionStatus.OFFLINE -> R.string.connection_offline
         }
         UiLanguage.FILIPINO -> when (status) {
             ConnectionStatus.ONLINE -> R.string.connection_online_fil
-            ConnectionStatus.OFFLINE -> R.string.connection_offline_fil
             ConnectionStatus.OFFLINE_MODE -> R.string.connection_offline_mode_fil
             ConnectionStatus.WAKING_UP -> R.string.connection_waking_up_fil
             ConnectionStatus.SERVER_UNAVAILABLE -> R.string.connection_server_unavailable_fil
+            ConnectionStatus.OFFLINE -> R.string.connection_offline_fil
         }
         UiLanguage.BULOS -> when (status) {
             ConnectionStatus.ONLINE -> R.string.connection_online_bul
-            ConnectionStatus.OFFLINE -> R.string.connection_offline_bul
             ConnectionStatus.OFFLINE_MODE -> R.string.connection_offline_mode_bul
             ConnectionStatus.WAKING_UP -> R.string.connection_waking_up_bul
             ConnectionStatus.SERVER_UNAVAILABLE -> R.string.connection_server_unavailable_bul
+            ConnectionStatus.OFFLINE -> R.string.connection_offline_bul
         }
     }
     val dotColor = when (status) {
-        ConnectionStatus.ONLINE -> Color(0xFF2E7D32)
-        ConnectionStatus.OFFLINE -> Color(0xFF757575)
-        ConnectionStatus.OFFLINE_MODE -> Color(0xFF5F6F52)
-        ConnectionStatus.WAKING_UP -> Color(0xFFD08A19)
-        ConnectionStatus.SERVER_UNAVAILABLE -> Color(0xFFB5483D)
+        ConnectionStatus.ONLINE -> Color(0xFF4CAF50)
+        ConnectionStatus.OFFLINE_MODE, ConnectionStatus.OFFLINE -> Color(0xFFE57373)
+        ConnectionStatus.WAKING_UP, ConnectionStatus.SERVER_UNAVAILABLE -> Color(0xFFFF9800)
     }
+
     Surface(
         modifier = modifier,
-        color = NavigationCream.copy(alpha = 0.94f),
-        contentColor = Color(0xFF29452E),
-        shape = RoundedCornerShape(50),
-        shadowElevation = 1.dp,
+        shape = RoundedCornerShape(12.dp),
+        color = Color.Black.copy(alpha = 0.25f),
+        contentColor = Color.White,
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Box(Modifier.size(7.dp).background(dotColor, CircleShape))
             Text(
@@ -85,6 +89,215 @@ fun ConnectionStatusIndicator(
                 maxLines = 1,
             )
         }
+    }
+}
+
+@Composable
+internal fun Modifier.safeHeaderInsets(): Modifier = windowInsetsPadding(
+    WindowInsets.statusBars
+        .union(WindowInsets.displayCutout)
+        .only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+)
+
+@Composable
+internal fun AdaptiveHeaderRow(
+    modifier: Modifier = Modifier,
+    verticalSpaceRatio: Float = 7f / 12f,
+    content: @Composable RowScope.() -> Unit,
+) {
+    Layout(
+        modifier = modifier
+            .fillMaxWidth()
+            .safeHeaderInsets(),
+        content = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 4.dp, end = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                content = content,
+            )
+        },
+    ) { measurables, constraints ->
+        val row = measurables.single().measure(constraints.copy(minHeight = 0))
+        val verticalSpace = (row.height * verticalSpaceRatio.coerceIn(0f, 1f)).toInt()
+        layout(constraints.maxWidth, row.height + verticalSpace * 2) {
+            row.placeRelative(0, verticalSpace)
+        }
+    }
+}
+
+@Composable
+internal fun OverlappingHeaderLayout(
+    overlap: Dp,
+    modifier: Modifier = Modifier,
+    header: @Composable () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    SubcomposeLayout(modifier = modifier) { constraints ->
+        val headerPlaceable = subcompose("header") { header() }
+            .first()
+            .measure(constraints.copy(minHeight = 0))
+        val overlapPx = overlap.roundToPx().coerceAtMost(headerPlaceable.height)
+        val contentTop = headerPlaceable.height - overlapPx
+        val contentHeight = (constraints.maxHeight - contentTop).coerceAtLeast(0)
+        val contentPlaceable = subcompose("content") { content() }
+            .first()
+            .measure(
+                constraints.copy(
+                    minHeight = contentHeight,
+                    maxHeight = contentHeight,
+                ),
+            )
+        layout(constraints.maxWidth, constraints.maxHeight) {
+            headerPlaceable.placeRelative(0, 0)
+            contentPlaceable.placeRelative(0, contentTop)
+        }
+    }
+}
+
+/** Fades scroll content through the portion that overlaps a fixed shared header. */
+@Composable
+internal fun Modifier.sharedHeaderScrollFade(
+    scrollOffsetPx: Int,
+    overlap: Dp,
+): Modifier {
+    val density = LocalDensity.current
+    val overlapPx = with(density) { overlap.toPx() }
+    val activationDistancePx = with(density) { 24.dp.toPx() }
+    val targetProgress = (scrollOffsetPx / activationDistancePx).coerceIn(0f, 1f)
+    val fadeProgress by animateFloatAsState(
+        targetValue = targetProgress,
+        animationSpec = tween(durationMillis = 120),
+        label = "sharedHeaderScrollFade",
+    )
+    return graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+        .drawWithContent {
+            drawContent()
+            drawRect(
+                brush = Brush.verticalGradient(
+                    0f to Color.Black.copy(alpha = 1f - fadeProgress),
+                    1f to Color.Black,
+                    endY = overlapPx,
+                ),
+                blendMode = BlendMode.DstIn,
+            )
+        }
+}
+
+/**
+ * Keeps a fixed bottom action readable while scroll content softly fades into the
+ * app's cream background instead of ending at the action's top edge.
+ */
+@Composable
+internal fun CreamFooterActionOverlay(
+    modifier: Modifier = Modifier,
+    action: @Composable () -> Unit,
+) {
+    val backgroundColor = Color(0xFFFFFBF4)
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(80.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(
+                    Brush.verticalGradient(
+                        0f to Color.Transparent,
+                        0.28f to backgroundColor.copy(alpha = 0.10f),
+                        0.62f to backgroundColor.copy(alpha = 0.52f),
+                        1f to backgroundColor.copy(alpha = 0.96f),
+                    ),
+                ),
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            action()
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SharedTopAppBar(
+    title: String,
+    @androidx.annotation.StringRes logoDescriptionRes: Int = R.string.app_logo_content_description,
+    @androidx.annotation.DrawableRes iconRes: Int? = null,
+    subtitle: String? = null,
+    onBack: (() -> Unit)? = null,
+    headerVerticalSpaceRatio: Float = 7f / 12f,
+    trailingContent: @Composable RowScope.() -> Unit = {},
+    selectionMode: Boolean = false,
+    selectionContent: @Composable RowScope.() -> Unit = {},
+) = Box {
+    Box(Modifier.matchParentSize().background(appHeaderGradientBrush()))
+    Column {
+    AdaptiveHeaderRow(verticalSpaceRatio = headerVerticalSpaceRatio) {
+        AnimatedContent(
+            targetState = selectionMode,
+            modifier = Modifier.fillMaxWidth(),
+            transitionSpec = {
+                if (targetState) {
+                    slideInVertically { height -> -height } + fadeIn() togetherWith
+                        slideOutVertically { height -> height } + fadeOut()
+                } else {
+                    slideInVertically { height -> height } + fadeIn() togetherWith
+                        slideOutVertically { height -> -height } + fadeOut()
+                }
+            },
+            label = "SharedTopAppBarSelectionContent",
+        ) { selecting ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (selecting) {
+                    selectionContent()
+                } else {
+                    if (onBack != null) {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = null,
+                                tint = Color.White,
+                            )
+                        }
+                    }
+                    Icon(
+                        painter = painterResource(iconRes ?: R.drawable.ic_app_logo_placeholder),
+                        contentDescription = stringResource(logoDescriptionRes),
+                        tint = Color.White,
+                        modifier = if (iconRes != null) Modifier.size(48.dp).padding(12.dp) else Modifier.size(48.dp).padding(8.dp),
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(title, color = Color.White, style = MaterialTheme.typography.titleLarge)
+                        if (subtitle != null) {
+                            Text(
+                                text = subtitle,
+                                color = Color.White,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = 13.sp,
+                                    lineHeight = 20.sp,
+                                ),
+                                fontWeight = FontWeight.Normal,
+                            )
+                        }
+                    }
+                    trailingContent()
+                    Spacer(Modifier.width(6.dp))
+                    ConnectionStatusIndicator()
+                }
+            }
+        }
+    }
+    Spacer(Modifier.height(AppHeaderTailHeight))
     }
 }
 
@@ -131,143 +344,6 @@ fun OfflineSuggestionList(
                 }
             }
         }
-    }
-}
-
-@Composable
-internal fun Modifier.safeHeaderInsets(): Modifier = windowInsetsPadding(
-    WindowInsets.statusBars
-        .union(WindowInsets.displayCutout)
-        .only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
-)
-
-@Composable
-internal fun AdaptiveHeaderRow(
-    modifier: Modifier = Modifier,
-    content: @Composable RowScope.() -> Unit,
-) {
-    Layout(
-        modifier = modifier
-            .fillMaxWidth()
-            .safeHeaderInsets(),
-        content = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 4.dp, end = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                content = content,
-            )
-        },
-    ) { measurables, constraints ->
-        val row = measurables.single().measure(constraints.copy(minHeight = 0))
-        // Scale breathing room from the measured row instead of assigning a
-        // device-specific y-coordinate. Larger fonts therefore grow the header.
-        val verticalSpace = row.height * 7 / 12
-        layout(constraints.maxWidth, row.height + verticalSpace * 2) {
-            row.placeRelative(0, verticalSpace)
-        }
-    }
-}
-
-@Composable
-internal fun OverlappingHeaderLayout(
-    overlap: Dp,
-    modifier: Modifier = Modifier,
-    header: @Composable () -> Unit,
-    content: @Composable () -> Unit,
-) {
-    SubcomposeLayout(modifier = modifier) { constraints ->
-        val headerPlaceable = subcompose("header") { header() }
-            .first()
-            .measure(constraints.copy(minHeight = 0))
-        val overlapPx = overlap.roundToPx().coerceAtMost(headerPlaceable.height)
-        val contentTop = headerPlaceable.height - overlapPx
-        val contentHeight = (constraints.maxHeight - contentTop).coerceAtLeast(0)
-        val contentPlaceable = subcompose("content") { content() }
-            .first()
-            .measure(
-                constraints.copy(
-                    minHeight = contentHeight,
-                    maxHeight = contentHeight,
-                ),
-            )
-        layout(constraints.maxWidth, constraints.maxHeight) {
-            headerPlaceable.placeRelative(0, 0)
-            contentPlaceable.placeRelative(0, contentTop)
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SharedTopAppBar(
-    title: String,
-    @androidx.annotation.StringRes logoDescriptionRes: Int = R.string.app_logo_content_description,
-    @androidx.annotation.DrawableRes iconRes: Int? = null,
-    subtitle: String? = null,
-    onBack: (() -> Unit)? = null,
-    trailingContent: @Composable RowScope.() -> Unit = {},
-    selectionMode: Boolean = false,
-    selectionContent: @Composable RowScope.() -> Unit = {},
-) = Box {
-    Box(Modifier.matchParentSize().background(appHeaderGradientBrush()))
-    Column {
-    AdaptiveHeaderRow {
-        AnimatedContent(
-            targetState = selectionMode,
-            modifier = Modifier.fillMaxWidth(),
-            transitionSpec = {
-                (fadeIn(tween(160)) togetherWith fadeOut(tween(120))).using(
-                    SizeTransform(clip = false, sizeAnimationSpec = { _, _ -> snap() }),
-                )
-            },
-            label = "sharedHeaderMode",
-        ) { selecting ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (selecting) {
-                    selectionContent()
-                } else {
-                    if (onBack != null) {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = null,
-                                tint = Color.White,
-                            )
-                        }
-                    }
-                    Icon(
-                        painter = painterResource(iconRes ?: R.drawable.ic_launcher_foreground),
-                        contentDescription = stringResource(logoDescriptionRes),
-                        tint = Color.White,
-                        modifier = if (iconRes != null) Modifier.size(48.dp).padding(12.dp) else Modifier.size(48.dp).padding(8.dp),
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(title, color = Color.White, style = MaterialTheme.typography.titleLarge)
-                        if (subtitle != null) {
-                            Text(
-                                text = subtitle,
-                                color = Color.White,
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    fontSize = 13.sp,
-                                    lineHeight = 20.sp,
-                                ),
-                                fontWeight = FontWeight.Normal,
-                                maxLines = 1,
-                            )
-                        }
-                    }
-                    trailingContent()
-                }
-            }
-        }
-    }
-    Spacer(Modifier.height(AppHeaderTailHeight))
     }
 }
 

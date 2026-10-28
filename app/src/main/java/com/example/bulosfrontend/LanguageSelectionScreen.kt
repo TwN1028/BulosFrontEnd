@@ -254,7 +254,7 @@ private fun ReferenceLanguageCard(
             .semantics { this.selected = selected },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = HomeContentCream,
+            containerColor = WarmWhiteCard,
         ),
         border = BorderStroke(
             width = if (selected) 2.dp else 1.dp,

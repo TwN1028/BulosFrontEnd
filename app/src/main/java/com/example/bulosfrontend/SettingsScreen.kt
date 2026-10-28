@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -20,6 +21,7 @@ import androidx.annotation.DrawableRes
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.bulosfrontend.ui.theme.InactiveButtonColor
@@ -39,6 +41,55 @@ private val OfflineResourcesBrush = Brush.verticalGradient(
 private val OfflineResourceTextColor = Color(0xFF10492F)
 private val OfflineResourceSupportingColor = Color(0xFF765F48)
 
+internal enum class OfflineResourceNotice {
+    ALL_READY,
+    PARTIALLY_AVAILABLE,
+    MISSING,
+    DOWNLOADING,
+    FAILED,
+}
+
+internal fun offlineResourceNotice(
+    isDictionaryReady: Boolean,
+    speechStates: Collection<OfflineSpeechResourceState>,
+): OfflineResourceNotice = when {
+    speechStates.any { it == OfflineSpeechResourceState.FAILED } -> OfflineResourceNotice.FAILED
+    speechStates.any { it == OfflineSpeechResourceState.DOWNLOADING } -> OfflineResourceNotice.DOWNLOADING
+    isDictionaryReady && speechStates.all { it == OfflineSpeechResourceState.READY } ->
+        OfflineResourceNotice.ALL_READY
+    isDictionaryReady || speechStates.any { it == OfflineSpeechResourceState.READY } ->
+        OfflineResourceNotice.PARTIALLY_AVAILABLE
+    else -> OfflineResourceNotice.MISSING
+}
+
+internal fun offlineResourceNoticeText(notice: OfflineResourceNotice, language: UiLanguage): String = when (notice) {
+    OfflineResourceNotice.ALL_READY -> when (language) {
+        UiLanguage.FILIPINO -> "Lahat ng kinakailangang offline resource ay na-download na."
+        UiLanguage.BULOS -> "Pesan a kailangan a offline resource ay na-download di."
+        UiLanguage.ENGLISH -> "All required offline resources are downloaded and ready."
+    }
+    OfflineResourceNotice.PARTIALLY_AVAILABLE -> when (language) {
+        UiLanguage.FILIPINO -> "Maaaring mag-download ng karagdagang speech model para sa iba pang wika."
+        UiLanguage.BULOS -> "Pede mag-download ni karagdagan a speech model para de kakmukan a sorot."
+        UiLanguage.ENGLISH -> "Some offline resources are ready. You can download additional speech models below."
+    }
+    OfflineResourceNotice.MISSING -> when (language) {
+        UiLanguage.FILIPINO -> "Kailangan ng internet upang ma-download ang mga offline speech model."
+        UiLanguage.BULOS -> "Kailangan ni internet para ma-download i mga offline speech model."
+        UiLanguage.ENGLISH -> "Offline speech models are not downloaded. Connect to internet to download them."
+    }
+    OfflineResourceNotice.DOWNLOADING -> when (language) {
+        UiLanguage.FILIPINO -> "Nagda-download ng offline resource..."
+        UiLanguage.BULOS -> "Ge-download ni offline resource..."
+        UiLanguage.ENGLISH -> "Downloading offline resources..."
+    }
+    OfflineResourceNotice.FAILED -> when (language) {
+        UiLanguage.FILIPINO -> "Hindi natuloy ang pag-download. Subukang muli."
+        UiLanguage.BULOS -> "Eyen natuloy i pag-download. Peliwetin muli."
+        UiLanguage.ENGLISH -> "Download failed. Please check your internet connection and try again."
+    }
+}
+
 @Composable
 fun SettingsScreen(
     viewModel: MainViewModel,
@@ -48,6 +99,7 @@ fun SettingsScreen(
 ) {
     val content = viewModel.content
     val home = content.home
+    val scrollState = rememberScrollState()
     Surface(Modifier.fillMaxSize(), color = Color(0xFFFFFBF4)) {
         OverlappingHeaderLayout(
             // The content has 16.dp top padding, leaving a visible 24.dp card overlap.
@@ -66,7 +118,8 @@ fun SettingsScreen(
         Column(
             Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .sharedHeaderScrollFade(scrollState.value, overlap = 40.dp)
+                .verticalScroll(scrollState)
                 .padding(16.dp)
                 .navigationBarsPadding(),
         ) {
@@ -106,6 +159,10 @@ fun SettingsScreen(
             Spacer(Modifier.height(10.dp))
             OfflineModeCard(viewModel)
             Spacer(Modifier.height(24.dp))
+            SettingsSectionHeader("Workflow & Translation Settings")
+            Spacer(Modifier.height(10.dp))
+            WorkflowSettingsCard(viewModel)
+            Spacer(Modifier.height(24.dp))
             SettingsSectionHeader(stringResource(appearanceSectionRes(viewModel.uiLanguage)))
             Spacer(Modifier.height(10.dp))
             Card(
@@ -136,10 +193,6 @@ fun SettingsScreen(
                 }
             }
             Spacer(Modifier.height(24.dp))
-            SettingsSectionHeader("Workflow & Translation Settings")
-            Spacer(Modifier.height(10.dp))
-            WorkflowSettingsCard(viewModel)
-            Spacer(Modifier.height(24.dp))
             SettingsSectionHeader(stringResource(home.aboutRes))
             Spacer(Modifier.height(10.dp))
             AboutSettingsCard(
@@ -158,6 +211,67 @@ private fun appearanceSectionRes(language: UiLanguage): Int = when (language) {
     UiLanguage.ENGLISH -> R.string.ui_appearance_eng
     UiLanguage.FILIPINO -> R.string.ui_appearance_fil
     UiLanguage.BULOS -> R.string.ui_appearance_bul
+}
+
+@Composable
+private fun WorkflowSettingsCard(viewModel: MainViewModel) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = HomeCardShape,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = HomeSupportingCardBorder,
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(18.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SettingsIcon(R.drawable.ic_lucide_mic)
+                Spacer(Modifier.width(12.dp))
+                SettingsTitleAndSubtitle(
+                    title = "Skip transcription screen",
+                    subtitle = "Go straight from recording to output screen",
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(Modifier.width(12.dp))
+                Switch(
+                    checked = viewModel.skipTranscriptionScreen,
+                    onCheckedChange = viewModel::selectSkipTranscriptionScreen,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = WarmWhite,
+                        checkedTrackColor = SharedActiveButtonColor,
+                        checkedBorderColor = SharedActiveButtonColor,
+                        uncheckedThumbColor = WarmWhite,
+                        uncheckedTrackColor = Color(0xFFF1E8DA),
+                        uncheckedBorderColor = Color(0xFFE5DDD2).copy(alpha = 0.65f),
+                    ),
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider(color = Color(0xFFE5DDD2).copy(alpha = 0.65f))
+            Spacer(Modifier.height(16.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SettingsIcon(R.drawable.ic_saved_history_reference)
+                Spacer(Modifier.width(12.dp))
+                SettingsTitleAndSubtitle(
+                    title = "Save entries by default",
+                    subtitle = "Automatically save translation history entries",
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(Modifier.width(12.dp))
+                Switch(
+                    checked = viewModel.autoSaveEnabled,
+                    onCheckedChange = viewModel::selectAutoSaveEnabled,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = WarmWhite,
+                        checkedTrackColor = SharedActiveButtonColor,
+                        checkedBorderColor = SharedActiveButtonColor,
+                        uncheckedThumbColor = WarmWhite,
+                        uncheckedTrackColor = Color(0xFFF1E8DA),
+                        uncheckedBorderColor = Color(0xFFE5DDD2).copy(alpha = 0.65f),
+                    ),
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -268,15 +382,17 @@ private fun SettingsSectionHeader(text: String) {
 }
 
 @Composable
-private fun OfflineModeCard(viewModel: MainViewModel) {
+internal fun OfflineModeCard(viewModel: MainViewModel) {
     val strings = offlineSpeechResourceStrings(viewModel.uiLanguage)
     val languages = listOf(UiLanguage.ENGLISH, UiLanguage.FILIPINO)
-    val hasMissingSpeechResources = languages.any {
-        viewModel.offlineSpeechResourceState(it) != OfflineSpeechResourceState.READY
-    }
+    val speechStates = languages.map(viewModel::offlineSpeechResourceState)
     val downloadInProgress = languages.any {
         viewModel.offlineSpeechResourceState(it) == OfflineSpeechResourceState.DOWNLOADING
     }
+    val resourceNotice = offlineResourceNotice(
+        isDictionaryReady = viewModel.isDictionaryLoaded,
+        speechStates = speechStates,
+    )
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = HomeCardShape,
@@ -295,12 +411,10 @@ private fun OfflineModeCard(viewModel: MainViewModel) {
                 Spacer(Modifier.width(12.dp))
                 SettingsTitleAndSubtitle(
                     title = stringResource(viewModel.content.home.offlineModeRes),
-                    subtitle = stringResource(
-                        if (viewModel.offlineModeEnabled) strings.activeRes else strings.automaticRes,
-                    ),
+                    subtitle = stringResource(viewModel.content.home.offlineModeSummaryRes),
                     modifier = Modifier.weight(1f),
                     titleColor = OfflineResourceTextColor,
-                    subtitleColor = OfflineResourceSupportingColor,
+                    subtitleColor = TranslationInputTextColor,
                 )
                 Spacer(Modifier.width(12.dp))
                 Switch(
@@ -316,82 +430,83 @@ private fun OfflineModeCard(viewModel: MainViewModel) {
                     ),
                 )
             }
-            Spacer(Modifier.height(16.dp))
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                color = Color.Transparent,
-            ) {
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .background(OfflineResourcesBrush)
-                        .padding(14.dp),
+            if (viewModel.offlineModeEnabled) {
+                Spacer(Modifier.height(16.dp))
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    color = Color.Transparent,
                 ) {
-                    Text(
-                        stringResource(strings.resourcesRes),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = OfflineResourceTextColor,
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    ResourceStatusRow(
-                        label = stringResource(strings.dictionaryRes),
-                        status = stringResource(
-                            if (viewModel.isDictionaryLoaded) strings.readyRes else strings.notInstalledRes,
-                        ),
-                        ready = viewModel.isDictionaryLoaded,
-                        textColor = OfflineResourceTextColor,
-                        supportingColor = OfflineResourceSupportingColor,
-                    )
-                    Spacer(Modifier.height(14.dp))
-                    Text(
-                        stringResource(strings.speechRecognitionRes),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = OfflineResourceTextColor,
-                    )
-                    Spacer(Modifier.height(3.dp))
-                    Text(
-                        stringResource(strings.availabilityRes),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = OfflineResourceSupportingColor,
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    languages.forEachIndexed { index, language ->
-                        OfflineSpeechModelRow(
-                            language = language,
-                            sizeMb = viewModel.offlineSpeechModelSizeMb(language),
-                            state = viewModel.offlineSpeechResourceState(language),
-                            downloadsEnabled = viewModel.isOnline && !downloadInProgress,
-                            strings = strings,
-                            onDownload = { viewModel.downloadOfflineSpeechModel(language) },
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .background(OfflineResourcesBrush)
+                            .padding(14.dp),
+                    ) {
+                        Text(
+                            stringResource(strings.resourcesRes),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = OfflineResourceTextColor,
+                        )
+                        Spacer(Modifier.height(14.dp))
+                        ResourceStatusRow(
+                            label = stringResource(strings.dictionaryRes),
+                            status = stringResource(
+                                if (viewModel.isDictionaryLoaded) strings.readyRes else strings.notInstalledRes,
+                            ),
+                            ready = viewModel.isDictionaryLoaded,
                             textColor = OfflineResourceTextColor,
                             supportingColor = OfflineResourceSupportingColor,
                         )
-                        if (index != languages.lastIndex) Spacer(Modifier.height(10.dp))
-                    }
-                    if (hasMissingSpeechResources) {
-                        Spacer(Modifier.height(14.dp))
+                        Spacer(Modifier.height(16.dp))
+                        OfflineModeDivider()
+                        Spacer(Modifier.height(16.dp))
                         Text(
-                            stringResource(strings.downloadResourcesRes),
+                            stringResource(strings.speechRecognitionRes),
                             style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.Bold,
                             color = OfflineResourceTextColor,
                         )
-                        if (!viewModel.isOnline) {
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                stringResource(strings.requiresInternetRes),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = OfflineResourceSupportingColor,
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            stringResource(strings.availabilityRes),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = OfflineResourceSupportingColor,
+                        )
+                        Spacer(Modifier.height(14.dp))
+                        languages.forEachIndexed { index, language ->
+                            OfflineSpeechModelRow(
+                                language = language,
+                                sizeMb = viewModel.offlineSpeechModelSizeMb(language),
+                                state = viewModel.offlineSpeechResourceState(language),
+                                downloadsEnabled = viewModel.isOnline && !downloadInProgress,
+                                strings = strings,
+                                onDownload = { viewModel.downloadOfflineSpeechModel(language) },
+                                textColor = OfflineResourceTextColor,
+                                supportingColor = OfflineResourceSupportingColor,
                             )
+                            if (index != languages.lastIndex) Spacer(Modifier.height(10.dp))
                         }
+                        Spacer(Modifier.height(14.dp))
+                        OfflineDownloadNotice(
+                            text = offlineResourceNoticeText(resourceNotice, viewModel.uiLanguage),
+                            textColor = OfflineResourceSupportingColor,
+                        )
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun OfflineModeDivider() {
+    HorizontalDivider(
+        modifier = Modifier.fillMaxWidth(),
+        thickness = 1.dp,
+        color = OfflineResourceTextColor.copy(alpha = 0.14f),
+    )
 }
 
 @Composable
@@ -410,12 +525,65 @@ private fun ResourceStatusRow(
             color = textColor,
         )
         Spacer(Modifier.width(12.dp))
+        if (ready) {
+            ReadyResourceStatus(status, textColor)
+        } else {
+            Text(
+                status,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = supportingColor,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ReadyResourceStatus(label: String, textColor: Color) {
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = Color(0xFFEAF1D8),
+        contentColor = OfflineResourceTextColor,
+    ) {
         Text(
-            status,
+            text = label,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
-            color = if (ready) textColor else supportingColor,
+            color = textColor,
         )
+    }
+}
+
+@Composable
+private fun OfflineDownloadNotice(text: String, textColor: Color) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(10.dp),
+        color = Color(0xFFFFF7E7).copy(alpha = 0.78f),
+        border = BorderStroke(0.5.dp, OfflineResourceTextColor.copy(alpha = 0.12f)),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_lucide_info),
+                contentDescription = null,
+                tint = textColor,
+                modifier = Modifier.size(15.dp),
+            )
+            Spacer(Modifier.width(7.dp))
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodySmall,
+                color = textColor,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
 
@@ -437,180 +605,114 @@ private fun OfflineSpeechModelRow(
         Column(Modifier.weight(1f)) {
             Text(
                 stringResource(language.displayNameRes),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.bodyMedium,
                 color = textColor,
             )
-            Text(
-                text = when {
-                    state == OfflineSpeechResourceState.DOWNLOADING -> stringResource(strings.downloadingRes)
-                    state == OfflineSpeechResourceState.READY -> stringResource(strings.readyRes)
-                    state == OfflineSpeechResourceState.FAILED -> stringResource(strings.failedRes)
-                    else -> "${stringResource(strings.notInstalledRes)} · $sizeMb MB"
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = if (state == OfflineSpeechResourceState.READY) {
-                    textColor
-                } else {
-                    supportingColor
-                },
-            )
         }
-        Spacer(Modifier.width(12.dp))
-        when {
-            state == OfflineSpeechResourceState.DOWNLOADING ->
-                CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
-            state != OfflineSpeechResourceState.READY -> OutlinedButton(
-                onClick = onDownload,
-                enabled = downloadsEnabled,
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_lucide_download),
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
+        if (state == OfflineSpeechResourceState.READY) {
+            Spacer(Modifier.width(12.dp))
+            ReadyResourceStatus(stringResource(strings.readyRes), textColor)
+        }
+    }
+    if (state != OfflineSpeechResourceState.READY) {
+        Spacer(Modifier.height(8.dp))
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.CenterEnd,
+        ) {
+            when (state) {
+                OfflineSpeechResourceState.DOWNLOADING -> CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = SharedActiveButtonColor,
+                    strokeWidth = 2.dp,
                 )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    stringResource(
-                        if (state == OfflineSpeechResourceState.FAILED) strings.retryRes else strings.downloadRes,
-                    ),
-                )
+                OfflineSpeechResourceState.NOT_DOWNLOADED,
+                OfflineSpeechResourceState.FAILED -> Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "$sizeMb MB",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = OfflineResourceSupportingColor,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    OutlinedButton(
+                        onClick = onDownload,
+                        enabled = downloadsEnabled,
+                        modifier = Modifier.height(32.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = OfflineResourceSupportingColor,
+                        ),
+                        border = BorderStroke(1.5.dp, Color(0xFFE3D1BE)),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_lucide_download),
+                            contentDescription = null,
+                            modifier = Modifier.size(15.dp),
+                        )
+                        Spacer(Modifier.width(5.dp))
+                        Text(
+                            stringResource(
+                                if (state == OfflineSpeechResourceState.FAILED) strings.retryRes else strings.downloadRes,
+                            ),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
             }
         }
     }
 }
 
 private data class OfflineSpeechResourceStrings(
-    val activeRes: Int,
-    val automaticRes: Int,
     val resourcesRes: Int,
     val dictionaryRes: Int,
     val speechRecognitionRes: Int,
     val availabilityRes: Int,
     val readyRes: Int,
     val notInstalledRes: Int,
-    val downloadingRes: Int,
     val downloadRes: Int,
-    val failedRes: Int,
     val retryRes: Int,
-    val downloadResourcesRes: Int,
-    val requiresInternetRes: Int,
 )
 
 private fun offlineSpeechResourceStrings(language: UiLanguage) = when (language) {
     UiLanguage.FILIPINO -> OfflineSpeechResourceStrings(
-        R.string.ui_offline_mode_active_fil,
-        R.string.ui_offline_mode_automatic_fil,
         R.string.ui_offline_resources_fil,
         R.string.ui_offline_dictionary_fil,
         R.string.ui_speech_recognition_fil,
         R.string.ui_offline_speech_availability_fil,
         R.string.ui_resource_ready_fil,
         R.string.ui_speech_model_not_installed_fil,
-        R.string.ui_speech_model_downloading_fil,
         R.string.ui_speech_model_download_fil,
-        R.string.ui_speech_model_failed_fil,
         R.string.ui_speech_model_retry_fil,
-        R.string.ui_download_offline_speech_resources_fil,
-        R.string.ui_speech_model_requires_internet_fil,
     )
     UiLanguage.BULOS -> OfflineSpeechResourceStrings(
-        R.string.ui_offline_mode_active_bul,
-        R.string.ui_offline_mode_automatic_bul,
         R.string.ui_offline_resources_bul,
         R.string.ui_offline_dictionary_bul,
         R.string.ui_speech_recognition_bul,
         R.string.ui_offline_speech_availability_bul,
         R.string.ui_resource_ready_bul,
         R.string.ui_speech_model_not_installed_bul,
-        R.string.ui_speech_model_downloading_bul,
         R.string.ui_speech_model_download_bul,
-        R.string.ui_speech_model_failed_bul,
         R.string.ui_speech_model_retry_bul,
-        R.string.ui_download_offline_speech_resources_bul,
-        R.string.ui_speech_model_requires_internet_bul,
     )
     UiLanguage.ENGLISH -> OfflineSpeechResourceStrings(
-        R.string.ui_offline_mode_active_eng,
-        R.string.ui_offline_mode_automatic_eng,
         R.string.ui_offline_resources_eng,
         R.string.ui_offline_dictionary_eng,
         R.string.ui_speech_recognition_eng,
         R.string.ui_offline_speech_availability_eng,
         R.string.ui_resource_ready_eng,
         R.string.ui_speech_model_not_installed_eng,
-        R.string.ui_speech_model_downloading_eng,
         R.string.ui_speech_model_download_eng,
-        R.string.ui_speech_model_failed_eng,
         R.string.ui_speech_model_retry_eng,
-        R.string.ui_download_offline_speech_resources_eng,
-        R.string.ui_speech_model_requires_internet_eng,
     )
 }
 
 @Composable
-private fun WorkflowSettingsCard(viewModel: MainViewModel) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = HomeCardShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = HomeSupportingCardBorder,
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-    ) {
-        Column(Modifier.fillMaxWidth().padding(18.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                SettingsIcon(R.drawable.ic_lucide_mic)
-                Spacer(Modifier.width(12.dp))
-                SettingsTitleAndSubtitle(
-                    title = "Skip transcription screen",
-                    subtitle = "Go straight from recording to output screen",
-                    modifier = Modifier.weight(1f),
-                )
-                Spacer(Modifier.width(12.dp))
-                Switch(
-                    checked = viewModel.skipTranscriptionScreen,
-                    onCheckedChange = viewModel::selectSkipTranscriptionScreen,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = WarmWhite,
-                        checkedTrackColor = SharedActiveButtonColor,
-                        checkedBorderColor = SharedActiveButtonColor,
-                        uncheckedThumbColor = WarmWhite,
-                        uncheckedTrackColor = Color(0xFFF1E8DA),
-                        uncheckedBorderColor = Color(0xFFE5DDD2).copy(alpha = 0.65f),
-                    ),
-                )
-            }
-            Spacer(Modifier.height(16.dp))
-            HorizontalDivider(color = Color(0xFFE5DDD2).copy(alpha = 0.65f))
-            Spacer(Modifier.height(16.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                SettingsIcon(R.drawable.ic_saved_history_reference)
-                Spacer(Modifier.width(12.dp))
-                SettingsTitleAndSubtitle(
-                    title = "Save entries by default",
-                    subtitle = "Automatically save translation history entries",
-                    modifier = Modifier.weight(1f),
-                )
-                Spacer(Modifier.width(12.dp))
-                Switch(
-                    checked = viewModel.autoSaveEnabled,
-                    onCheckedChange = viewModel::selectAutoSaveEnabled,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = WarmWhite,
-                        checkedTrackColor = SharedActiveButtonColor,
-                        checkedBorderColor = SharedActiveButtonColor,
-                        uncheckedThumbColor = WarmWhite,
-                        uncheckedTrackColor = Color(0xFFF1E8DA),
-                        uncheckedBorderColor = Color(0xFFE5DDD2).copy(alpha = 0.65f),
-                    ),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun FontSizeSelector(
+internal fun FontSizeSelector(
     selectedFontSize: AppFontSize,
     smallLabel: String,
     mediumLabel: String,
@@ -623,7 +725,7 @@ private fun FontSizeSelector(
         AppFontSize.LARGE to largeLabel,
     )
     Row(
-        modifier = Modifier.fillMaxWidth().height(40.dp),
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         options.forEach { (fontSize, label) ->
@@ -645,7 +747,10 @@ private fun ThemeOption(
     modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = modifier.fillMaxHeight().clickable(onClick = onClick),
+        modifier = modifier
+            .fillMaxHeight()
+            .defaultMinSize(minHeight = 40.dp)
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(20.dp),
         color = if (selected) SharedActiveButtonColor else InactiveButtonColor,
         contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -657,7 +762,9 @@ private fun ThemeOption(
                 text = label,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
-                maxLines = 1,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
+                textAlign = TextAlign.Center,
+                maxLines = 2,
             )
         }
     }

@@ -57,6 +57,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.annotation.StringRes
 import com.example.bulosfrontend.ui.theme.BulosFrontEndTheme
 import kotlin.math.sin
 
@@ -70,6 +71,12 @@ private val SplashProgressForest = Color(0xFF385F2B)
 private val SplashProgressGreen = Color(0xFF83AE46)
 private val SplashProgressHighlight = Color(0xFFDCEF69)
 internal const val StartupProgressAnimationDurationMillis = 900
+
+@StringRes
+internal fun splashSubtitleRes(language: UiLanguage): Int = R.string.splash_subtitle
+
+@StringRes
+internal fun splashLoadingRes(language: UiLanguage): Int = R.string.splash_preparing
 
 fun splashGradientBrush(): Brush =
     Brush.verticalGradient(

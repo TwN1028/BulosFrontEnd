@@ -524,8 +524,16 @@ fun HomeRecordingScreen(
                     )
                     SttTutorialHint(
                         step = 1,
-                        title = "Select Your Languages",
-                        body = "Choose the language you'll speak and the language to translate it into.",
+                        title = when (viewModel.uiLanguage) {
+                            UiLanguage.FILIPINO -> "Pumili ng mga Wika"
+                            UiLanguage.BULOS -> "Pumili ni mga Sorot"
+                            else -> "Select Your Languages"
+                        },
+                        body = when (viewModel.uiLanguage) {
+                            UiLanguage.FILIPINO -> "Piliin ang wikang sasalitain at ang wikang isasalin."
+                            UiLanguage.BULOS -> "Piliin i sorot a surotin ki i sorot a isasalin."
+                            else -> "Choose the language you'll speak and the language to translate it into."
+                        },
                         modifier = Modifier.align(Alignment.TopCenter).padding(top = 54.dp),
                     )
                 }
@@ -563,8 +571,16 @@ fun HomeRecordingScreen(
                 if (tutorialStep == SttTutorialStep.MICROPHONE) {
                     SttTutorialHint(
                         step = 2,
-                        title = "Tap the microphone to start speaking.",
-                        body = "Microphone permission is requested only when it is needed.",
+                        title = when (viewModel.uiLanguage) {
+                            UiLanguage.FILIPINO -> "Pindutin ang mikropono upang magsimulang magsalita."
+                            UiLanguage.BULOS -> "Pindutin i mikropono para magsimula a magsalita."
+                            else -> "Tap the microphone to start speaking."
+                        },
+                        body = when (viewModel.uiLanguage) {
+                            UiLanguage.FILIPINO -> "Hihilingin lamang ang pahintulot sa mikropono kung kinakailangan."
+                            UiLanguage.BULOS -> "Hihilingin la i pahintulot de mikropono pag kailangan."
+                            else -> "Microphone permission is requested only when it is needed."
+                        },
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .padding(top = 54.dp),
@@ -572,8 +588,16 @@ fun HomeRecordingScreen(
                 } else if (tutorialStep == SttTutorialStep.LISTENING) {
                     SttTutorialHint(
                         step = 3,
-                        title = "Recording... Start speaking.",
-                        body = "Try saying a short word or phrase, then tap Finish when you're done.",
+                        title = when (viewModel.uiLanguage) {
+                            UiLanguage.FILIPINO -> "Nagsasalita... Magsimulang magsalita."
+                            UiLanguage.BULOS -> "Nagsurot... Magsimula a magsalita."
+                            else -> "Recording... Start speaking."
+                        },
+                        body = when (viewModel.uiLanguage) {
+                            UiLanguage.FILIPINO -> "Subukang magsalita ng maikling salita o parirala, pagkatapos ay pindutin ang Tapos kapag tapos ka na."
+                            UiLanguage.BULOS -> "Subukan a magsalita ni untik a surot, pagkatapos ay pindutin i Tapos pag tapos ka di."
+                            else -> "Try saying a short word or phrase, then tap Finish when you're done."
+                        },
                         bodyHighlight = "Finish",
                         modifier = Modifier
                             .align(Alignment.TopCenter)

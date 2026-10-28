@@ -25,5 +25,6 @@ object TextNormalizer {
         .replace(optionalSentencePunctuation, " ")
         .lowercase(Locale.ROOT)
         .replace(whitespace, " ")
+        .replace(Regex("\\bkamusta\\b"), "kumusta")
         .trim()
 }

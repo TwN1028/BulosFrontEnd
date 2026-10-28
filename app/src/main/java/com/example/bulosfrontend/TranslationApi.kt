@@ -179,7 +179,7 @@ class NetworkTranslationRepository(private val api: TranslationApi) : Translatio
             ),
         )
         require(response.originalText.isNotBlank())
-        require(response.translatedText.isNotEmpty())
+        require(response.translatedText.isNotBlank())
         require(response.sourceLanguage == sourceCode)
         require(response.targetLanguage == targetCode)
         require(response.translationMethod.isNotBlank())
@@ -308,16 +308,33 @@ class HybridTranslationRepository(
             }
         }
 
-        return when (val offlineResult = offlineDictionary.lookup(text, source, target)) {
-            is OfflineLookupResult.Translation ->
-                offlineTranslationSuccess(offlineResult, text, sourceLanguage, targetLanguage)
-            is OfflineLookupResult.Suggestions -> TranslationResult.Suggestions(offlineResult.candidates)
-            else -> offlineTranslationSuccess(
-                OfflineLookupResult.Translation(text, "offline_original_fallback", 1.0),
-                text,
-                sourceLanguage,
-                targetLanguage
-            )
+        if (source == UiLanguage.BULOS && target == UiLanguage.ENGLISH) {
+            val filipinoResult = offlineDictionary.lookup(text, UiLanguage.BULOS, UiLanguage.FILIPINO)
+            if (filipinoResult is OfflineLookupResult.Translation && filipinoResult.translatedText.isNotBlank()) {
+                val mlKitEnglish = MlKitEnglishFilipinoPivot(context).translateFilipinoToEnglish(filipinoResult.translatedText)
+                if (!mlKitEnglish.isNullOrBlank()) {
+                    return offlineTranslationSuccess(
+                        OfflineLookupResult.Translation(mlKitEnglish, "offline_mlkit_pivot", filipinoResult.confidence),
+                        text,
+                        sourceLanguage,
+                        targetLanguage,
+                    )
+                }
+            }
+        }
+
+        return applyOfflineFallback(source, target, networkResult, wasOnline) {
+            when (val offlineResult = offlineDictionary.lookup(text, source, target)) {
+                is OfflineLookupResult.Translation ->
+                    offlineTranslationSuccess(offlineResult, text, sourceLanguage, targetLanguage)
+                is OfflineLookupResult.Suggestions -> TranslationResult.Suggestions(offlineResult.candidates)
+                else -> offlineTranslationSuccess(
+                    OfflineLookupResult.Translation(text, "offline_original_fallback", 1.0),
+                    text,
+                    sourceLanguage,
+                    targetLanguage
+                )
+            }
         }
     }
 
@@ -376,6 +393,38 @@ class HybridTranslationRepository(
 
 internal fun canUseOnlineServices(hasInternetConnection: Boolean, offlineModeEnabled: Boolean): Boolean =
     hasInternetConnection && !offlineModeEnabled
+
+internal const val BULOS_TO_ENGLISH_ONLINE_REQUIRED_MESSAGE =
+    "Bulos to English translation requires the online service. Turn off Offline Mode and try again."
+
+internal fun applyOfflineFallback(
+    source: UiLanguage,
+    target: UiLanguage,
+    networkResult: TranslationResult,
+    wasOnline: Boolean,
+    offlineFallback: () -> TranslationResult,
+): TranslationResult {
+    if (source == UiLanguage.BULOS && target == UiLanguage.ENGLISH) {
+        return if (wasOnline) networkResult else {
+            TranslationResult.Failure(BULOS_TO_ENGLISH_ONLINE_REQUIRED_MESSAGE)
+        }
+    }
+    return offlineFallback()
+}
+
+internal fun TranslationResponse.matchesTranslationRequest(
+    text: String,
+    sourceLanguage: String,
+    targetLanguage: String,
+): Boolean {
+    val sourceCode = runCatching { BackendLanguageCodes.forUiLabel(sourceLanguage) }.getOrNull()
+        ?: return false
+    val targetCode = runCatching { BackendLanguageCodes.forUiLabel(targetLanguage) }.getOrNull()
+        ?: return false
+    return TextNormalizer.normalizeForMatching(originalText) == TextNormalizer.normalizeForMatching(text) &&
+        this.sourceLanguage == sourceCode &&
+        this.targetLanguage == targetCode
+}
 
 /**
  * Older backend deployments can return a successful but incomplete English -> Bulos response.
@@ -440,6 +489,10 @@ internal fun translationFailurePresentation(message: String): TranslationFailure
     "The translation server took too long to respond. Please try again shortly." -> TranslationFailurePresentation(
         title = "Translation service is taking too long",
         description = "Please try again shortly.",
+    )
+    BULOS_TO_ENGLISH_ONLINE_REQUIRED_MESSAGE -> TranslationFailurePresentation(
+        title = "Online translation required",
+        description = "Turn off Offline Mode and try again.",
     )
     DEVICE_ID_ERROR_MESSAGE -> TranslationFailurePresentation(
         title = "App identity unavailable",
@@ -526,7 +579,7 @@ internal suspend fun refreshCompleteDictionary(
 }
 
 object TranslationServiceProvider {
-    const val BASE_URL = "https://bulosbackendserver.onrender.com/"
+    const val BASE_URL = "https://buotkoikitam.onrender.com/"
 
     @Volatile
     private var repository: TranslationRepository? = null

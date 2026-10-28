@@ -94,8 +94,11 @@ fun TranslateTextScreen(
     val successfulResponse =
         (viewModel.textTranslationState as? TextTranslationUiState.Success)?.response
             ?.takeIf {
-                TextNormalizer.normalizeForMatching(it.originalText) ==
-                    TextNormalizer.normalizeForMatching(text) &&
+                it.matchesTranslationRequest(
+                    text = text,
+                    sourceLanguage = TranslationState.sourceLanguage,
+                    targetLanguage = TranslationState.targetLanguage,
+                ) &&
                     it.translatedText.isNotBlank()
             }
     val successfulTranslation = successfulResponse?.translatedText

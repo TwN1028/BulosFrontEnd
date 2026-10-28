@@ -62,15 +62,13 @@ internal class OfflineDictionary(entries: List<Map<String, String>>) {
         ) return OfflineLookupResult.Translation(text, "offline_original_fallback", 1.0)
         if (rows.isEmpty()) return OfflineLookupResult.Translation(text, "offline_original_fallback", 1.0)
 
-        val directResult = lookupDirect(text, source, target)
-        if (directResult is OfflineLookupResult.Translation) {
-            return directResult
-        }
+        // Stage 1: Exact full-input dataset sentence/phrase lookup
+        lookupExactPhrase(text, source, target)?.let { return it }
 
-        if (source == UiLanguage.ENGLISH && target == UiLanguage.BULOS) {
-            translateViaFilipino(text, source, target)?.let { return it }
-        }
+        // Stage 2: Dataset template lookup
+        lookupTemplate(text, source, target)?.let { return it }
 
+        // Stage 3: Grammar-rule engine check
         val ruleDirection = when {
             source == UiLanguage.ENGLISH && target == UiLanguage.BULOS -> RuleTranslationDirection.ENGLISH_TO_BULOS
             source == UiLanguage.FILIPINO && target == UiLanguage.BULOS -> RuleTranslationDirection.FILIPINO_TO_BULOS
@@ -83,36 +81,63 @@ internal class OfflineDictionary(entries: List<Map<String, String>>) {
             return OfflineLookupResult.Translation(ruleAppliedText, "offline_grammar_rule", 0.95)
         }
 
-        translateWordByWord(text, source, target)?.let { return it }
-        if (directResult is OfflineLookupResult.Suggestions) return directResult
+        // Stage 4: Local phrase/word translation fallback
+        if (source == UiLanguage.ENGLISH && target == UiLanguage.BULOS) {
+            val directMatch = translateDirectSequenceOrWord(text, source, target)
+            if (directMatch != null && isCompleteTranslation(directMatch)) {
+                return directMatch
+            }
+            // Only if incomplete, pivot the whole original input through English -> Filipino -> Bulos
+            translateViaFilipino(text, source, target)?.let { return it }
+            if (directMatch != null) return directMatch
+        } else {
+            translateDirectSequenceOrWord(text, source, target)?.let { return it }
+        }
+
+        // Stage 5: Safe unchanged/unresolved fallback
         return OfflineLookupResult.Translation(text, "offline_original_fallback", 1.0)
     }
 
-    /**
-     * Looks up a pair without applying the public supported-pair restriction.  This is used only
-     * for the English -> Filipino -> Bulos bridge; it never returns the source text as a match.
-     */
-    private fun lookupDirect(text: String, source: UiLanguage, target: UiLanguage): OfflineLookupResult? {
+    private fun lookupExactPhrase(text: String, source: UiLanguage, target: UiLanguage): OfflineLookupResult.Translation? {
         val normalizedInput = TextNormalizer.normalizeForMatching(text)
         if (normalizedInput.isEmpty()) return null
         val punctuation = trailingSentencePunctuation(text)
 
-        val rawTranslation = exact(normalizedInput, source, target, phrase = true)
-            ?: exact(normalizedInput, source, target, phrase = false)
-            ?: template(text, source, target)
-            ?: translateCompleteKnownSequence(text, source, target)
-            ?: return null
-
+        val rawTranslation = exact(normalizedInput, source, target, phrase = true) ?: return null
         val formattedText = rawTranslation.trim().replaceFirstChar { if (it.isLowerCase()) it.uppercaseChar() else it }
+        return OfflineLookupResult.Translation(formattedText + punctuation, "offline_exact_phrase", 1.0)
+    }
 
-        val method = when {
-            exact(normalizedInput, source, target, phrase = true) != null -> "offline_exact_phrase"
-            exact(normalizedInput, source, target, phrase = false) != null -> "offline_exact_dictionary"
-            template(text, source, target) != null -> "offline_template_match"
-            else -> "offline_exact_composite"
+    private fun lookupTemplate(text: String, source: UiLanguage, target: UiLanguage): OfflineLookupResult.Translation? {
+        val punctuation = trailingSentencePunctuation(text)
+        val rawTranslation = template(text, source, target) ?: return null
+        val formattedText = rawTranslation.trim().replaceFirstChar { if (it.isLowerCase()) it.uppercaseChar() else it }
+        return OfflineLookupResult.Translation(formattedText + punctuation, "offline_template_match", 1.0)
+    }
+
+    private fun translateDirectSequenceOrWord(text: String, source: UiLanguage, target: UiLanguage): OfflineLookupResult.Translation? {
+        val normalizedInput = TextNormalizer.normalizeForMatching(text)
+        if (normalizedInput.isEmpty()) return null
+        val punctuation = trailingSentencePunctuation(text)
+
+        val singleWord = exact(normalizedInput, source, target, phrase = false)
+        if (singleWord != null) {
+            val formatted = singleWord.trim().replaceFirstChar { if (it.isLowerCase()) it.uppercaseChar() else it }
+            return OfflineLookupResult.Translation(formatted + punctuation, "offline_exact_dictionary", 1.0)
         }
 
-        return OfflineLookupResult.Translation(formattedText + punctuation, method, 1.0)
+        val composite = translateCompleteKnownSequence(text, source, target)
+        if (composite != null) {
+            val formatted = composite.trim().replaceFirstChar { if (it.isLowerCase()) it.uppercaseChar() else it }
+            return OfflineLookupResult.Translation(formatted + punctuation, "offline_exact_composite", 1.0)
+        }
+
+        return translateWordByWord(text, source, target)
+    }
+
+    private fun isCompleteTranslation(result: OfflineLookupResult.Translation): Boolean {
+        if (result.method == "offline_exact_dictionary" || result.method == "offline_exact_composite") return true
+        return result.confidence >= 1.0
     }
 
     /** Fills corresponding underscore placeholders only when the full template matches. */
@@ -355,14 +380,24 @@ internal class OfflineDictionary(entries: List<Map<String, String>>) {
     private fun exact(normalizedInput: String, source: UiLanguage, target: UiLanguage, phrase: Boolean): String? {
         val translations = rows.asSequence()
             .filter { row ->
-                row.isPhrase == phrase &&
-                    row.values[source]?.let(TextNormalizer::normalizeForMatching) == normalizedInput
+                if (row.isPhrase != phrase) return@filter false
+                val rawSource = row.values[source] ?: return@filter false
+                if (TextNormalizer.normalizeForMatching(rawSource) == normalizedInput) return@filter true
+
+                if (rawSource.contains(',') && !rawSource.contains('.')) {
+                    val chunks = rawSource.split(',')
+                    if (chunks.all { it.trim().split(Regex("\\s+")).size <= 4 }) {
+                        return@filter chunks.any { TextNormalizer.normalizeForMatching(it) == normalizedInput }
+                    }
+                }
+                false
             }
-            .mapNotNull { it.values[target] }
+            .mapNotNull { it.values[target]?.takeIf { v -> v.isNotBlank() && v != "-" && v != "—" } }
+            .flatMap { val splits = it.split(","); if (splits.size > 1 && splits.any { s -> s.trim().equals("aku", true) }) listOf("aku") else splits.map(String::trim) }
+            .filter { it.isNotBlank() && it != "-" && it != "—" }
             .distinct()
             .toList()
-        // A normalized source key with conflicting target values must never choose an arbitrary first row.
-        return translations.singleOrNull()
+        return if (phrase) translations.singleOrNull() else translations.firstOrNull()
     }
 
     companion object {
@@ -416,25 +451,20 @@ class OfflineDictionaryManager(private val context: Context) {
         private set
 
     suspend fun load(): Unit = withContext(Dispatchers.IO) {
+        val verifiedAdditions = readVerifiedAdditions()
         val cachedEntries = if (dictionaryFile.exists()) {
-            runCatching { readEntries(dictionaryFile) }.getOrElse {
-                isLoaded = false
-                return@withContext
-            }
+            runCatching { readEntries(dictionaryFile) }.getOrDefault(emptyList())
         } else {
             emptyList()
         }
-        runCatching { mergeVerifiedDictionaryAdditions(cachedEntries, readVerifiedAdditions()) }
-            .onSuccess { entries ->
-                dictionary = OfflineDictionary(entries)
-                isLoaded = entries.isNotEmpty()
-            }
-            .onFailure { isLoaded = false }
+        val entries = mergeVerifiedDictionaryAdditions(verifiedAdditions, cachedEntries)
+        dictionary = OfflineDictionary(entries)
+        isLoaded = entries.isNotEmpty()
     }
 
     suspend fun replace(entries: List<Map<String, String>>) = withContext(Dispatchers.IO) {
         require(entries.isNotEmpty()) { "Verified dictionary download was empty." }
-        val replacement = OfflineDictionary(mergeVerifiedDictionaryAdditions(entries, readVerifiedAdditions()))
+        val replacement = OfflineDictionary(mergeVerifiedDictionaryAdditions(readVerifiedAdditions(), entries))
         val temporaryFile = File(context.filesDir, "custom_dictionary.json.tmp")
         try {
             temporaryFile.writeText(Gson().toJson(entries))
@@ -478,12 +508,12 @@ class OfflineDictionaryManager(private val context: Context) {
 }
 
 /**
- * Appends only complete curated rows whose source keys cannot alter an existing first-match lookup.
- * The downloaded cache remains authoritative and is never rewritten with bundled additions.
+ * Appends only complete curated secondary rows whose source keys cannot alter an existing primary entry.
+ * The primary verified additions dataset remains authoritative so that translation happens fresh every time.
  */
 internal fun mergeVerifiedDictionaryAdditions(
-    cachedEntries: List<Map<String, String>>,
-    additions: List<Map<String, String>>,
+    primaryEntries: List<Map<String, String>>,
+    secondaryEntries: List<Map<String, String>>,
 ): List<Map<String, String>> {
     val languages = listOf("English", "Filipino", "Bulos")
     fun sourceKeys(entry: Map<String, String>): Set<Pair<String, String>> = languages.mapNotNull { language ->
@@ -494,13 +524,13 @@ internal fun mergeVerifiedDictionaryAdditions(
             ?.let { language to it }
     }.toSet()
 
-    val occupiedSourceKeys = cachedEntries.flatMapTo(mutableSetOf()) { sourceKeys(it) }
-    val selected = additions.filter { entry ->
+    val occupiedSourceKeys = primaryEntries.flatMapTo(mutableSetOf()) { sourceKeys(it) }
+    val selected = secondaryEntries.filter { entry ->
         val complete = languages.all { entry[it]?.isNotBlank() == true && entry[it] != "—" }
         val keys = sourceKeys(entry)
         val accepted = complete && keys.size == languages.size && keys.none(occupiedSourceKeys::contains)
         if (accepted) occupiedSourceKeys.addAll(keys)
         accepted
     }
-    return cachedEntries + selected
+    return primaryEntries + selected
 }

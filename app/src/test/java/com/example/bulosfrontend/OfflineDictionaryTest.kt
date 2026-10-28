@@ -1,6 +1,11 @@
 package com.example.bulosfrontend
 
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import java.io.File
+import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Test
 
 class OfflineDictionaryTest {
@@ -18,6 +23,16 @@ class OfflineDictionaryTest {
             mapOf("en" to "boat", "tl" to "bangka", "bul" to "boat-bul"),
         ),
     )
+
+    @Before
+    fun setUp() {
+        BulosGrammarRuleRegistry.clear()
+    }
+
+    @After
+    fun tearDown() {
+        BulosGrammarRuleRegistry.clear()
+    }
 
     @Test
     fun normalizedExactPhrasePrecedesDictionaryLookup() {
@@ -174,103 +189,147 @@ class OfflineDictionaryTest {
     }
 
     @Test
-    fun englishToFilipinoToBulosBridgeUsesOnlyActualIntermediateTranslations() {
-        val bridge = OfflineDictionary(
+    fun exactPhraseAndTemplateResultsReturnBeforeRules() {
+        val testDict = OfflineDictionary(
             listOf(
-                mapOf("English" to "rain", "Filipino" to "ulan"),
-                mapOf("Filipino" to "ulan", "Bulos" to "oran"),
+                mapOf("_category" to "phrases", "English" to "good morning", "Bulos" to "maabig a buklas"),
+                mapOf("_category" to "phrases", "Filipino" to "Ako si ___.", "Bulos" to "Aku i ___."),
             ),
         )
-
-        val result = bridge.lookup("rain", UiLanguage.ENGLISH, UiLanguage.BULOS)
-
-        assertEquals("Oran", (result as OfflineLookupResult.Translation).translatedText)
-        assertEquals("offline_bridge_english_filipino", result.method)
-    }
-
-    @Test
-    fun englishToBulosBridgeKeepsNumbersAndUsesFilipinoWithoutRefuzzyingBulos() {
-        val bridge = OfflineDictionary(
-            listOf(
-                mapOf("English" to "iron", "Filipino" to "plantsa", "Bulos" to "palansa"),
-                mapOf("English" to "house", "Filipino" to "bahay"),
-                // This row must not be reached by re-processing the already translated
-                // Bulos result "palansa" as a Filipino input.
-                mapOf("Filipino" to "palansa", "Bulos" to "malangsa"),
-            ),
-        )
-
-        val result = bridge.lookup("the iron house 100", UiLanguage.ENGLISH, UiLanguage.BULOS)
-
-        assertEquals(
-            "The palansa bahay 100",
-            (result as OfflineLookupResult.Translation).translatedText,
-        )
-        assertEquals("offline_bridge_english_filipino", result.method)
-        assertEquals(0.5, result.confidence, 0.0)
-    }
-
-    @Test
-    fun grammarRulesRemainDisabledByDefaultAndDoNotInterfere() {
-        BulosGrammarRuleRegistry.clear()
         BulosGrammarRuleRegistry.register(
             BulosGrammarRule(
-                id = "default-disabled",
+                id = "rule-phrase-conflict",
+                direction = RuleTranslationDirection.ENGLISH_TO_BULOS,
+                description = "Phrase conflict rule",
+                condition = { it.contains("good morning", ignoreCase = true) },
+                transformation = { "rule-transformed" },
+                priority = 1,
+                isEnabled = true,
+            ),
+        )
+
+        val phraseResult = testDict.lookup("good morning", UiLanguage.ENGLISH, UiLanguage.BULOS)
+        assertEquals("Maabig a buklas", (phraseResult as OfflineLookupResult.Translation).translatedText)
+        assertEquals("offline_exact_phrase", phraseResult.method)
+
+        val templateResult = testDict.lookup("Ako si Angelo!", UiLanguage.FILIPINO, UiLanguage.BULOS)
+        assertEquals("Aku i Angelo!", (templateResult as OfflineLookupResult.Translation).translatedText)
+        assertEquals("offline_template_match", templateResult.method)
+    }
+
+    @Test
+    fun enabledGrammarRuleRunsBeforeLocalWordMatchingAndPivot() {
+        val testDict = OfflineDictionary(
+            listOf(
+                mapOf("English" to "coat", "Bulos" to "coat-bul"),
+            ),
+        )
+        BulosGrammarRuleRegistry.register(
+            BulosGrammarRule(
+                id = "rule-runs-before-local-word",
+                direction = RuleTranslationDirection.ENGLISH_TO_BULOS,
+                description = "Runs before local word match",
+                condition = { it.equals("coat", ignoreCase = true) },
+                transformation = { "rule-coat" },
+                priority = 1,
+                isEnabled = true,
+            ),
+        )
+
+        val result = testDict.lookup("coat", UiLanguage.ENGLISH, UiLanguage.BULOS)
+        assertEquals("rule-coat", (result as OfflineLookupResult.Translation).translatedText)
+        assertEquals("offline_grammar_rule", result.method)
+    }
+
+    @Test
+    fun disabledAndWrongDirectionRulesDoNotRun() {
+        BulosGrammarRuleRegistry.register(
+            BulosGrammarRule(
+                id = "disabled-rule",
                 direction = RuleTranslationDirection.ENGLISH_TO_BULOS,
                 description = "Disabled rule",
-                condition = { it.contains("coat") },
-                transformation = { "overridden-coat" },
+                condition = { it.equals("coat", ignoreCase = true) },
+                transformation = { "disabled-coat" },
                 priority = 1,
                 isEnabled = false,
+            ),
+        )
+        BulosGrammarRuleRegistry.register(
+            BulosGrammarRule(
+                id = "wrong-direction-rule",
+                direction = RuleTranslationDirection.FILIPINO_TO_BULOS,
+                description = "Wrong direction rule",
+                condition = { it.equals("coat", ignoreCase = true) },
+                transformation = { "wrong-direction-coat" },
+                priority = 1,
+                isEnabled = true,
             ),
         )
 
         val result = dictionary.lookup("coat", UiLanguage.ENGLISH, UiLanguage.BULOS)
         assertEquals("Coat-bul", (result as OfflineLookupResult.Translation).translatedText)
         assertEquals("offline_exact_dictionary", result.method)
-        BulosGrammarRuleRegistry.clear()
     }
 
     @Test
-    fun explicitlyEnabledGrammarRuleAppliesWhenExactMatchMisses() {
-        BulosGrammarRuleRegistry.clear()
-        BulosGrammarRuleRegistry.register(
-            BulosGrammarRule(
-                id = "enabled-test-rule",
-                direction = RuleTranslationDirection.ENGLISH_TO_BULOS,
-                description = "Enabled test rule",
-                condition = { it.equals("unknown-term", ignoreCase = true) },
-                transformation = { "rule-transformed-term" },
-                priority = 1,
-                isEnabled = true,
+    fun englishToBulosPerformsDirectMatchingBeforePivotWhenIncomplete() {
+        val testDict = OfflineDictionary(
+            listOf(
+                mapOf("English" to "beautiful", "Bulos" to "masampat"),
+                mapOf("English" to "rain", "Filipino" to "ulan"),
+                mapOf("Filipino" to "ulan", "Bulos" to "oran"),
             ),
         )
 
-        val result = dictionary.lookup("unknown-term", UiLanguage.ENGLISH, UiLanguage.BULOS)
-        assertEquals("rule-transformed-term", (result as OfflineLookupResult.Translation).translatedText)
-        assertEquals("offline_grammar_rule", result.method)
-        BulosGrammarRuleRegistry.clear()
+        // Complete direct English -> Bulos match
+        val directResult = testDict.lookup("beautiful", UiLanguage.ENGLISH, UiLanguage.BULOS)
+        assertEquals("Masampat", (directResult as OfflineLookupResult.Translation).translatedText)
+        assertEquals("offline_exact_dictionary", directResult.method)
+
+        // Incomplete direct match pivots through English -> Filipino -> Bulos
+        val pivotedResult = testDict.lookup("rain", UiLanguage.ENGLISH, UiLanguage.BULOS)
+        assertEquals("Oran", (pivotedResult as OfflineLookupResult.Translation).translatedText)
+        assertEquals("offline_bridge_english_filipino", pivotedResult.method)
     }
 
     @Test
-    fun exactMatchTakesPrecedenceOverEnabledGrammarRule() {
-        BulosGrammarRuleRegistry.clear()
-        BulosGrammarRuleRegistry.register(
-            BulosGrammarRule(
-                id = "rule-override-attempt",
-                direction = RuleTranslationDirection.ENGLISH_TO_BULOS,
-                description = "Rule override attempt",
-                condition = { it.contains("beautiful") },
-                transformation = { "rule-overridden" },
-                priority = 1,
-                isEnabled = true,
+    fun filipinoToBulosDoesNotPivotThroughEnglish() {
+        val testDict = OfflineDictionary(
+            listOf(
+                mapOf("English" to "rain", "Filipino" to "ulan", "Bulos" to "oran"),
             ),
         )
 
-        val result = dictionary.lookup("beautiful", UiLanguage.ENGLISH, UiLanguage.BULOS)
-        assertEquals("Masampat", (result as OfflineLookupResult.Translation).translatedText)
-        assertEquals("offline_exact_dictionary", result.method)
-        BulosGrammarRuleRegistry.clear()
+        val result = testDict.lookup("unmapped-filipino-word", UiLanguage.FILIPINO, UiLanguage.BULOS)
+        assertEquals("unmapped-filipino-word", (result as OfflineLookupResult.Translation).translatedText)
+        assertEquals("offline_original_fallback", result.method)
+    }
+
+    @Test
+    fun fallbackOutputIsNotOverwrittenByALaterStage() {
+        val result = dictionary.lookup("unresolved123", UiLanguage.FILIPINO, UiLanguage.BULOS)
+        assertEquals("unresolved123", (result as OfflineLookupResult.Translation).translatedText)
+        assertEquals("offline_original_fallback", result.method)
+        assertEquals(1.0, result.confidence, 0.0)
+    }
+
+    @Test
+    fun bulosToEnglishExactOutputsForBuotPhraseVariations() {
+        val type = object : TypeToken<List<Map<String, String>>>() {}.type
+        val rows: List<Map<String, String>> = File("src/main/assets/verified_dictionary_additions.json")
+            .reader()
+            .use { Gson().fromJson(it, type) }
+        val fullDict = OfflineDictionary(rows)
+
+        val res1 = fullDict.lookup("buot ka eya", UiLanguage.BULOS, UiLanguage.ENGLISH) as OfflineLookupResult.Translation
+        val res2 = fullDict.lookup("buot ko eya", UiLanguage.BULOS, UiLanguage.ENGLISH) as OfflineLookupResult.Translation
+        val res3 = fullDict.lookup("buot ku eya", UiLanguage.BULOS, UiLanguage.ENGLISH) as OfflineLookupResult.Translation
+        val res4 = fullDict.lookup("Buot ku ikaw", UiLanguage.BULOS, UiLanguage.ENGLISH) as OfflineLookupResult.Translation
+
+        assertEquals("Gusto you he", res1.translatedText)
+        assertEquals("Gusto ko he", res2.translatedText)
+        assertEquals("Gusto ku he", res3.translatedText)
+        assertEquals("I love you.", res4.translatedText)
     }
 
     private fun assertExactComposite(

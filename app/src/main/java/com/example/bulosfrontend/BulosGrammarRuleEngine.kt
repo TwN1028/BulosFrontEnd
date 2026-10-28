@@ -20,6 +20,7 @@ data class BulosGrammarRule(
 
 object BulosGrammarRuleRegistry {
     private val rules = mutableMapOf<String, BulosGrammarRule>()
+    @Volatile var isGrammarRulesEnabled: Boolean = true
 
     fun register(rule: BulosGrammarRule) {
         rules[rule.id] = rule
@@ -30,6 +31,7 @@ object BulosGrammarRuleRegistry {
     }
 
     fun getRules(direction: RuleTranslationDirection): List<BulosGrammarRule> {
+        if (!isGrammarRulesEnabled) return emptyList()
         return rules.values
             .filter { it.isEnabled && (it.direction == direction || it.direction == RuleTranslationDirection.ANY) }
             .sortedBy { it.priority }
@@ -43,8 +45,17 @@ object BulosGrammarRuleRegistry {
         }
     }
 
+    fun setAllRulesEnabled(enabled: Boolean) {
+        rules.keys.toList().forEach { id ->
+            rules[id]?.let { rule ->
+                rules[id] = rule.copy(isEnabled = enabled)
+            }
+        }
+    }
+
     fun clear() {
         rules.clear()
+        isGrammarRulesEnabled = true
     }
 }
 

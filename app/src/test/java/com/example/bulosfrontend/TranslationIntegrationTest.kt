@@ -1,11 +1,16 @@
 package com.example.bulosfrontend
 
+import com.google.gson.Gson
+import com.google.gson.JsonObject
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.ResponseBody.Companion.toResponseBody
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -75,6 +80,206 @@ class TranslationIntegrationTest {
         assertEquals("bul", api.lastRequest?.targetLanguage)
         assertTrue(result is TranslationResult.Success)
         assertEquals("Hindi kilala", (result as TranslationResult.Success).response.translatedText)
+    }
+
+    @Test
+    fun bulosToEnglishSendsCorrectRequestAndReturnsFinalBackendTextForRepresentativeInputs() = runBlocking {
+        val examples = listOf(
+            "Denu?" to "Where?",
+            "Kapide ka dumalong?" to "When did you come?",
+            "Hanga i beloy ni patod" to "The man's house is big",
+        )
+
+        MockWebServer().use { server ->
+            examples.forEach { (input, english) ->
+                server.enqueue(
+                    MockResponse()
+                        .addHeader("Content-Type", "application/json")
+                        .setBody(
+                            Gson().toJson(
+                                mapOf(
+                                    "original_text" to input,
+                                    "translated_text" to english,
+                                    "source_language" to "bul",
+                                    "target_language" to "en",
+                                    "confidence" to 0.9,
+                                    "intermediate_language" to "tl",
+                                    "translation_method" to "bul_filipino_english",
+                                ),
+                            ),
+                        ),
+                )
+            }
+            val api = Retrofit.Builder()
+                .baseUrl(server.url("/"))
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
+                .create(TranslationApi::class.java)
+            val repository = NetworkTranslationRepository(api)
+
+            examples.forEach { (input, expectedEnglish) ->
+                val result = repository.translate("Bulos", "English", input)
+                assertTrue(result is TranslationResult.Success)
+                assertEquals(
+                    expectedEnglish,
+                    (result as TranslationResult.Success).response.translatedText,
+                )
+
+                val request = server.takeRequest()
+                assertEquals("POST", request.method)
+                assertEquals("/api/v1/translate/", request.path)
+                val body = Gson().fromJson(request.body.readUtf8(), JsonObject::class.java)
+                assertEquals("bul", body.get("source_language").asString)
+                assertEquals("en", body.get("target_language").asString)
+                assertEquals(input, body.get("text").asString)
+            }
+        }
+    }
+
+    @Test
+    fun bulosToFilipinoStillUsesTheFilipinoBackendResponse() = runBlocking {
+        val api = RecordingApi(
+            TranslationResponse(
+                originalText = "Denu?",
+                translatedText = "Saan?",
+                sourceLanguage = "bul",
+                targetLanguage = "tl",
+                confidence = 1.0,
+                intermediateLanguage = null,
+                translationMethod = "dictionary",
+            ),
+        )
+
+        val result = NetworkTranslationRepository(api).translate("Bulos", "Filipino", "Denu?")
+
+        assertEquals("bul", api.lastRequest?.sourceLanguage)
+        assertEquals("tl", api.lastRequest?.targetLanguage)
+        assertEquals("Saan?", (result as TranslationResult.Success).response.translatedText)
+    }
+
+    @Test
+    fun bulosToEnglishTimeoutAndBlankOutputAreFailures() = runBlocking {
+        val timeoutApi = object : TranslationApi {
+            override suspend fun translate(request: TranslationRequest): TranslationResponse =
+                throw SocketTimeoutException("backend timeout")
+        }
+        val timeoutResult = NetworkTranslationRepository(timeoutApi)
+            .translate("Bulos", "English", "Denu?")
+        assertTrue(timeoutResult is TranslationResult.Failure)
+        assertTrue((timeoutResult as TranslationResult.Failure).message.contains("too long"))
+
+        val blankResponseApi = RecordingApi(
+            TranslationResponse(
+                originalText = "Denu?",
+                translatedText = "   ",
+                sourceLanguage = "bul",
+                targetLanguage = "en",
+                confidence = 0.0,
+                intermediateLanguage = "tl",
+                translationMethod = "bul_filipino_english",
+            ),
+        )
+        assertTrue(
+            NetworkTranslationRepository(blankResponseApi).translate("Bulos", "English", "Denu?")
+                is TranslationResult.Failure,
+        )
+    }
+
+    @Test
+    fun missingEnglishResponseFieldIsNotAcceptedAsSuccess() = runBlocking {
+        MockWebServer().use { server ->
+            server.enqueue(
+                MockResponse()
+                    .addHeader("Content-Type", "application/json")
+                    .setBody(
+                        """{"original_text":"Denu?","source_language":"bul","target_language":"en","confidence":0.0,"intermediate_language":"tl","translation_method":"bul_filipino_english"}""",
+                    ),
+            )
+            val api = Retrofit.Builder()
+                .baseUrl(server.url("/"))
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
+                .create(TranslationApi::class.java)
+
+            val result = NetworkTranslationRepository(api).translate("Bulos", "English", "Denu?")
+
+            assertTrue(result is TranslationResult.Failure)
+        }
+    }
+
+    @Test
+    fun bulosToEnglishDoesNotUseOfflineResultAfterBackendFailureOrOfflineMode() {
+        val backendFailure = TranslationResult.Failure("Translation service is unavailable.")
+        var offlineFallbackCalled = false
+        val onlineFailure = applyOfflineFallback(
+            source = UiLanguage.BULOS,
+            target = UiLanguage.ENGLISH,
+            networkResult = backendFailure,
+            wasOnline = true,
+        ) {
+            offlineFallbackCalled = true
+            TranslationResult.Success(
+                TranslationResponse("Denu?", "Saan?", "bul", "en", 1.0, null, "offline"),
+            )
+        }
+        assertEquals(backendFailure, onlineFailure)
+        assertFalse(offlineFallbackCalled)
+
+        val offlineModeFailure = applyOfflineFallback(
+            source = UiLanguage.BULOS,
+            target = UiLanguage.ENGLISH,
+            networkResult = TranslationResult.Failure("Offline"),
+            wasOnline = false,
+        ) {
+            offlineFallbackCalled = true
+            backendFailure
+        }
+        assertEquals(
+            TranslationResult.Failure(BULOS_TO_ENGLISH_ONLINE_REQUIRED_MESSAGE),
+            offlineModeFailure,
+        )
+        assertFalse(offlineFallbackCalled)
+    }
+
+    @Test
+    fun otherOfflineTranslationDirectionsStillUseTheirFallback() {
+        val expected = TranslationResult.Failure("offline fallback")
+        listOf(
+            UiLanguage.FILIPINO to UiLanguage.BULOS,
+            UiLanguage.ENGLISH to UiLanguage.BULOS,
+            UiLanguage.BULOS to UiLanguage.FILIPINO,
+        ).forEach { (source, target) ->
+            var fallbackCalled = false
+            val result = applyOfflineFallback(
+                source = source,
+                target = target,
+                networkResult = TranslationResult.Failure("Offline"),
+                wasOnline = false,
+            ) {
+                fallbackCalled = true
+                expected
+            }
+            assertTrue(fallbackCalled)
+            assertEquals(expected, result)
+        }
+    }
+
+    @Test
+    fun displayedResponseMustMatchCurrentTextAndLanguagePair() {
+        val response = TranslationResponse(
+            originalText = "Denu?",
+            translatedText = "Where?",
+            sourceLanguage = "bul",
+            targetLanguage = "en",
+            confidence = 0.9,
+            intermediateLanguage = "tl",
+            translationMethod = "bul_filipino_english",
+        )
+
+        assertTrue(response.matchesTranslationRequest("Denu?", "Bulos", "English"))
+        assertFalse(response.matchesTranslationRequest("Denu?", "Bulos", "Filipino"))
+        assertFalse(response.matchesTranslationRequest("Denu?", "English", "Bulos"))
+        assertFalse(response.matchesTranslationRequest("Kapide?", "Bulos", "English"))
     }
 
     @Test

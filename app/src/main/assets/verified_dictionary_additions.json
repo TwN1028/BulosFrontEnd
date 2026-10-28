@@ -2707,7 +2707,7 @@
   },
   {
     "_category": "DATA",
-    "English": "I'm leaving.",
+    "English": "I\u0027m leaving.",
     "Filipino": "Aalis na po ako.",
     "Bulos": "Notolulok di."
   },
@@ -2983,7 +2983,7 @@
   },
   {
     "_category": "DATA",
-    "English": "one o'clock",
+    "English": "one o\u0027clock",
     "Filipino": "ala una",
     "Bulos": "ala-ona"
   },
@@ -3037,67 +3037,67 @@
   },
   {
     "_category": "DATA",
-    "English": "ten o'clock",
+    "English": "ten o\u0027clock",
     "Filipino": "alas diyes",
     "Bulos": "alas-diyes"
   },
   {
     "_category": "DATA",
-    "English": "two o'clock",
+    "English": "two o\u0027clock",
     "Filipino": "alas dos",
     "Bulos": "alas-dus"
   },
   {
     "_category": "DATA",
-    "English": "twelve o'clock",
+    "English": "twelve o\u0027clock",
     "Filipino": "alas dose",
     "Bulos": "alas-dusi"
   },
   {
     "_category": "DATA",
-    "English": "four o'clock",
+    "English": "four o\u0027clock",
     "Filipino": "alas kuwatro",
     "Bulos": "alas-kuwatru"
   },
   {
     "_category": "DATA",
-    "English": "nine o'clock",
+    "English": "nine o\u0027clock",
     "Filipino": "alas nuwebe",
     "Bulos": "alas-nuwibi"
   },
   {
     "_category": "DATA",
-    "English": "eleven o'clock",
+    "English": "eleven o\u0027clock",
     "Filipino": "alas onse",
     "Bulos": "alas-sunsi"
   },
   {
     "_category": "DATA",
-    "English": "eight o'clock",
+    "English": "eight o\u0027clock",
     "Filipino": "alas otso",
     "Bulos": "alas-utsu"
   },
   {
     "_category": "DATA",
-    "English": "six o'clock",
+    "English": "six o\u0027clock",
     "Filipino": "alas sais",
     "Bulos": "ala-sais"
   },
   {
     "_category": "DATA",
-    "English": "five o'clock",
+    "English": "five o\u0027clock",
     "Filipino": "alas singko",
     "Bulos": "alas-singku"
   },
   {
     "_category": "DATA",
-    "English": "seven o'clock",
+    "English": "seven o\u0027clock",
     "Filipino": "alas siyete",
     "Bulos": "ala-siyete"
   },
   {
     "_category": "DATA",
-    "English": "three o'clock",
+    "English": "three o\u0027clock",
     "Filipino": "alas tres",
     "Bulos": "alas-tiris"
   },
@@ -3391,9 +3391,9 @@
   },
   {
     "_category": "DATA",
-    "English": "Words with glottal stop at the end of the word have is presented by this mark (')",
-    "Filipino": "Ang glottal stop na nasa hulihan ng salita ay isinusulat na (')",
-    "Bulos": "I glottal stop a de inapoan ni surot ay pesulat a (')"
+    "English": "Words with glottal stop at the end of the word have is presented by this mark (\u0027)",
+    "Filipino": "Ang glottal stop na nasa hulihan ng salita ay isinusulat na (\u0027)",
+    "Bulos": "I glottal stop a de inapoan ni surot ay pesulat a (\u0027)"
   },
   {
     "_category": "DATA",
@@ -3434,14 +3434,14 @@
   {
     "_category": "DATA",
     "English": "Some words produce the second sound of e which has semi-vowel sound of y when it follows to consonants b, d and g. This is represented as ě.",
-    "Filipino": "Ang ikalawang tunog ng titik e ay nalilikha sa ilang mga salita kapag ito ay sumusunod sa mga titik b, d, at g. Ito ay nagkakaroon ng tunog na malapatinig y sa unahan na parang alon kung kaya't isusulat ng ě",
+    "Filipino": "Ang ikalawang tunog ng titik e ay nalilikha sa ilang mga salita kapag ito ay sumusunod sa mga titik b, d, at g. Ito ay nagkakaroon ng tunog na malapatinig y sa unahan na parang alon kung kaya\u0027t isusulat ng ě",
     "Bulos": "I kaduwa a tinug ni e ay mage malapatenig a y de unahan bege abut de katenig a b, d pati g. lo ay pesolat ni ě"
   },
   {
     "_category": "DATA",
     "English": "The second sound of letter e is produced when it follows to letters b, d and g. Thus, it is written as Ēē",
-    "Filipino": "Ang ikalawang tunog ng titik e ay nililikha sa ilang mga salita kapag ito ay sumusunod sa mga titik b, d, at g. Ito ay nagkakaroon ng tunog na malapatinig y sa unahan na parang alon kung kaya't isusulat ng ē",
-    "Bulos": "I kaaduwa a timog ni tetik e ay nalilikha de tipide a mga surot bege io ay geabut de mga tetik b, d at g. Io ay gekaduman ni tinog a malapatenig y de unahan a mage alon kung kaya't pesolat a ē"
+    "Filipino": "Ang ikalawang tunog ng titik e ay nililikha sa ilang mga salita kapag ito ay sumusunod sa mga titik b, d, at g. Ito ay nagkakaroon ng tunog na malapatinig y sa unahan na parang alon kung kaya\u0027t isusulat ng ē",
+    "Bulos": "I kaaduwa a timog ni tetik e ay nalilikha de tipide a mga surot bege io ay geabut de mga tetik b, d at g. Io ay gekaduman ni tinog a malapatenig y de unahan a mage alon kung kaya\u0027t pesolat a ē"
   },
   {
     "_category": "DATA",
@@ -3614,8 +3614,8 @@
   {
     "_category": "DATA",
     "English": "There are twenty-three (23) sounds in the Dumaget Bulos Language. Six (6) of these are vowels and seventeen (17) are consonants including the glottal stop.",
-    "Filipino": "Ang Wikang Dumaget Bulos ay may dalawampu't tatlong tunog. Ito ay may anim (6) na patinig at labing-pitong (17) katinig na ang mga impit na tunog (glottal stop).",
-    "Bulos": "I Surot a Dumaget Bulos ay te dalawampu't tiluwan (23) a tinog. Io ay te anim (6) a patenig at labing-pitu a katenig kabilang di i mga impit a tinog (glottal stop)."
+    "Filipino": "Ang Wikang Dumaget Bulos ay may dalawampu\u0027t tatlong tunog. Ito ay may anim (6) na patinig at labing-pitong (17) katinig na ang mga impit na tunog (glottal stop).",
+    "Bulos": "I Surot a Dumaget Bulos ay te dalawampu\u0027t tiluwan (23) a tinog. Io ay te anim (6) a patenig at labing-pitu a katenig kabilang di i mga impit a tinog (glottal stop)."
   },
   {
     "_category": "DATA",
@@ -3674,56 +3674,56 @@
   {
     "_category": "DATA",
     "English": "sixty-six",
-    "Filipino": "animnapu't anim",
-    "Bulos": "animnapu't anim"
+    "Filipino": "animnapu\u0027t anim",
+    "Bulos": "animnapu\u0027t anim"
   },
   {
     "_category": "DATA",
     "English": "sixty-four",
-    "Filipino": "animnapu't apat",
-    "Bulos": "animnapu't apat"
+    "Filipino": "animnapu\u0027t apat",
+    "Bulos": "animnapu\u0027t apat"
   },
   {
     "_category": "DATA",
     "English": "sixty-two",
-    "Filipino": "animnapu't dalawa",
-    "Bulos": "animnapu't aduwa"
+    "Filipino": "animnapu\u0027t dalawa",
+    "Bulos": "animnapu\u0027t aduwa"
   },
   {
     "_category": "DATA",
     "English": "sixty-one",
-    "Filipino": "animnapu't isa",
-    "Bulos": "animnapu't isin"
+    "Filipino": "animnapu\u0027t isa",
+    "Bulos": "animnapu\u0027t isin"
   },
   {
     "_category": "DATA",
     "English": "sixty-five",
-    "Filipino": "animnapu't lima",
-    "Bulos": "animnapu't lima"
+    "Filipino": "animnapu\u0027t lima",
+    "Bulos": "animnapu\u0027t lima"
   },
   {
     "_category": "DATA",
     "English": "sixty-seven",
-    "Filipino": "animnapu't pito",
-    "Bulos": "animnapu't pito"
+    "Filipino": "animnapu\u0027t pito",
+    "Bulos": "animnapu\u0027t pito"
   },
   {
     "_category": "DATA",
     "English": "sixty-nine",
-    "Filipino": "animnapu't siyam",
-    "Bulos": "animnapu't siyam"
+    "Filipino": "animnapu\u0027t siyam",
+    "Bulos": "animnapu\u0027t siyam"
   },
   {
     "_category": "DATA",
     "English": "sixty-three",
-    "Filipino": "animnapu't tatlo",
-    "Bulos": "animnapu't tiluwon"
+    "Filipino": "animnapu\u0027t tatlo",
+    "Bulos": "animnapu\u0027t tiluwon"
   },
   {
     "_category": "DATA",
     "English": "sixty-eight",
-    "Filipino": "animnapu't walo",
-    "Bulos": "animnapu't walo"
+    "Filipino": "animnapu\u0027t walo",
+    "Bulos": "animnapu\u0027t walo"
   },
   {
     "_category": "DATA",
@@ -3812,7 +3812,7 @@
   {
     "_category": "DATA",
     "English": "What is your name?",
-    "Filipino": "Ano'ng pangalan mo?",
+    "Filipino": "Ano\u0027ng pangalan mo?",
     "Bulos": "Ànu i ngalan mu?"
   },
   {
@@ -3908,56 +3908,56 @@
   {
     "_category": "DATA",
     "English": "forty-six",
-    "Filipino": "apatnapu't anim",
-    "Bulos": "apatnapu't anim"
+    "Filipino": "apatnapu\u0027t anim",
+    "Bulos": "apatnapu\u0027t anim"
   },
   {
     "_category": "DATA",
     "English": "forty-four",
-    "Filipino": "apatnapu't apat",
-    "Bulos": "apatnapu't apat"
+    "Filipino": "apatnapu\u0027t apat",
+    "Bulos": "apatnapu\u0027t apat"
   },
   {
     "_category": "DATA",
     "English": "forty-two",
-    "Filipino": "apatnapu't dalawa",
-    "Bulos": "apatnapu't aduwa"
+    "Filipino": "apatnapu\u0027t dalawa",
+    "Bulos": "apatnapu\u0027t aduwa"
   },
   {
     "_category": "DATA",
     "English": "forty-one",
-    "Filipino": "apatnapu't isa",
-    "Bulos": "apatnapu't isin"
+    "Filipino": "apatnapu\u0027t isa",
+    "Bulos": "apatnapu\u0027t isin"
   },
   {
     "_category": "DATA",
     "English": "forty-five",
-    "Filipino": "apatnapu't lima",
-    "Bulos": "apatnapu't lima"
+    "Filipino": "apatnapu\u0027t lima",
+    "Bulos": "apatnapu\u0027t lima"
   },
   {
     "_category": "DATA",
     "English": "forty-seven",
-    "Filipino": "apatnapu't pito",
-    "Bulos": "apatnapu't pito"
+    "Filipino": "apatnapu\u0027t pito",
+    "Bulos": "apatnapu\u0027t pito"
   },
   {
     "_category": "DATA",
     "English": "forty-nine",
-    "Filipino": "apatnapu't siyam",
-    "Bulos": "apatnapu't siyam"
+    "Filipino": "apatnapu\u0027t siyam",
+    "Bulos": "apatnapu\u0027t siyam"
   },
   {
     "_category": "DATA",
     "English": "forty-three",
-    "Filipino": "apatnapu't tatlo",
-    "Bulos": "apatnapu't tiluwon"
+    "Filipino": "apatnapu\u0027t tatlo",
+    "Bulos": "apatnapu\u0027t tiluwon"
   },
   {
     "_category": "DATA",
     "English": "forty-eight",
-    "Filipino": "apatnapu't walo",
-    "Bulos": "apatnapu't walo"
+    "Filipino": "apatnapu\u0027t walo",
+    "Bulos": "apatnapu\u0027t walo"
   },
   {
     "_category": "DATA",
@@ -4225,13 +4225,13 @@
   },
   {
     "_category": "DATA",
-    "English": "don't want",
+    "English": "don\u0027t want",
     "Filipino": "ayaw",
     "Bulos": "anok"
   },
   {
     "_category": "DATA",
-    "English": "I don't want to anymore",
+    "English": "I don\u0027t want to anymore",
     "Filipino": "ayaw ko na",
     "Bulos": "anak di"
   },
@@ -5816,56 +5816,56 @@
   {
     "_category": "DATA",
     "English": "twenty-six",
-    "Filipino": "dalawampu't anim",
-    "Bulos": "dalawampu't anim"
+    "Filipino": "dalawampu\u0027t anim",
+    "Bulos": "dalawampu\u0027t anim"
   },
   {
     "_category": "DATA",
     "English": "twenty-four",
-    "Filipino": "dalawampu't apat",
-    "Bulos": "dalawampu't apat"
+    "Filipino": "dalawampu\u0027t apat",
+    "Bulos": "dalawampu\u0027t apat"
   },
   {
     "_category": "DATA",
     "English": "twenty-two",
-    "Filipino": "dalawampu't dalawa",
-    "Bulos": "dalawampu't aduwa"
+    "Filipino": "dalawampu\u0027t dalawa",
+    "Bulos": "dalawampu\u0027t aduwa"
   },
   {
     "_category": "DATA",
     "English": "twenty-one",
-    "Filipino": "dalawampu't isa",
-    "Bulos": "dalawampu't isin"
+    "Filipino": "dalawampu\u0027t isa",
+    "Bulos": "dalawampu\u0027t isin"
   },
   {
     "_category": "DATA",
     "English": "twenty-five",
-    "Filipino": "dalawampu't lima",
-    "Bulos": "dalawampu't lima"
+    "Filipino": "dalawampu\u0027t lima",
+    "Bulos": "dalawampu\u0027t lima"
   },
   {
     "_category": "DATA",
     "English": "twenty-seven",
-    "Filipino": "dalawampu't pito",
-    "Bulos": "dalawampu't pito"
+    "Filipino": "dalawampu\u0027t pito",
+    "Bulos": "dalawampu\u0027t pito"
   },
   {
     "_category": "DATA",
     "English": "twenty-nine",
-    "Filipino": "dalawampu't siyam",
-    "Bulos": "dalawampu't siyam"
+    "Filipino": "dalawampu\u0027t siyam",
+    "Bulos": "dalawampu\u0027t siyam"
   },
   {
     "_category": "DATA",
     "English": "twenty-three",
-    "Filipino": "dalawampu't tatlo",
-    "Bulos": "dalawampu't tiluwon"
+    "Filipino": "dalawampu\u0027t tatlo",
+    "Bulos": "dalawampu\u0027t tiluwon"
   },
   {
     "_category": "DATA",
     "English": "twenty-eight",
-    "Filipino": "dalawampu't walo",
-    "Bulos": "dalawampu't walo"
+    "Filipino": "dalawampu\u0027t walo",
+    "Bulos": "dalawampu\u0027t walo"
   },
   {
     "_category": "DATA",
@@ -7081,7 +7081,7 @@
   },
   {
     "_category": "DATA",
-    "English": "I'm building a house.",
+    "English": "I\u0027m building a house.",
     "Filipino": "Gumagawa ako ng bahay.",
     "Bulos": "Geyedi ok ni beloy."
   },
@@ -7423,7 +7423,7 @@
   },
   {
     "_category": "DATA",
-    "English": "I don't know the answer.",
+    "English": "I don\u0027t know the answer.",
     "Filipino": "Hindi ko alam ang sagot.",
     "Bulos": "Eyen ko alam i sagot."
   },
@@ -7537,13 +7537,13 @@
   },
   {
     "_category": "DATA",
-    "English": "don't",
+    "English": "don\u0027t",
     "Filipino": "huwag",
     "Bulos": "uwet"
   },
   {
     "_category": "DATA",
-    "English": "don't",
+    "English": "don\u0027t",
     "Filipino": "huwag",
     "Bulos": "wet"
   },
@@ -9391,7 +9391,7 @@
   },
   {
     "_category": "DATA",
-    "English": "I'm going to get corn.",
+    "English": "I\u0027m going to get corn.",
     "Filipino": "Kukuha ako ng mais.",
     "Bulos": "Nangamitok ni mais."
   },
@@ -10148,56 +10148,56 @@
   {
     "_category": "DATA",
     "English": "fifty-six",
-    "Filipino": "limampu't anim",
-    "Bulos": "limampu't anim"
+    "Filipino": "limampu\u0027t anim",
+    "Bulos": "limampu\u0027t anim"
   },
   {
     "_category": "DATA",
     "English": "fifty-four",
-    "Filipino": "limampu't apat",
-    "Bulos": "limampu't apat"
+    "Filipino": "limampu\u0027t apat",
+    "Bulos": "limampu\u0027t apat"
   },
   {
     "_category": "DATA",
     "English": "fifty-two",
-    "Filipino": "limampu't dalawa",
-    "Bulos": "limampu't aduwa"
+    "Filipino": "limampu\u0027t dalawa",
+    "Bulos": "limampu\u0027t aduwa"
   },
   {
     "_category": "DATA",
     "English": "fifty-one",
-    "Filipino": "limampu't isa",
-    "Bulos": "limampu't isin"
+    "Filipino": "limampu\u0027t isa",
+    "Bulos": "limampu\u0027t isin"
   },
   {
     "_category": "DATA",
     "English": "fifty-five",
-    "Filipino": "limampu't lima",
-    "Bulos": "limampu't lima"
+    "Filipino": "limampu\u0027t lima",
+    "Bulos": "limampu\u0027t lima"
   },
   {
     "_category": "DATA",
     "English": "fifty-seven",
-    "Filipino": "limampu't pito",
-    "Bulos": "limampu't pito"
+    "Filipino": "limampu\u0027t pito",
+    "Bulos": "limampu\u0027t pito"
   },
   {
     "_category": "DATA",
     "English": "fifty-nine",
-    "Filipino": "limampu't siyam",
-    "Bulos": "limampu't siyam"
+    "Filipino": "limampu\u0027t siyam",
+    "Bulos": "limampu\u0027t siyam"
   },
   {
     "_category": "DATA",
     "English": "fifty-three",
-    "Filipino": "limampu't tatlo",
-    "Bulos": "limampu't tiluwon"
+    "Filipino": "limampu\u0027t tatlo",
+    "Bulos": "limampu\u0027t tiluwon"
   },
   {
     "_category": "DATA",
     "English": "fifty-eight",
-    "Filipino": "limampu't walo",
-    "Bulos": "limampu't walo"
+    "Filipino": "limampu\u0027t walo",
+    "Bulos": "limampu\u0027t walo"
   },
   {
     "_category": "DATA",
@@ -10645,7 +10645,7 @@
   },
   {
     "_category": "DATA",
-    "English": "I'm fine.",
+    "English": "I\u0027m fine.",
     "Filipino": "Mabuti naman ako.",
     "Bulos": "Masampat pan aku."
   },
@@ -12625,7 +12625,7 @@
   },
   {
     "_category": "DATA",
-    "English": "I'm preparing food.",
+    "English": "I\u0027m preparing food.",
     "Filipino": "Naghahanda ako ng pagkain.",
     "Bulos": "Ge hande ok ni papangan."
   },
@@ -12637,7 +12637,7 @@
   },
   {
     "_category": "DATA",
-    "English": "I'm preparing rice and fish.",
+    "English": "I\u0027m preparing rice and fish.",
     "Filipino": "Nagluluto ako ng kanin at isda.",
     "Bulos": "Gepokaluto ok ni kanin ki ikan."
   },
@@ -13207,7 +13207,7 @@
   },
   {
     "_category": "DATA",
-    "English": "that's true",
+    "English": "that\u0027s true",
     "Filipino": "oo nga",
     "Bulos": "ongani"
   },
@@ -13447,7 +13447,7 @@
   },
   {
     "_category": "DATA",
-    "English": "Your father's food.",
+    "English": "Your father\u0027s food.",
     "Filipino": "Pagkain ng tatay mo.",
     "Bulos": "Papangan ni ama mu."
   },
@@ -13651,7 +13651,7 @@
   },
   {
     "_category": "DATA",
-    "English": "bird's wing",
+    "English": "bird\u0027s wing",
     "Filipino": "pakpak ng ibon",
     "Bulos": "ilad ni manok"
   },
@@ -14492,56 +14492,56 @@
   {
     "_category": "DATA",
     "English": "seventy-six",
-    "Filipino": "pitumpu't anim",
-    "Bulos": "pitumpu't anim"
+    "Filipino": "pitumpu\u0027t anim",
+    "Bulos": "pitumpu\u0027t anim"
   },
   {
     "_category": "DATA",
     "English": "seventy-four",
-    "Filipino": "pitumpu't apat",
-    "Bulos": "pitumpu't apat"
+    "Filipino": "pitumpu\u0027t apat",
+    "Bulos": "pitumpu\u0027t apat"
   },
   {
     "_category": "DATA",
     "English": "seventy-two",
-    "Filipino": "pitumpu't dalawa",
-    "Bulos": "pitumpu't aduwa"
+    "Filipino": "pitumpu\u0027t dalawa",
+    "Bulos": "pitumpu\u0027t aduwa"
   },
   {
     "_category": "DATA",
     "English": "seventy-one",
-    "Filipino": "pitumpu't isa",
-    "Bulos": "pitumpu't isin"
+    "Filipino": "pitumpu\u0027t isa",
+    "Bulos": "pitumpu\u0027t isin"
   },
   {
     "_category": "DATA",
     "English": "seventy-five",
-    "Filipino": "pitumpu't lima",
-    "Bulos": "pitumpu't lima"
+    "Filipino": "pitumpu\u0027t lima",
+    "Bulos": "pitumpu\u0027t lima"
   },
   {
     "_category": "DATA",
     "English": "seventy-seven",
-    "Filipino": "pitumpu't pito",
-    "Bulos": "pitumpu't pito"
+    "Filipino": "pitumpu\u0027t pito",
+    "Bulos": "pitumpu\u0027t pito"
   },
   {
     "_category": "DATA",
     "English": "seventy-nine",
-    "Filipino": "pitumpu't siyam",
-    "Bulos": "pitumpu't siyam"
+    "Filipino": "pitumpu\u0027t siyam",
+    "Bulos": "pitumpu\u0027t siyam"
   },
   {
     "_category": "DATA",
     "English": "seventy-three",
-    "Filipino": "pitumpu't tatlo",
-    "Bulos": "pitumpu't tiluwon"
+    "Filipino": "pitumpu\u0027t tatlo",
+    "Bulos": "pitumpu\u0027t tiluwon"
   },
   {
     "_category": "DATA",
     "English": "seventy-eight",
-    "Filipino": "pitumpu't walo",
-    "Bulos": "pitumpu't walo"
+    "Filipino": "pitumpu\u0027t walo",
+    "Bulos": "pitumpu\u0027t walo"
   },
   {
     "_category": "DATA",
@@ -14695,7 +14695,7 @@
   },
   {
     "_category": "DATA",
-    "English": "I'm going to the garden.",
+    "English": "I\u0027m going to the garden.",
     "Filipino": "Pupunta ako sa halamanan.",
     "Bulos": "Nakangok duman de tanuman."
   },
@@ -16142,56 +16142,56 @@
   {
     "_category": "DATA",
     "English": "ninety-six",
-    "Filipino": "siyamnapu't anim",
-    "Bulos": "siyamnapu't anim"
+    "Filipino": "siyamnapu\u0027t anim",
+    "Bulos": "siyamnapu\u0027t anim"
   },
   {
     "_category": "DATA",
     "English": "ninety-four",
-    "Filipino": "siyamnapu't apat",
-    "Bulos": "siyamnapu't apat"
+    "Filipino": "siyamnapu\u0027t apat",
+    "Bulos": "siyamnapu\u0027t apat"
   },
   {
     "_category": "DATA",
     "English": "ninety-two",
-    "Filipino": "siyamnapu't dalawa",
-    "Bulos": "siyamnapu't aduwa"
+    "Filipino": "siyamnapu\u0027t dalawa",
+    "Bulos": "siyamnapu\u0027t aduwa"
   },
   {
     "_category": "DATA",
     "English": "ninety-one",
-    "Filipino": "siyamnapu't isa",
-    "Bulos": "siyamnapu't isin"
+    "Filipino": "siyamnapu\u0027t isa",
+    "Bulos": "siyamnapu\u0027t isin"
   },
   {
     "_category": "DATA",
     "English": "ninety-five",
-    "Filipino": "siyamnapu't lima",
-    "Bulos": "siyamnapu't lima"
+    "Filipino": "siyamnapu\u0027t lima",
+    "Bulos": "siyamnapu\u0027t lima"
   },
   {
     "_category": "DATA",
     "English": "ninety-seven",
-    "Filipino": "siyamnapu't pito",
-    "Bulos": "siyamnapu't pito"
+    "Filipino": "siyamnapu\u0027t pito",
+    "Bulos": "siyamnapu\u0027t pito"
   },
   {
     "_category": "DATA",
     "English": "ninety-nine",
-    "Filipino": "siyamnapu't siyam",
-    "Bulos": "siyamnapu't siyam"
+    "Filipino": "siyamnapu\u0027t siyam",
+    "Bulos": "siyamnapu\u0027t siyam"
   },
   {
     "_category": "DATA",
     "English": "ninety-three",
-    "Filipino": "siyamnapu't tatlo",
-    "Bulos": "siyamnapu't tiluwon"
+    "Filipino": "siyamnapu\u0027t tatlo",
+    "Bulos": "siyamnapu\u0027t tiluwon"
   },
   {
     "_category": "DATA",
     "English": "ninety-eight",
-    "Filipino": "siyamnapu't walo",
-    "Bulos": "siyamnapu't walo"
+    "Filipino": "siyamnapu\u0027t walo",
+    "Bulos": "siyamnapu\u0027t walo"
   },
   {
     "_category": "DATA",
@@ -16663,7 +16663,7 @@
   },
   {
     "_category": "DATA",
-    "English": "Principal's Office",
+    "English": "Principal\u0027s Office",
     "Filipino": "tanggapan ng Punung-Guro",
     "Bulos": "tanggepan ni Getodu"
   },
@@ -16729,7 +16729,7 @@
   },
   {
     "_category": "DATA",
-    "English": "let's go",
+    "English": "let\u0027s go",
     "Filipino": "tara",
     "Bulos": "-"
   },
@@ -16778,56 +16778,56 @@
   {
     "_category": "DATA",
     "English": "thirty-six",
-    "Filipino": "tatlumpu't anim",
-    "Bulos": "tatlumpu't anim"
+    "Filipino": "tatlumpu\u0027t anim",
+    "Bulos": "tatlumpu\u0027t anim"
   },
   {
     "_category": "DATA",
     "English": "thirty-four",
-    "Filipino": "tatlumpu't apat",
-    "Bulos": "tatlumpu't apat"
+    "Filipino": "tatlumpu\u0027t apat",
+    "Bulos": "tatlumpu\u0027t apat"
   },
   {
     "_category": "DATA",
     "English": "thirty-two",
-    "Filipino": "tatlumpu't dalawa",
-    "Bulos": "tatlumpu't aduwa"
+    "Filipino": "tatlumpu\u0027t dalawa",
+    "Bulos": "tatlumpu\u0027t aduwa"
   },
   {
     "_category": "DATA",
     "English": "thirty-one",
-    "Filipino": "tatlumpu't isa",
-    "Bulos": "tatlumpu't isin"
+    "Filipino": "tatlumpu\u0027t isa",
+    "Bulos": "tatlumpu\u0027t isin"
   },
   {
     "_category": "DATA",
     "English": "thirty-five",
-    "Filipino": "tatlumpu't lima",
-    "Bulos": "tatlumpu't lima"
+    "Filipino": "tatlumpu\u0027t lima",
+    "Bulos": "tatlumpu\u0027t lima"
   },
   {
     "_category": "DATA",
     "English": "thirty-seven",
-    "Filipino": "tatlumpu't pito",
-    "Bulos": "tatlumpu't pito"
+    "Filipino": "tatlumpu\u0027t pito",
+    "Bulos": "tatlumpu\u0027t pito"
   },
   {
     "_category": "DATA",
     "English": "thirty-nine",
-    "Filipino": "tatlumpu't siyam",
-    "Bulos": "tatlumpu't siyam"
+    "Filipino": "tatlumpu\u0027t siyam",
+    "Bulos": "tatlumpu\u0027t siyam"
   },
   {
     "_category": "DATA",
     "English": "thirty-three",
-    "Filipino": "tatlumpu't tatlo",
-    "Bulos": "tatlumpu't tiluwon"
+    "Filipino": "tatlumpu\u0027t tatlo",
+    "Bulos": "tatlumpu\u0027t tiluwon"
   },
   {
     "_category": "DATA",
     "English": "thirty-eight",
-    "Filipino": "tatlumpu't walo",
-    "Bulos": "tatlumpu't walo"
+    "Filipino": "tatlumpu\u0027t walo",
+    "Bulos": "tatlumpu\u0027t walo"
   },
   {
     "_category": "DATA",
@@ -17755,13 +17755,13 @@
   },
   {
     "_category": "DATA",
-    "English": "you're welcome",
+    "English": "you\u0027re welcome",
     "Filipino": "walang anuman",
     "Bulos": "walang anuman"
   },
   {
     "_category": "DATA",
-    "English": "You're welcome.",
+    "English": "You\u0027re welcome.",
     "Filipino": "Walang anuman",
     "Bulos": "Walang anuman"
   },
@@ -17792,56 +17792,56 @@
   {
     "_category": "DATA",
     "English": "eighty-six",
-    "Filipino": "walumpu't anim",
-    "Bulos": "walumpu't anim"
+    "Filipino": "walumpu\u0027t anim",
+    "Bulos": "walumpu\u0027t anim"
   },
   {
     "_category": "DATA",
     "English": "eighty-four",
-    "Filipino": "walumpu't apat",
-    "Bulos": "walumpu't apat"
+    "Filipino": "walumpu\u0027t apat",
+    "Bulos": "walumpu\u0027t apat"
   },
   {
     "_category": "DATA",
     "English": "eighty-two",
-    "Filipino": "walumpu't dalawa",
-    "Bulos": "walumpu't aduwa"
+    "Filipino": "walumpu\u0027t dalawa",
+    "Bulos": "walumpu\u0027t aduwa"
   },
   {
     "_category": "DATA",
     "English": "eighty-one",
-    "Filipino": "walumpu't isa",
-    "Bulos": "walumpu't isin"
+    "Filipino": "walumpu\u0027t isa",
+    "Bulos": "walumpu\u0027t isin"
   },
   {
     "_category": "DATA",
     "English": "eighty-five",
-    "Filipino": "walumpu't lima",
-    "Bulos": "walumpu't lima"
+    "Filipino": "walumpu\u0027t lima",
+    "Bulos": "walumpu\u0027t lima"
   },
   {
     "_category": "DATA",
     "English": "eighty-seven",
-    "Filipino": "walumpu't pito",
-    "Bulos": "walumpu't pito"
+    "Filipino": "walumpu\u0027t pito",
+    "Bulos": "walumpu\u0027t pito"
   },
   {
     "_category": "DATA",
     "English": "eighty-nine",
-    "Filipino": "walumpu't siyam",
-    "Bulos": "walumpu't siyam"
+    "Filipino": "walumpu\u0027t siyam",
+    "Bulos": "walumpu\u0027t siyam"
   },
   {
     "_category": "DATA",
     "English": "eighty-three",
-    "Filipino": "walumpu't tatlo",
-    "Bulos": "walumpu't tiluwon"
+    "Filipino": "walumpu\u0027t tatlo",
+    "Bulos": "walumpu\u0027t tiluwon"
   },
   {
     "_category": "DATA",
     "English": "eighty-eight",
-    "Filipino": "walumpu't walo",
-    "Bulos": "walumpu't walo"
+    "Filipino": "walumpu\u0027t walo",
+    "Bulos": "walumpu\u0027t walo"
   },
   {
     "_category": "DATA",
@@ -17947,45 +17947,45 @@
   },
   {
     "_category": "TEMPLATES",
-    "English": "The <noun> is <descriptor>.",
-    "Filipino": "<descriptor> ang <noun>",
-    "Bulos": "<descriptor> i <noun>"
+    "English": "The \u003cnoun\u003e is \u003cdescriptor\u003e.",
+    "Filipino": "\u003cdescriptor\u003e ang \u003cnoun\u003e",
+    "Bulos": "\u003cdescriptor\u003e i \u003cnoun\u003e"
   },
   {
     "_category": "TEMPLATES",
-    "English": "<pronoun> <motion-verb> to/at <location>.",
-    "Filipino": "<motion-verb> <pronoun> sa <location>",
-    "Bulos": "<motion-verb> <pronoun> de <location>"
+    "English": "\u003cpronoun\u003e \u003cmotion-verb\u003e to/at \u003clocation\u003e.",
+    "Filipino": "\u003cmotion-verb\u003e \u003cpronoun\u003e sa \u003clocation\u003e",
+    "Bulos": "\u003cmotion-verb\u003e \u003cpronoun\u003e de \u003clocation\u003e"
   },
   {
     "_category": "TEMPLATES",
-    "English": "<demonstrative> <noun>.",
-    "Filipino": "<noun> na <demonstrative>",
-    "Bulos": "<noun> a <demonstrative>"
+    "English": "\u003cdemonstrative\u003e \u003cnoun\u003e.",
+    "Filipino": "\u003cnoun\u003e na \u003cdemonstrative\u003e",
+    "Bulos": "\u003cnoun\u003e a \u003cdemonstrative\u003e"
   },
   {
     "_category": "TEMPLATES",
-    "English": "<pronoun> is my <noun>.",
-    "Filipino": "<pronoun> ang aking <noun>",
-    "Bulos": "<pronoun> i <possessive> a <noun>"
+    "English": "\u003cpronoun\u003e is my \u003cnoun\u003e.",
+    "Filipino": "\u003cpronoun\u003e ang aking \u003cnoun\u003e",
+    "Bulos": "\u003cpronoun\u003e i \u003cpossessive\u003e a \u003cnoun\u003e"
   },
   {
     "_category": "TEMPLATES",
-    "English": "I <verb> to/at <location>.",
-    "Filipino": "<verb> ako sa <location>",
-    "Bulos": "<verb> ok de <location>"
+    "English": "I \u003cverb\u003e to/at \u003clocation\u003e.",
+    "Filipino": "\u003cverb\u003e ako sa \u003clocation\u003e",
+    "Bulos": "\u003cverb\u003e ok de \u003clocation\u003e"
   },
   {
     "_category": "TEMPLATES",
-    "English": "You <verb> the <noun>.",
-    "Filipino": "<verb> mo ang <noun>",
-    "Bulos": "<verb> mo i <noun>"
+    "English": "You \u003cverb\u003e the \u003cnoun\u003e.",
+    "Filipino": "\u003cverb\u003e mo ang \u003cnoun\u003e",
+    "Bulos": "\u003cverb\u003e mo i \u003cnoun\u003e"
   },
   {
     "_category": "TEMPLATES",
-    "English": "Let's give <noun> to <recipient>.",
-    "Filipino": "<verb> natin ng <noun> ang <recipient>",
-    "Bulos": "<verb> tam ni <noun> un <recipient>"
+    "English": "Let\u0027s give \u003cnoun\u003e to \u003crecipient\u003e.",
+    "Filipino": "\u003cverb\u003e natin ng \u003cnoun\u003e ang \u003crecipient\u003e",
+    "Bulos": "\u003cverb\u003e tam ni \u003cnoun\u003e un \u003crecipient\u003e"
   },
   {
     "_category": "TEMPLATES",
@@ -17995,129 +17995,129 @@
   },
   {
     "_category": "TEMPLATES",
-    "English": "Give <object> to <recipient>.",
-    "Filipino": "Bigyan mo ang <recipient> ng <object>",
-    "Bulos": "Biyen mo i <recipient> ni <object>"
+    "English": "Give \u003cobject\u003e to \u003crecipient\u003e.",
+    "Filipino": "Bigyan mo ang \u003crecipient\u003e ng \u003cobject\u003e",
+    "Bulos": "Biyen mo i \u003crecipient\u003e ni \u003cobject\u003e"
   },
   {
     "_category": "TEMPLATES",
-    "English": "I am making/building <noun>.",
-    "Filipino": "Gumagawa ako ng <noun>",
-    "Bulos": "Geyedi ok ni <noun>"
+    "English": "I am making/building \u003cnoun\u003e.",
+    "Filipino": "Gumagawa ako ng \u003cnoun\u003e",
+    "Bulos": "Geyedi ok ni \u003cnoun\u003e"
   },
   {
     "_category": "TEMPLATES",
-    "English": "<giver> gave <object> to <recipient>.",
-    "Filipino": "Ibinigay <giver> ang <object> kay <recipient>",
-    "Bulos": "Binoy <giver> i <object> di <recipient>"
+    "English": "\u003cgiver\u003e gave \u003cobject\u003e to \u003crecipient\u003e.",
+    "Filipino": "Ibinigay \u003cgiver\u003e ang \u003cobject\u003e kay \u003crecipient\u003e",
+    "Bulos": "Binoy \u003cgiver\u003e i \u003cobject\u003e di \u003crecipient\u003e"
   },
   {
     "_category": "TEMPLATES",
-    "English": "When do/did you <verb>?",
-    "Filipino": "Kailan ka <verb>?",
-    "Bulos": "Kapide ka <verb>?"
+    "English": "When do/did you \u003cverb\u003e?",
+    "Filipino": "Kailan ka \u003cverb\u003e?",
+    "Bulos": "Kapide ka \u003cverb\u003e?"
   },
   {
     "_category": "TEMPLATES",
-    "English": "I am eating <noun>.",
-    "Filipino": "Kumakain ako ng <noun>",
-    "Bulos": "Gehande ok ni <noun>"
+    "English": "I am eating \u003cnoun\u003e.",
+    "Filipino": "Kumakain ako ng \u003cnoun\u003e",
+    "Bulos": "Gehande ok ni \u003cnoun\u003e"
   },
   {
     "_category": "TEMPLATES",
-    "English": "How much/many <noun>?",
-    "Filipino": "Magkano ang <noun>? / Ilan ang <noun>?",
-    "Bulos": "Pidê <noun>?"
+    "English": "How much/many \u003cnoun\u003e?",
+    "Filipino": "Magkano ang \u003cnoun\u003e? / Ilan ang \u003cnoun\u003e?",
+    "Bulos": "Pidê \u003cnoun\u003e?"
   },
   {
     "_category": "TEMPLATES",
-    "English": "<subject> is reading <noun>.",
-    "Filipino": "Nagbabasa ng <noun> ang <subject>",
-    "Bulos": "Gebesa ni <noun> i <subject>"
+    "English": "\u003csubject\u003e is reading \u003cnoun\u003e.",
+    "Filipino": "Nagbabasa ng \u003cnoun\u003e ang \u003csubject\u003e",
+    "Bulos": "Gebesa ni \u003cnoun\u003e i \u003csubject\u003e"
   },
   {
     "_category": "TEMPLATES",
-    "English": "<giver> gave <object> to <recipient>.",
-    "Filipino": "Nagbigay ng <object> ang <giver> kay <recipient>",
-    "Bulos": "Nagboy ni <object> i <giver> di <recipient>"
+    "English": "\u003cgiver\u003e gave \u003cobject\u003e to \u003crecipient\u003e.",
+    "Filipino": "Nagbigay ng \u003cobject\u003e ang \u003cgiver\u003e kay \u003crecipient\u003e",
+    "Bulos": "Nagboy ni \u003cobject\u003e i \u003cgiver\u003e di \u003crecipient\u003e"
   },
   {
     "_category": "TEMPLATES",
-    "English": "This <noun> is <possessor>'s.",
-    "Filipino": "Sa <possessor> ang <noun> na ito",
-    "Bulos": "<possessor> i <noun> a oyo"
+    "English": "This \u003cnoun\u003e is \u003cpossessor\u003e\u0027s.",
+    "Filipino": "Sa \u003cpossessor\u003e ang \u003cnoun\u003e na ito",
+    "Bulos": "\u003cpossessor\u003e i \u003cnoun\u003e a oyo"
   },
   {
     "_category": "TEMPLATES",
-    "English": "That <noun> is <possessor>'s.",
-    "Filipino": "Sa <possessor> ang <noun> na iyan/iyon",
-    "Bulos": "<possessor> i <noun> a iwina"
+    "English": "That \u003cnoun\u003e is \u003cpossessor\u003e\u0027s.",
+    "Filipino": "Sa \u003cpossessor\u003e ang \u003cnoun\u003e na iyan/iyon",
+    "Bulos": "\u003cpossessor\u003e i \u003cnoun\u003e a iwina"
   },
   {
     "_category": "TEMPLATES",
-    "English": "The <noun> at <location> is <possessor>'s.",
-    "Filipino": "Sa <possessor> ang <noun> sa <location>",
-    "Bulos": "<possessor> i <noun> de <location>"
+    "English": "The \u003cnoun\u003e at \u003clocation\u003e is \u003cpossessor\u003e\u0027s.",
+    "Filipino": "Sa \u003cpossessor\u003e ang \u003cnoun\u003e sa \u003clocation\u003e",
+    "Bulos": "\u003cpossessor\u003e i \u003cnoun\u003e de \u003clocation\u003e"
   },
   {
     "_category": "TEMPLATES",
-    "English": "This <noun> is mine.",
-    "Filipino": "Sa akin ang <noun> na ito",
-    "Bulos": "Dêku i <noun> a oyo"
+    "English": "This \u003cnoun\u003e is mine.",
+    "Filipino": "Sa akin ang \u003cnoun\u003e na ito",
+    "Bulos": "Dêku i \u003cnoun\u003e a oyo"
   },
   {
     "_category": "TEMPLATES",
-    "English": "The <noun> at <location> is ours.",
-    "Filipino": "Sa amin ang <noun> sa <location>",
-    "Bulos": "Dikami i <noun> de <location>"
+    "English": "The \u003cnoun\u003e at \u003clocation\u003e is ours.",
+    "Filipino": "Sa amin ang \u003cnoun\u003e sa \u003clocation\u003e",
+    "Bulos": "Dikami i \u003cnoun\u003e de \u003clocation\u003e"
   },
   {
     "_category": "TEMPLATES",
-    "English": "The <noun> at <location> is yours.",
-    "Filipino": "Sa inyo ang <noun> sa <location>",
-    "Bulos": "Dikamu i <noun> de <location>"
+    "English": "The \u003cnoun\u003e at \u003clocation\u003e is yours.",
+    "Filipino": "Sa inyo ang \u003cnoun\u003e sa \u003clocation\u003e",
+    "Bulos": "Dikamu i \u003cnoun\u003e de \u003clocation\u003e"
   },
   {
     "_category": "TEMPLATES",
-    "English": "This <noun> is yours.",
-    "Filipino": "Sa iyo ang <noun> na ito",
-    "Bulos": "Dikaw i <noun> a oyo"
+    "English": "This \u003cnoun\u003e is yours.",
+    "Filipino": "Sa iyo ang \u003cnoun\u003e na ito",
+    "Bulos": "Dikaw i \u003cnoun\u003e a oyo"
   },
   {
     "_category": "TEMPLATES",
-    "English": "Where are you <verb>?",
-    "Filipino": "Saan ka <verb>?",
-    "Bulos": "Dêno ka <verb>?"
+    "English": "Where are you \u003cverb\u003e?",
+    "Filipino": "Saan ka \u003cverb\u003e?",
+    "Bulos": "Dêno ka \u003cverb\u003e?"
   },
   {
     "_category": "TEMPLATES",
-    "English": "Where are you <verb>? (respectful/plural)",
-    "Filipino": "Saan kayo <verb>?",
-    "Bulos": "Dêno ikamu <verb>?"
+    "English": "Where are you \u003cverb\u003e? (respectful/plural)",
+    "Filipino": "Saan kayo \u003cverb\u003e?",
+    "Bulos": "Dêno ikamu \u003cverb\u003e?"
   },
   {
     "_category": "TEMPLATES",
-    "English": "Who is your <noun>?",
-    "Filipino": "Sino ang <noun> mo?",
-    "Bulos": "Inú i <noun> mo?"
+    "English": "Who is your \u003cnoun\u003e?",
+    "Filipino": "Sino ang \u003cnoun\u003e mo?",
+    "Bulos": "Inú i \u003cnoun\u003e mo?"
   },
   {
     "_category": "TEMPLATES",
-    "English": "<verb> <pronoun>",
-    "Filipino": "<verb> na <pronoun>",
-    "Bulos": "<verb> <pronoun>"
+    "English": "\u003cverb\u003e \u003cpronoun\u003e",
+    "Filipino": "\u003cverb\u003e na \u003cpronoun\u003e",
+    "Bulos": "\u003cverb\u003e \u003cpronoun\u003e"
   },
   {
     "_category": "TEMPLATES",
-    "English": "<demonstrative> <noun>",
-    "Filipino": "<noun> na <demonstrative>",
-    "Bulos": "<noun> a <demonstrative>"
+    "English": "\u003cdemonstrative\u003e \u003cnoun\u003e",
+    "Filipino": "\u003cnoun\u003e na \u003cdemonstrative\u003e",
+    "Bulos": "\u003cnoun\u003e a \u003cdemonstrative\u003e"
   },
   {
     "_category": "TEMPLATES",
-    "English": "<question-word> <noun> <pronoun>?",
-    "Filipino": "<question-word> ang <noun> <pronoun>?",
-    "Bulos": "<question-word> i <noun> <pronoun>?"
+    "English": "\u003cquestion-word\u003e \u003cnoun\u003e \u003cpronoun\u003e?",
+    "Filipino": "\u003cquestion-word\u003e ang \u003cnoun\u003e \u003cpronoun\u003e?",
+    "Bulos": "\u003cquestion-word\u003e i \u003cnoun\u003e \u003cpronoun\u003e?"
   },
   {
     "_category": "SYNONYMS",

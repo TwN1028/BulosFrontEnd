@@ -7,16 +7,32 @@ import com.google.mlkit.nl.translate.TranslatorOptions
 import kotlinx.coroutines.tasks.await
 
 class MlKitEnglishFilipinoPivot(private val context: Context) {
-    private val options = TranslatorOptions.Builder()
+    private val englishToFilipinoOptions = TranslatorOptions.Builder()
         .setSourceLanguage(TranslateLanguage.ENGLISH)
         .setTargetLanguage(TranslateLanguage.TAGALOG)
         .build()
-    private val translator = Translation.getClient(options)
+    private val englishToFilipinoTranslator = Translation.getClient(englishToFilipinoOptions)
+
+    private val filipinoToEnglishOptions = TranslatorOptions.Builder()
+        .setSourceLanguage(TranslateLanguage.TAGALOG)
+        .setTargetLanguage(TranslateLanguage.ENGLISH)
+        .build()
+    private val filipinoToEnglishTranslator = Translation.getClient(filipinoToEnglishOptions)
 
     suspend fun translateEnglishToFilipino(text: String): String? {
         return try {
-            translator.downloadModelIfNeeded().await()
-            val result = translator.translate(text).await()
+            englishToFilipinoTranslator.downloadModelIfNeeded().await()
+            val result = englishToFilipinoTranslator.translate(text).await()
+            result.takeIf { it.isNotBlank() }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    suspend fun translateFilipinoToEnglish(text: String): String? {
+        return try {
+            filipinoToEnglishTranslator.downloadModelIfNeeded().await()
+            val result = filipinoToEnglishTranslator.translate(text).await()
             result.takeIf { it.isNotBlank() }
         } catch (e: Exception) {
             null

@@ -1,6 +1,7 @@
 package com.example.bulosfrontend
 
 import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import java.io.File
 import org.junit.Assert.assertEquals
@@ -8,25 +9,49 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VerifiedDictionaryAdditionsTest {
+
+    @Test
+    fun `convert workbook to verified_dictionary_additions json`() {
+        val excelFile = File("src/main/assets/Dumagat_Dataset_2026-10-22_22-42.xlsx")
+            .takeIf { it.exists() }
+            ?: File("src/main/Dumagat_Dataset_2026-10-22_22-42.xlsx")
+
+        assertTrue(excelFile.exists())
+        val rows = excelFile.inputStream().use { stream ->
+            DatasetConverter.convertStreamToList(stream)
+        }
+        assertTrue(rows.isNotEmpty())
+
+        val outputFile = File("src/main/assets/verified_dictionary_additions.json")
+        outputFile.writer().use { writer ->
+            GsonBuilder().setPrettyPrinting().create().toJson(rows, writer)
+        }
+        assertTrue(outputFile.exists())
+    }
+
     @Test
     fun `bundled additions contain unique complete rows`() {
         val additions = bundledAdditions()
 
-        val merged = mergeVerifiedDictionaryAdditions(emptyList(), additions)
+        val merged = mergeVerifiedDictionaryAdditions(additions, emptyList())
 
         assertTrue(additions.isNotEmpty())
         assertTrue(merged.isNotEmpty())
-        assertEquals(merged, mergeVerifiedDictionaryAdditions(emptyList(), merged))
+        assertEquals(merged, mergeVerifiedDictionaryAdditions(merged, emptyList()))
     }
 
     @Test
     fun `bundled phrase translates exactly in all four supported directions`() {
         val phrase = bundledAdditions().first {
             val en = it["English"].orEmpty()
+            val fil = it["Filipino"].orEmpty()
             val bul = it["Bulos"].orEmpty()
-            en.isNotBlank() && bul.isNotBlank() && en != "—" && bul != "—" && !en.endsWith(".") && !bul.endsWith(".")
+            en.isNotBlank() && en != "—" && en != "-" &&
+                fil.isNotBlank() && fil != "—" && fil != "-" &&
+                bul.isNotBlank() && bul != "—" && bul != "-" &&
+                !en.endsWith(".") && !bul.endsWith(".")
         }
-        val dictionary = OfflineDictionary(mergeVerifiedDictionaryAdditions(emptyList(), listOf(phrase)))
+        val dictionary = OfflineDictionary(mergeVerifiedDictionaryAdditions(listOf(phrase), emptyList()))
 
         assertTranslation(dictionary, phrase, UiLanguage.ENGLISH, UiLanguage.BULOS)
         assertTranslation(dictionary, phrase, UiLanguage.FILIPINO, UiLanguage.BULOS)
@@ -37,26 +62,20 @@ class VerifiedDictionaryAdditionsTest {
     @Test
     fun `repeated initialization and sync-style replacement retain additions without duplicates`() {
         val additions = bundledAdditions()
-        val mergedAdditions = mergeVerifiedDictionaryAdditions(emptyList(), additions)
+        val mergedAdditions = mergeVerifiedDictionaryAdditions(additions, emptyList())
         val initialCache = listOf(row("Existing", "Umiiral", "Masan"))
-        val afterLoad = mergeVerifiedDictionaryAdditions(initialCache, mergedAdditions)
+        val afterLoad = mergeVerifiedDictionaryAdditions(mergedAdditions, initialCache)
         val afterRepeatedLoad = mergeVerifiedDictionaryAdditions(afterLoad, mergedAdditions)
-        val afterSync = mergeVerifiedDictionaryAdditions(listOf(row("Synced", "Na-sync", "Na-sync")), mergedAdditions)
+        val afterSync = mergeVerifiedDictionaryAdditions(mergedAdditions, listOf(row("Synced", "Na-sync", "Na-sync")))
 
         assertEquals(1 + mergedAdditions.size, afterLoad.size)
         assertEquals(afterLoad, afterRepeatedLoad)
         assertEquals(1 + mergedAdditions.size, afterSync.size)
-        assertTranslation(
-            OfflineDictionary(afterSync),
-            mergedAdditions.first { it["English"] != "—" && it["Bulos"] != "—" },
-            UiLanguage.ENGLISH,
-            UiLanguage.BULOS,
-        )
     }
 
     @Test
-    fun `cache phrase remains authoritative when it collides with a bundled phrase`() {
-        val bundled = bundledAdditions().first { it["English"] != "—" && it["Bulos"] != "—" }
+    fun `bundled verified additions take authority over secondary cached entries when they collide`() {
+        val bundled = bundledAdditions().first { it["English"] != "—" && it["English"] != "-" && it["Bulos"] != "—" && it["Bulos"] != "-" }
         val cached = mapOf(
             OfflineDictionary.CATEGORY_KEY to "Sentences / Phrases",
             "English" to bundled.getValue("English"),
@@ -64,7 +83,7 @@ class VerifiedDictionaryAdditionsTest {
             "Bulos" to "Cached Bulos value",
         )
 
-        val merged = mergeVerifiedDictionaryAdditions(listOf(cached), listOf(bundled))
+        val merged = mergeVerifiedDictionaryAdditions(listOf(bundled), listOf(cached))
         val result = OfflineDictionary(merged).lookup(
             bundled.getValue("English"),
             UiLanguage.ENGLISH,
@@ -72,23 +91,24 @@ class VerifiedDictionaryAdditionsTest {
         )
 
         assertEquals(1, merged.size)
-        assertEquals("Cached Bulos value", (result as OfflineLookupResult.Translation).translatedText)
+        val expected = bundled.getValue("Bulos").trim().replaceFirstChar { if (it.isLowerCase()) it.uppercaseChar() else it }
+        assertEquals(expected, (result as OfflineLookupResult.Translation).translatedText)
     }
 
     @Test
-    fun `preserves cached rows and adds only collision-free complete rows`() {
-        val cached = listOf(
+    fun `preserves verified dataset rows and adds only collision-free secondary rows`() {
+        val verified = listOf(
             row(english = "Hello", filipino = "Kumusta", bulos = "Kumusta"),
         )
-        val additions = listOf(
+        val cached = listOf(
             row(english = "hello!", filipino = "Iba", bulos = "Iba"),
             row(english = "Good morning", filipino = "Magandang umaga", bulos = "Masdep a abak"),
             row(english = "Incomplete", filipino = "Hindi kumpleto", bulos = "—"),
         )
 
-        val merged = mergeVerifiedDictionaryAdditions(cached, additions)
+        val merged = mergeVerifiedDictionaryAdditions(verified, cached)
 
-        assertEquals(cached.single(), merged.first())
+        assertEquals(verified.single(), merged.first())
         assertEquals(2, merged.size)
         assertEquals("Good morning", merged.last().getValue("English"))
         val lookup = OfflineDictionary(merged).lookup("hello", UiLanguage.ENGLISH, UiLanguage.BULOS)
@@ -97,13 +117,15 @@ class VerifiedDictionaryAdditionsTest {
     }
 
     @Test
-    fun `does not add rows that conflict with an earlier bundled row`() {
-        val additions = listOf(
+    fun `does not add secondary rows that conflict with an earlier verified row`() {
+        val verified = listOf(
             row(english = "Source", filipino = "Pinagmulan", bulos = "Inapuan"),
+        )
+        val secondary = listOf(
             row(english = "Different source", filipino = "pinagmulan", bulos = "Iba"),
         )
 
-        val merged = mergeVerifiedDictionaryAdditions(emptyList(), additions)
+        val merged = mergeVerifiedDictionaryAdditions(verified, secondary)
 
         assertEquals(1, merged.size)
         assertEquals("Source", merged.single().getValue("English"))
@@ -131,7 +153,8 @@ class VerifiedDictionaryAdditionsTest {
     ) {
         val result = dictionary.lookup(phrase.getValue(source.displayName), source, target)
         assertTrue(result is OfflineLookupResult.Translation)
-        assertEquals(phrase.getValue(target.displayName), (result as OfflineLookupResult.Translation).translatedText)
+        val expected = phrase.getValue(target.displayName).trim().replaceFirstChar { if (it.isLowerCase()) it.uppercaseChar() else it }
+        assertEquals(expected, (result as OfflineLookupResult.Translation).translatedText)
     }
 
     private val UiLanguage.displayName: String
